@@ -13,7 +13,7 @@ import re
 import numpy as np
 import pandas as pd
 import pytest
-from ringbear.dtyper import (STR_CASTER, TYPE_REGEX, concat_interval,
+from ragsbear.dtyper import (STR_CASTER, TYPE_REGEX, concat_interval,
                              detect_dtype_anyway, detect_str_dtype,
                              infer_dtype, infer_major_dtype,
                              intervals_from_list, max_key, min_key,
