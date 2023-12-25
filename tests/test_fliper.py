@@ -3,7 +3,7 @@
 #   Name: test_fliper.py
 #   Author: xyy15926
 #   Created: 2023-12-18 19:42:15
-#   Updated: 2023-12-19 15:18:04
+#   Updated: 2023-12-21 20:41:14
 #   Description:
 # ---------------------------------------------------------
 
@@ -24,7 +24,14 @@ from datetime import date, time
 from flagbear.patterns import REGEX_TOKEN_SPECS, LEX_ENDFLAG
 from flagbear.lex import Lexer
 from flagbear.parser import EnvParser
-from flagbear.fliper import regex_caster, extract_field, rebuild_dict
+from flagbear.fliper import (regex_caster, extract_field, rebuild_dict,
+                             rename_duplicated)
+
+
+# %%
+# TODO
+def test_rename_duplicated():
+    pass
 
 
 # %%

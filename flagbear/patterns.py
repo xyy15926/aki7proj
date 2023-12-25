@@ -3,7 +3,7 @@
 #   Name: patterns.py
 #   Author: xyy15926
 #   Created: 2023-12-03 21:05:51
-#   Updated: 2023-12-19 10:24:18
+#   Updated: 2023-12-19 17:11:05
 #   Description:
 # ---------------------------------------------------------
 
@@ -182,9 +182,11 @@ SYN_EXPR_PRODS = [
     ("expr"     , ("expr", "LPAR", "expr", "RPAR")      , lambda x: x[0](x[2])      , 9     , "L"),
 ]
 
-SYN_ENV = {
+CALLABLE_ENV = {
     "count"             : len,
     "sum"               : sum,
     "max"               : max,
     "min"               : min,
+    "nnfilter"          : lambda x: [i for i in x if i is not None],
+    "nncount"           : lambda x: len([i for i in x if i is not None]),
 }

@@ -3,7 +3,7 @@
 #   Name: sortable.py
 #   Author: xyy15926
 #   Created: 2023-12-06 21:29:38
-#   Updated: 2023-12-11 14:46:30
+#   Updated: 2023-12-20 19:50:52
 #   Description: Modules with functions to handle sortable features.
 # -----------------------------------------------------------------------------
 
@@ -37,6 +37,7 @@ logger.info("Logging Start.")
 
 
 # %%
+# TODO: Test cases
 def tree_cut(
     x: np.ndarray,
     y: np.ndarray,
@@ -91,6 +92,7 @@ def tree_cut(
 
 
 # %%
+# TODO: Test cases
 def chimerge_cut(
     x: np.ndarray | list | pd.Series,
     y: np.ndarray | list | pd.Series,

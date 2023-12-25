@@ -27,6 +27,26 @@ logger.info("Logging Start.")
 
 
 # %%
+def rename_duplicated(ori: list):
+    """Rename duplicated elements inorder."""
+    duped = False
+    cnts = {}
+    new = []
+
+    for ele in ori:
+        if ele in cnts:
+            duped = False
+            cnts[ele] += 1
+            times = cnts[ele]
+            new.append(f"{ele}_{times}")
+        else:
+            cnts[ele] = 1
+            new.append(ele)
+
+    return new if duped else None
+
+
+# %%
 def regex_caster(
     words: str,
     lexer: Lexer | None = None,

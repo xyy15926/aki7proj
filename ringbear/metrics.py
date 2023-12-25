@@ -3,7 +3,7 @@
 #   Name: metrics.py
 #   Author: xyy15926
 #   Created: 2023-04-23 14:32:37
-#   Updated: 2023-12-11 14:47:54
+#   Updated: 2023-12-20 19:46:19
 #   Description:
 # ---------------------------------------------------------
 
@@ -26,7 +26,7 @@ logger.info("Logging Start.")
 
 
 # %%
-def lifts(
+def cal_lifts(
     x: np.ndarray,
     y: np.ndarray,
     weights: np.ndarray | None = None,
@@ -120,7 +120,8 @@ def lifts(
 
 
 # %%
-def woes(
+# TODO: Extend WOEs from 2-Classification to MultiClf.
+def cal_woes(
     x: np.ndarray,
     y: np.ndarray,
     weights: np.ndarray | None = None,
@@ -165,7 +166,7 @@ def woes(
 
 
 # %%
-def ivs(
+def cal_ivs(
     X: np.ndarray,
     y: np.ndarray,
     weights: np.ndarray | None = None
@@ -184,10 +185,10 @@ def ivs(
 
     Return:
     ----------------
-    ndarray of IVs of each columns.
+    1-D NDA of IVs of each columns of X.
     """
     if X.ndim == 1:
         X = X.reshape(-1, 1)
     return np.apply_along_axis(
-        lambda X: woes(X, y, weights)[2].sum(), 0, X
+        lambda X: cal_woes(X, y, weights)[2].sum(), 0, X
     )

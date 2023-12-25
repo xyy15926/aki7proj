@@ -3,7 +3,7 @@
 #   Name: parser.py
 #   Author: xyy15926
 #   Created: 2023-12-02 21:04:21
-#   Updated: 2023-12-19 15:05:15
+#   Updated: 2023-12-19 17:11:48
 #   Description:
 # ---------------------------------------------------------
 
@@ -27,9 +27,9 @@ from flagbear.tree import GeTNode
 from flagbear.patterns import (LEX_TOKEN_SPECS, LEX_SKIPS,
                                LEX_RESERVEDS, LEX_ENDFLAG,
                                REGEX_TOKEN_SPECS,
-                               SYN_ENV,
                                SYN_STARTSYM, SYN_ARITH_PRODS,
-                               SYN_EXPR_PRODS)
+                               SYN_EXPR_PRODS,
+                               CALLABLE_ENV)
 
 Reduction = TypeVar("Reduction")
 
@@ -185,7 +185,7 @@ class EnvParser(LRParser):
     id_specs: list[str of ID_REGEX, callable to get value]
       Hook for changing how to get the value of token ID.
     """
-    def __init__(self, default_env: dict[str, Callable] = SYN_ENV):
+    def __init__(self, default_env: dict[str, Callable] = CALLABLE_ENV):
         """Init parser with environment.
 
         Replace the token ID's specification with a list as a hook, so to

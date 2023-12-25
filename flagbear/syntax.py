@@ -3,7 +3,7 @@
 #   Name: syntax.py
 #   Author: xyy15926
 #   Created: 2023-11-29 20:20:12
-#   Updated: 2023-12-18 18:57:15
+#   Updated: 2023-12-20 22:31:59
 #   Description:
 #
 #    Refers to: <https://dl.acm.org/doi/pdf/10.1145/69622.357187> for more
@@ -18,6 +18,7 @@ try:
 except ImportError:
     from typing_extensions import NamedTuple, Self
 from collections.abc import Iterator, Callable
+
 from IPython.core.debugger import set_trace
 
 import copy
