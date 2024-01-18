@@ -3,7 +3,7 @@
 #   Name: freqs.py
 #   Author: xyy15926
 #   Created: 2023-12-06 18:12:05
-#   Updated: 2023-12-11 14:30:40
+#   Updated: 2024-01-17 21:15:30
 #   Description: Module with functions handles 2-D NDA of frequencies.
 #
 # In most cases, the first parameters of the function in this module should be
@@ -295,6 +295,27 @@ def cal_gini(
 
 
 # %%
+def chi2_only(freqs: np.ndarray) -> float:
+    """Calculate chi2 only.
+
+    1. Allow row or column fullfilled with 0 in crosstab.
+    2. Just like `contingency.chi2_contingency` without p-value and test.
+
+    Params:
+    ------------------
+    freqs: crosstab.
+
+    Return:
+    ------------------
+    chi2
+    """
+    expf = contingency.expected_freq(freqs)
+    chi2 = (expf - freqs) ** 2 / expf
+    np.nan_to_num(chi2, False, nan=0, posinf=0, neginf=0)
+    return chi2.sum()
+
+
+# %%
 def chi_pairwisely(
     freqs: np.ndarray,
     axis: int = 0,
@@ -317,7 +338,7 @@ def chi_pairwisely(
 
     Return:
     ---------------
-    chis: [[chi, p-value], ...]
+    chis: [chi,...]
     """
     if np.any(freqs == 0):
         logger.warning("Invalid frequencies to calculate Chis. "
@@ -331,7 +352,7 @@ def chi_pairwisely(
         s_former = np.s_[:, :-1]
         s_latter = np.s_[:, 1 :]
     chis = np.apply_along_axis(
-        lambda x: contingency.chi2_contingency(x.reshape(2, -1))[0:2],
+        lambda x: contingency.chi2_contingency(x.reshape(2, -1))[:2],
         axis=(axis + 1) % 2,
         arr=np.concatenate((freqs[s_former], freqs[s_latter]),
                            axis=(axis + 1) % 2)

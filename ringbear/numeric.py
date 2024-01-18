@@ -3,7 +3,7 @@
 #   Name: numeric.py
 #   Author: xyy15926
 #   Created: 2023-03-28 21:17:46
-#   Updated: 2023-12-11 14:46:06
+#   Updated: 2024-01-17 19:35:42
 #   Description:
 # ---------------------------------------------------------
 
@@ -198,7 +198,7 @@ def span_cut(
 
 
 # %%
-def ordinal_encode(
+def edge_encode(
     arr: np.ndarray,
     edges: np.ndarray,
     check_range: bool = False,

@@ -3,22 +3,30 @@
 #   Name: test_sketch.py
 #   Author: xyy15926
 #   Created: 2023-12-21 20:36:50
-#   Updated: 2023-12-22 08:47:04
+#   Updated: 2024-01-18 09:05:34
 #   Description:
 # ---------------------------------------------------------
 
 # %%
-import pytest
+from pytest import mark
+
 if __name__ == "__main__":
     from importlib import reload
     from ragsbear import sketch
+    from ringbear import metrics
+    from ringbear import sortable
     reload(sketch)
+    reload(metrics)
+    reload(sortable)
 
 import numpy as np
 import pandas as pd
 from datetime import date
+from scipy.stats import contingency
 
 from ragsbear.sketch import DataSketch
+from ringbear.metrics import cal_woes
+from ringbear.sortable import tree_cut
 
 
 # %%
@@ -73,15 +81,93 @@ def mock_data(row_n=100):
 
 
 # %%
+@mark.filterwarnings("ignore: divide by zero encountered")
 def test_data_sketch():
-    df, y = mock_data()
-    # sort_keys = {"range_int_half": 1}
-    # factors = 10
-    # uni_keys = ["range_int_half", ]
-    # keep = keep_keys = "first"
+    rown = 100
+    df, y = mock_data(rown)
+    sort_keys = {"range_int_half": 1}
+    factors = 10
+    uni_keys = ["range_int_half", ]
+    uni_keep = "first"
     # na_thresh = 0.9
     # flat_thresh = 0.9
-    ds = DataSketch(df, y)
-    rint = np.random.randint(1, 100)
-    log_dest = f"sketch_{date.today()}_{rint}.xlsx"
-    ds.auto_data(log_dest)
+    ds = DataSketch(df, y, factors, sort_keys, uni_keys, uni_keep)
+    ds.check_index()
+    colname = "nan_float_10"
+
+    ds.drop_duplicates()
+    assert ds.data.shape[0] == rown // 2
+    dnf = ds.data[colname]
+
+    ds.drop_flat()
+    assert ds.sketch_logs[ds.stage]["manlog"] is not None
+
+    ds.numlog()
+    assert ds.sketch_logs[ds.stage]["numlog"] is not None
+
+    ds.numlog_pcorr()
+    assert ds.sketch_logs[ds.stage]["numlog_pcorr"] is not None
+
+    ds.srtlog()
+    assert ds.sketch_logs[ds.stage]["srtlog"] is not None
+
+    ds.ordinize(new_stage="ord")
+    assert ds.stage == "ord"
+
+    ds.woeze(new_stage="woe")
+    assert ds.stage == "woe"
+    (re, ce), ctab = contingency.crosstab(dnf, ds.label)
+    woes = cal_woes(dnf.values, ds.label.values)[1] * np.log(2)
+    collog = ds.sketch_logs["ord"]["manlog"][colname]
+    assert np.all(np.isclose(ctab, collog["ctab"]))
+    assert np.all(np.isclose(woes, collog["woes"]))
+
+
+@mark.filterwarnings("ignore: divide by zero encountered")
+def test_data_sketch_2():
+    rown = 100
+    df, y = mock_data(rown)
+    df["nan_float_10_copy"] = df["nan_float_10"]
+    sort_keys = {"range_int_half": 1}
+    factors = 10
+    uni_keys = ["range_int_half", ]
+    uni_keep = "first"
+    # na_thresh = 0.9
+    # flat_thresh = 0.9
+    ds = DataSketch(df, y, factors, sort_keys, uni_keys, uni_keep)
+    ds.check_index()
+    colname = "nan_float_10"
+
+    ds.drop_duplicates()
+    assert ds.data.shape[0] == rown // 2
+    dnf = ds.data[colname]
+
+    ds.drop_flat()
+    assert ds.sketch_logs[ds.stage]["manlog"] is not None
+
+    ds.numlog()
+    assert ds.sketch_logs[ds.stage]["numlog"] is not None
+
+    ds.numlog_pcorr()
+    assert ds.sketch_logs[ds.stage]["numlog_pcorr"] is not None
+
+    ds.srtlog()
+    assert ds.sketch_logs[ds.stage]["srtlog"] is not None
+
+    ds.ordinize(new_stage="ord")
+    assert ds.stage == "ord"
+
+    ds.binize(new_stage="bin")
+    assert ds.stage == "bin"
+    collog = ds.sketch_logs["ord"]["manlog"][colname]
+    edges, ctab = tree_cut(dnf.values, ds.label.values, factors)
+    assert np.all(np.isclose(edges, collog["edges"]))
+    assert np.all(np.isclose(ctab, collog["ctab"]))
+
+    ds.woeze(new_stage="woe")
+    assert ds.stage == "woe"
+    ds.drop_flat()
+    ds.drop_pcorr()
+    assert ds.sketch_logs["woe"]["manlog"] is not None
+
+    # ds.log2excel("ka.xlsx")

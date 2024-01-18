@@ -18,7 +18,7 @@ if __name__ == "__main__":
     reload(numeric)
 
 from ringbear.numeric import (std_outlier, remove_std_outlier, span_cut,
-                              ordinal_encode,
+                              edge_encode,
                               POS_FLAG, NEG_FLAG)
 
 
@@ -71,6 +71,6 @@ def test_ordinal_encode():
                           np.arange(20, 30),
                           np.arange(50, 70)])
     bin_edges = span_cut(arr, 3)
-    ordinal_encode(arr, bin_edges)
+    edge_encode(arr, bin_edges)
 
 

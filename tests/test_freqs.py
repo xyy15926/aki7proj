@@ -3,7 +3,7 @@
 #   Name: test_freqs.py
 #   Author: xyy15926
 #   Created: 2023-12-06 18:42:42
-#   Updated: 2023-12-08 19:31:29
+#   Updated: 2024-01-17 21:05:12
 #   Description:
 # ---------------------------------------------------------
 
@@ -15,7 +15,11 @@ if __name__ == "__main__":
     from importlib import reload
     from ringbear import freqs
     reload(freqs)
+
+from sklearn.datasets import load_iris
+from scipy.stats import contingency
 from ringbear.freqs import (cal_entropy, cal_gini, chi_pairwisely,
+                            chi2_only,
                             enhanced_freqs)
 
 
@@ -88,5 +92,13 @@ def test_enhanced_freqs_2D():
                                             [15   , 12    , 0]])
     assert np.all(unisr == [1, 2, 3])
     assert np.all(unisc == [6, 12, 18])
+
+
+def test_chi2_only():
+    X, y = load_iris(return_X_y=True)
+    (ux, uy), freqs = contingency.crosstab(X[:, 0], y)
+    chi2 = chi2_only(freqs)
+    cchi2 = contingency.chi2_contingency(freqs)[0]
+    assert chi2 == cchi2
 
 
