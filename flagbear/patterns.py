@@ -3,7 +3,7 @@
 #   Name: patterns.py
 #   Author: xyy15926
 #   Created: 2023-12-03 21:05:51
-#   Updated: 2023-12-19 17:11:05
+#   Updated: 2024-01-25 09:18:05
 #   Description:
 # ---------------------------------------------------------
 
@@ -177,9 +177,8 @@ SYN_EXPR_PRODS = [
     ("expr"     , ("expr", "AND", "expr")       , lambda x: x[0] and x[2]           , 1     , "L"),
     ("expr"     , ("NOT", "expr")               , lambda x: not x[1]                , 1     , "L"),
     ("expr"     , ("expr", "IN", "expr")        , lambda x: x[0] in x[2]            , 1     , "L"),
-    ("expr"     , ("expr", "LSPAR", "expr", "RSPAR")    , lambda x: x[0][x[2]]      , 9     , "L"),
-    ("expr"     , ("expr", "LSPAR", "expr", "RSPAR")    , lambda x: x[0][x[2]]      , 9     , "L"),
-    ("expr"     , ("expr", "LPAR", "expr", "RPAR")      , lambda x: x[0](x[2])      , 9     , "L"),
+    ("expr"     , ("expr", "LSPAR", "expr", "RSPAR")    , lambda x: x[0][x[2]] if x[2] < len(x[0]) else None    , 9     , "L"),
+    ("expr"     , ("expr", "LPAR", "expr", "RPAR")      , lambda x: x[0](x[2])                                  , 9     , "L"),
 ]
 
 CALLABLE_ENV = {

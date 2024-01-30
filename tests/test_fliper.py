@@ -3,7 +3,7 @@
 #   Name: test_fliper.py
 #   Author: xyy15926
 #   Created: 2023-12-18 19:42:15
-#   Updated: 2023-12-21 20:41:14
+#   Updated: 2024-01-26 10:14:11
 #   Description:
 # ---------------------------------------------------------
 
@@ -71,7 +71,7 @@ def test_extract_field():
         "b": 2,
         "c": {
             "ca": "ca",
-            "cb": 2,
+            "cb": "2",
             "cc": {
                 "cca": 1,
                 "ccb": [
@@ -79,7 +79,7 @@ def test_extract_field():
                     {"ccba": 2, "ccbb": 4, },
                     {"ccba": 1, "ccbb": 4, },
                     {
-                        "ccba": 2,
+                        "ccba": "2",
                         "ccbb": 2,
                         "ccbc": [
                             {"ccbca": 1, "ccbcb": 2, },
@@ -101,11 +101,20 @@ def test_extract_field():
     assert extract_field(env, "a") == 1
     assert extract_field(env, "a:b") is None
     assert extract_field(env, "a:b:c") is None
+    assert extract_field(env, "c:ca", dtype="INT") == "ca"
+    assert extract_field(env, "c:cb", dtype="INT") == 2
+    assert extract_field(env, "c:cb") == "2"
+    assert extract_field(env, "c:cb", dtype="AUTO") == 2
+
     assert extract_field(env, "c:cc:cca") == 1
     assert extract_field(env, "c:cc:ccb:[count(_)]") == 5
-    assert extract_field(env, "c:cc:ccb:[]:ccba") == [1, 2, 1, 2, 1]
-    assert extract_field(env, "c:cc:ccb:[max(_)]:ccba") == 2
-    assert extract_field(env, "c:cc:ccb:[max(_)]:ccba") == 2
+    assert extract_field(env, "c:cc:ccb:[]:ccba") == [1, 2, 1, "2", 1]
+    assert extract_field(env, "c:cc:ccb:[]:ccba", dtype="INT") == [1, 2, 1, 2, 1]
+    assert extract_field(env, "c:cc:ccb:[]:ccba", dtype="AUTO") == [1, 2, 1, 2, 1]
+
+    with pytest.raises(TypeError):
+        assert extract_field(env, "c:cc:ccb:[max(_)]:ccba") == 2
+    assert extract_field(env, "c:cc:ccb:[max(_)]:ccba", dtype="AUTO") == 2
     assert extract_field(env, "c:cc:ccb:[]:ccbc:[]:ccbca") == [None, None, None,
                                                                [1, 2], [1, 2]]
     envp = EnvParser()
@@ -128,7 +137,7 @@ def test_rebuild_dict():
                     {"ccba": 2, "ccbb": 4, },
                     {"ccba": 1, "ccbb": 4, },
                     {
-                        "ccba": 2,
+                        "ccba": "2",
                         "ccbb": 2,
                         "ccbc": [
                             {"ccbca": 1, "ccbcb": 2, },
@@ -147,13 +156,13 @@ def test_rebuild_dict():
             },
         },
     }
-    rules = {
-        ("a", None, "a", int),
-        ("ca", None, "c:ca", int),
-        ("ccb_count", None, "c:cc:ccb:[count(_)]", int),
-        ("ccba", None, "c:cc:ccb:[]:ccba", list),
-        ("ccbca", None, "c:cc:ccb:[]:ccbc:[]:ccbca", list),
-    }
+    rules = [
+        ("a"            , None      , "a"                           , "INT"),
+        ("ca"           , None      , "c:ca"                        , "INT"),
+        ("ccb_count"    , None      , "c:cc:ccb:[count(_)]"         , "INT"),
+        ("ccba"         , None      , "c:cc:ccb:[]:ccba"            , "INT"),
+        ("ccbca"        , None      , "c:cc:ccb:[]:ccbc:[]:ccbca"   , "INT"),
+    ]
     rets = rebuild_dict(env, rules)
     envp = EnvParser()
     rets_p = rebuild_dict(env, rules, envp)

@@ -3,7 +3,7 @@
 #   Name: parser.py
 #   Author: xyy15926
 #   Created: 2023-12-02 21:04:21
-#   Updated: 2023-12-19 17:11:48
+#   Updated: 2024-01-24 10:00:42
 #   Description:
 # ---------------------------------------------------------
 
@@ -182,8 +182,9 @@ class EnvParser(LRParser):
     ----------------------
     env: dict[str of variable name, Any]
       The dict to get the value of ID from.
-    id_specs: list[str of ID_REGEX, callable to get value]
-      Hook for changing how to get the value of token ID.
+    id_prod: Production
+      Hook for changing the behavior of how to get the value of token `ID` in
+      order to bind `env` to `_`.
     """
     def __init__(self, default_env: dict[str, Callable] = CALLABLE_ENV):
         """Init parser with environment.

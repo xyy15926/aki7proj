@@ -9,7 +9,8 @@
 from __future__ import annotations
 import logging
 import json
-from typing import Any
+from typing import Any, TypeVar
+from collections.abc import Iterator
 from collections import deque
 from IPython.core.debugger import set_trace
 
@@ -79,6 +80,7 @@ def extract_field(
     obj: dict | str,
     steps: str,
     envp: EnvParser | None = None,
+    dtype: str = None,
 ) -> Any:
     """Extract field from dict.
 
@@ -120,6 +122,9 @@ def extract_field(
       list: List of steps.
     envp: EvnParser to execute the conditions and the aggragation.
       EvnParser with default arguments will be used as default.
+    dtype: str | AUTO | None
+      AUTO: Call `regex_caster` to cast string to any proper dtype.
+      str: Casting string to indicating dtype.
 
     Return:
     ----------------
@@ -130,7 +135,9 @@ def extract_field(
     cur_obj = obj
     for idx, step in enumerate(steps):
         # Stop early.
-        if not cur_obj:
+        # `[]` or `{}` shouldn't stop early to keep behavior consistent while
+        #   aggregating.
+        if cur_obj is None:
             return None
 
         if step[0] in "[{" and step[-1] in "]}":
@@ -139,7 +146,7 @@ def extract_field(
             if step[0] == "{":
                 cur_obj = cur_obj.values()
             for obj_ in cur_obj:
-                ret = extract_field(obj_, steps[idx + 1:], envp)
+                ret = extract_field(obj_, steps[idx + 1:], envp, dtype)
                 rets.append(ret)
             agg_expr = step[1:-1]
             if agg_expr:
@@ -154,6 +161,24 @@ def extract_field(
             if conds and not envp.bind_env(cur_obj).parse(conds[0]):
                 return None
             cur_obj = cur_obj.get(dest, None) if isinstance(cur_obj, dict) else None
+
+    # Try type casting.
+    if isinstance(cur_obj, str) and dtype is not None:
+        if dtype == "AUTO":
+            ret = regex_caster(cur_obj)
+            if ret is not None:
+                cur_obj = ret[0]
+        else:
+            # `REGEX_TOKEN_SPECS` stores dtype with capital letters.
+            if isinstance(dtype, str):
+                dtype = dtype.upper()
+            convers = REGEX_TOKEN_SPECS.get(dtype)
+            if convers is not None:
+                try:
+                    cur_obj = convers[1](cur_obj)
+                except ValueError as e:
+                    logger.warning(e)
+
     return cur_obj
 
 
@@ -172,7 +197,7 @@ def rebuild_dict(
     obj: dict | str
       dict: Dict where fields will be found.
       str: JSON string, which dict will loaded from.
-    rules: [(key, from_, steps, rule), ...]
+    rules: [(key, from_, steps, dtype), ...]
       key: Key in the new dict.
       from_: Dependency and source from which get the value and will be passed
         to `extract_field` as `obj.`
@@ -204,8 +229,8 @@ def rebuild_dict(
 
         # Extract fields.
         if isinstance(cur_obj, list):
-            rets[key] = [extract_field(ele, steps, envp) for ele in cur_obj]
+            rets[key] = [extract_field(ele, steps, envp, dtype) for ele in cur_obj]
         else:
-            rets[key] = extract_field(cur_obj, steps, envp)
+            rets[key] = extract_field(cur_obj, steps, envp, dtype)
 
     return rets
