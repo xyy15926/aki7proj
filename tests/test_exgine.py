@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-02-01 10:07:31
-#   Updated: 2024-02-01 18:35:04
+#   Updated: 2024-02-01 21:06:42
 #   Description:
 # ---------------------------------------------------------
 
@@ -30,10 +30,8 @@ from flagbear.fliper import extract_field
 def test_parse2df():
     pboc = open(os.path.join(ASSETS, "pboc_utf8.json"), "r").read()
     src = pd.Series({"xfy": pboc, "xfy2": pboc})
-    pconfs = pd.read_excel(os.path.join(ASSETS, "pboc_execution_20240201.xlsx"),
-                           sheet_name="parts")
-    fconfs = pd.read_excel(os.path.join(ASSETS, "pboc_execution_20240201.xlsx"),
-                           sheet_name="fields")
+    pconfs = pd.read_csv(os.path.join(ASSETS, "pboc_parts.csv"))
+    fconfs = pd.read_csv(os.path.join(ASSETS, "pboc_fields.csv"))
 
     confs = fconfs[fconfs["part"] == "pboc_basic_info"].copy()
     basic_info = parse_2df(src, confs, 0)
@@ -49,10 +47,8 @@ def test_parse2df():
 def test_parse_parts():
     pboc = open(os.path.join(ASSETS, "pboc_utf8.json"), "r").read()
     src = pd.Series({"xfy": pboc, "xfy2": pboc})
-    pconfs = pd.read_excel(os.path.join(ASSETS, "pboc_execution_20240201.xlsx"),
-                           sheet_name="parts")
-    fconfs = pd.read_excel(os.path.join(ASSETS, "pboc_execution_20240201.xlsx"),
-                           sheet_name="fields")
+    pconfs = pd.read_csv(os.path.join(ASSETS, "pboc_parts.csv"))
+    fconfs = pd.read_csv(os.path.join(ASSETS, "pboc_fields.csv"))
 
     pconf = pconfs.iloc[0]
     psrc = parse_parts(src, pconf)
@@ -73,10 +69,8 @@ def test_parse_parts():
 def test_parse_2stages():
     pboc = open(os.path.join(ASSETS, "pboc_utf8.json"), "r").read()
     src = pd.Series({"xfy": pboc, "xfy2": pboc})
-    pconfs = pd.read_excel(os.path.join(ASSETS, "pboc_execution_20240201.xlsx"),
-                           sheet_name="parts")
-    fconfs = pd.read_excel(os.path.join(ASSETS, "pboc_execution_20240201.xlsx"),
-                           sheet_name="fields")
+    pconfs = pd.read_csv(os.path.join(ASSETS, "pboc_parts.csv"))
+    fconfs = pd.read_csv(os.path.join(ASSETS, "pboc_fields.csv"))
 
     rets = {}
     for idx, pconf in pconfs.iterrows():
