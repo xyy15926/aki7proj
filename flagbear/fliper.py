@@ -132,7 +132,11 @@ def extract_field(
     """
     envp = EnvParser() if envp is None else envp
     steps = steps.split(":") if isinstance(steps, str) else steps
-    cur_obj = obj
+    if isinstance(obj, str):
+        cur_obj = json.loads(obj)
+    else:
+        cur_obj = obj
+
     for idx, step in enumerate(steps):
         # Stop early.
         # `[]` or `{}` shouldn't stop early to keep behavior consistent while
@@ -219,13 +223,14 @@ def rebuild_dict(
         if from_ is None:
             cur_obj = obj
         else:
-            cur_obj = rets.get(from_, None)
             # Append current item to the rear of the queue.
             # NOTE: This may time comsuming if few items in rules exchange
             # their positions and the rest of rules depend on them.
-            if cur_obj is None:
+            if from_ not in rets:
                 rule_Q.append((key, from_, steps, dtype))
                 continue
+            else:
+                cur_obj = rets[from_]
 
         # Extract fields.
         if isinstance(cur_obj, list):

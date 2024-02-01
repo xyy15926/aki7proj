@@ -13,6 +13,7 @@ __pycache__/
 # executable files
 *.pyc
 *.exe
+*.xlsx
 
 # log files
 *.log

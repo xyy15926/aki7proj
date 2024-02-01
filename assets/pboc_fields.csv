@@ -1,0 +1,376 @@
+part,key,steps,dtype,comment
+pboc_basic_info,PA01AI01,PRH:PA01:PA01A:PA01AI01,varchar(255),报告编号
+pboc_basic_info,PA01AR01,PRH:PA01:PA01A:PA01AR01,date,报告时间
+pboc_basic_info,PA01BQ01,PRH:PA01:PA01B:PA01BQ01,varchar(1022),被查询者姓名
+pboc_basic_info,PA01BD01,PRH:PA01:PA01B:PA01BD01,varchar(31),被查询者证件类型
+pboc_basic_info,PA01BI01,PRH:PA01:PA01B:PA01BI01,varchar(255),被查询者证件号
+pboc_basic_info,PA01BI02,PRH:PA01:PA01B:PA01BI02,varchar(255),查询机构代码
+pboc_basic_info,PA01BD02,PRH:PA01:PA01B:PA01BD02,varchar(31),查询原因代码
+pboc_basic_info,PA01CH,PRH:PA01:PA01C:PA01CH,text,其他证件信息
+pboc_basic_info,PA01DH,PRH:PA01:PA01D:PA01DH,text,防欺诈警示信息
+pboc_basic_info,PA01ES01,PRH:PA01:PA01E:PA01ES01,int,异议标注数目
+pboc_basic_info,PB01AD01,PIM:PB01:PB01A:PB01AD01,varchar(31),性别
+pboc_basic_info,PB01AR01,PIM:PB01:PB01A:PB01AR01,date,出生日期
+pboc_basic_info,PB01AD02,PIM:PB01:PB01A:PB01AD02,varchar(31),学历
+pboc_basic_info,PB01AD03,PIM:PB01:PB01A:PB01AD03,varchar(31),学位
+pboc_basic_info,PB01AD04,PIM:PB01:PB01A:PB01AD04,varchar(31),就业状况
+pboc_basic_info,PB01AD05,PIM:PB01:PB01A:PB01AD05,varchar(31),国籍
+pboc_basic_info,PB01AQ01,PIM:PB01:PB01A:PB01AQ01,varchar(1022),电子邮箱
+pboc_basic_info,PB01AQ02,PIM:PB01:PB01A:PB01AQ02,varchar(1022),通讯地址
+pboc_basic_info,PB01AQ03,PIM:PB01:PB01A:PB01AQ03,varchar(1022),户籍地址
+pboc_basic_info,PB01BH,PIM:PB01:PB01B:PB01BH,text,手机号信息
+pboc_basic_info,PB01BS01,PIM:PB01:PB01B:PB01BS01,int,手机号记录数量
+pboc_basic_info,PB020D01,PMM:PB02:PB020D01,varchar(31),婚姻状态
+pboc_basic_info,PB020D02,PMM:PB02:PB020D02,varchar(31),配偶证件类型
+pboc_basic_info,PB020I01,PMM:PB02:PB020I01,varchar(255),配偶证件号
+pboc_basic_info,PB020Q01,PMM:PB02:PB020Q01,varchar(1022),配偶姓名
+pboc_basic_info,PB02OQ02,PMM:PB02:PB02OQ02,varchar(1022),配偶工作单位
+pboc_basic_info,PB020Q03,PMM:PB02:PB020Q03,varchar(1022),配偶联系电话
+pboc_mobile,PB01BQ01,PB01BQ01,varchar(1022),手机号
+pboc_mobile,PB01BR01,PB01BR01,date,信息更新日期
+pboc_address,PB030Q01,PB030Q01,varchar(1022),居住地址
+pboc_address,PB030Q02,PB030Q02,varchar(1022),住宅电话
+pboc_address,PB030D01,PB030D01,varchar(31),居住状况
+pboc_address,PB030R01,PB030R01,date,信息更新日期
+pboc_company,PB040D02,PB040D02,varchar(31),单位性质
+pboc_company,PB040D04,PB040D04,varchar(31),职业
+pboc_company,PB040D03,PB040D03,varchar(31),行业
+pboc_company,PB040D05,PB040D05,varchar(31),职务
+pboc_company,PB040D06,PB040D06,varchar(31),职称
+pboc_company,PB040Q01,PB040Q01,varchar(1022),工作单位
+pboc_company,PB040Q02,PB040Q02,varchar(1022),单位地址
+pboc_company,PB040Q03,PB040Q03,varchar(1022),单位电话
+pboc_company,PB040R01,PB040R01,date,进入本单位年份
+pboc_company,PB040R02,PB040R02,date,信息更新日期
+pboc_score,PC010Q01,PSM:PC01:PC010Q01,int,数字解读
+pboc_score,PC010Q02,PSM:PC01:PC010Q02,int,相对位置
+pboc_score,PC010D01,PSM:PC01:PC010D01,varchar(1022),分数说明
+pboc_biz_abst,PC02AD01_11,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==11,varchar(31),业务类型:11 个人住房贷款
+pboc_biz_abst,PC02AD02_11,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==11,varchar(31),业务类型:11 个人住房贷款|业务大类：贷款
+pboc_biz_abst,PC02AR02_11,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==11,date,业务类型:11 个人住房贷款|业务大类：首笔业务发放月份
+pboc_biz_abst,PC02AS03_11,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==11,int,业务类型:11 个人住房贷款|账户数
+pboc_biz_abst,PC02AD01_12,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==12,int,业务类型:12 个人商用房（包括商住两用房）贷款
+pboc_biz_abst,PC02AD02_12,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==12,int,业务类型:12 个人商用房（包括商住两用房）贷款|业务大类：贷款
+pboc_biz_abst,PC02AR02_12,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==12,varchar(31),业务类型:12 个人商用房（包括商住两用房）贷款|业务大类：首笔业务发放月份
+pboc_biz_abst,PC02AS03_12,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==12,varchar(31),业务类型:12 个人商用房（包括商住两用房）贷款|账户数
+pboc_biz_abst,PC02AD01_19,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==19,date,业务类型:19 其他类贷款
+pboc_biz_abst,PC02AD02_19,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==19,int,业务类型:19 其他类贷款|业务大类：贷款
+pboc_biz_abst,PC02AR02_19,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==19,int,业务类型:19 其他类贷款|业务大类：首笔业务发放月份
+pboc_biz_abst,PC02AS03_19,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==19,int,业务类型:19 其他类贷款|账户数
+pboc_biz_abst,PC02AD01_21,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==21,varchar(31),业务类型:21 贷记卡
+pboc_biz_abst,PC02AD02_21,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==21,varchar(31),业务类型:21 贷记卡|业务大类：信用卡
+pboc_biz_abst,PC02AR02_21,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==21,date,业务类型:21 贷记卡|业务大类：首笔业务发放月份
+pboc_biz_abst,PC02AS03_21,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==21,int,业务类型:21 贷记卡|账户数
+pboc_biz_abst,PC02AD01_22,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==22,int,业务类型:22 准贷记卡
+pboc_biz_abst,PC02AD02_22,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==22,int,业务类型:22 准贷记卡|业务大类：信用卡
+pboc_biz_abst,PC02AR02_22,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==22,varchar(31),业务类型:22 准贷记卡|业务大类：首笔业务发放月份
+pboc_biz_abst,PC02AS03_22,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==22,varchar(31),业务类型:22 准贷记卡|账户数
+pboc_biz_abst,PC02AD01_99,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==99,date,业务类型:99 其他
+pboc_biz_abst,PC02AD02_99,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==99,int,业务类型:99 其他|业务大类：其他
+pboc_biz_abst,PC02AR02_99,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==99,int,业务类型:99 其他|首笔业务发放月份
+pboc_biz_abst,PC02AS03_99,PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==99,int,业务类型:99 其他|账户数
+pboc_biz_abst,PC02AS01,PCO:PC02:PC02A:PC02AS01,int,账户数合计
+pboc_biz_abst,PC02AS02,PCO:PC02:PC02A:PC02AS02,int,业务类型记录数
+pboc_cacc_abst,PC02BD01_1,PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BD01&&PC02BD01==1,varchar(31),业务类型：资产处置业务
+pboc_cacc_abst,PC02BS03_1,PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BS03&&PC02BD01==1,int,业务类型：资产处置业务：账户数
+pboc_cacc_abst,PC02BJ02_1,PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BJ02&&PC02BD01==1,int,业务类型：资产处置业务：账户余额
+pboc_cacc_abst,PC02BD01_2,PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BD01&&PC02BD01==2,varchar(31),业务类型：垫款业务
+pboc_cacc_abst,PC02BS03_2,PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BS03&&PC02BD01==2,int,业务类型：垫款业务：账户数
+pboc_cacc_abst,PC02BJ02_2,PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BJ02&&PC02BD01==2,int,业务类型：垫款业务：账户余额
+pboc_cacc_abst,PC02BJ01,PCO:PC02:PC02B:PC02BJ01,int,账户余额合计
+pboc_cacc_abst,PC02BS01,PCO:PC02:PC02B:PC02BS01,int,账户数合计
+pboc_cacc_abst,PC02BS02,PCO:PC02:PC02B:PC02BS02,int,C类账户记录数
+pboc_dum_abst,PC02CJ01,PCO:PC02:PC02C:PC02CJ01,int,账户余额
+pboc_dum_abst,PC02CS01,PCO:PC02:PC02C:PC02CS01,int,账户数
+pboc_dracc_abst,PC02DD01_1,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DD01&&PC02DD01==1,varchar(31),账户类型D1
+pboc_dracc_abst,PC02DS02_1,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS02&&PC02DD01==1,int,D1账户数
+pboc_dracc_abst,PC02DS03_1,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS03&&PC02DD01==1,int,D1月份数
+pboc_dracc_abst,PC02DJ01_1,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DJ01&&PC02DD01==1,int,D1单月最高逾期（透支）总额
+pboc_dracc_abst,PC02DS04_1,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS04&&PC02DD01==1,int,D1最长逾期（透支）月数
+pboc_dracc_abst,PC02DD01_2,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DD01&&PC02DD01==2,varchar(31),账户类型R4
+pboc_dracc_abst,PC02DS02_2,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS02&&PC02DD01==2,int,R4账户数
+pboc_dracc_abst,PC02DS03_2,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS03&&PC02DD01==2,int,R4月份数
+pboc_dracc_abst,PC02DJ01_2,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DJ01&&PC02DD01==2,int,R4单月最高逾期（透支）总额
+pboc_dracc_abst,PC02DS04_2,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS04&&PC02DD01==2,int,R4最长逾期（透支）月数
+pboc_dracc_abst,PC02DD01_3,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DD01&&PC02DD01==3,varchar(31),账户类型R1
+pboc_dracc_abst,PC02DS02_3,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS02&&PC02DD01==3,int,R1账户数
+pboc_dracc_abst,PC02DS03_3,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS03&&PC02DD01==3,int,R1月份数
+pboc_dracc_abst,PC02DJ01_3,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DJ01&&PC02DD01==3,int,R1单月最高逾期（透支）总额
+pboc_dracc_abst,PC02DS04_3,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS04&&PC02DD01==3,int,R1最长逾期（透支）月数
+pboc_dracc_abst,PC02DD01_4,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DD01&&PC02DD01==4,varchar(31),账户类型R2
+pboc_dracc_abst,PC02DS02_4,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS02&&PC02DD01==4,int,R2账户数
+pboc_dracc_abst,PC02DS03_4,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS03&&PC02DD01==4,int,R2月份数
+pboc_dracc_abst,PC02DJ01_4,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DJ01&&PC02DD01==4,int,R2单月最高逾期（透支）总额
+pboc_dracc_abst,PC02DS04_4,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS04&&PC02DD01==4,int,R2最长逾期（透支）月数
+pboc_dracc_abst,PC02DD01_5,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DD01&&PC02DD01==5,varchar(31),账户类型R3
+pboc_dracc_abst,PC02DS02_5,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS02&&PC02DD01==5,int,R3账户数
+pboc_dracc_abst,PC02DS03_5,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS03&&PC02DD01==5,int,R3月份数
+pboc_dracc_abst,PC02DJ01_5,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DJ01&&PC02DD01==5,int,R3单月最高逾期（透支）总额
+pboc_dracc_abst,PC02DS04_5,PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS04&&PC02DD01==5,int,R3最长逾期（透支）月数
+pboc_dracc_abst,PC02DS01,PCO:PC02:PC02D:PC02DS01,int,PC02DH 记录数
+pboc_dracc_abst,PC02ES01,PCO:PC02:PC02E:PC02ES01,int,D1管理机构数
+pboc_dracc_abst,PC02ES02,PCO:PC02:PC02E:PC02ES02,int,D1账户数
+pboc_dracc_abst,PC02EJ01,PCO:PC02:PC02E:PC02EJ01,int,D1授信总额
+pboc_dracc_abst,PC02EJ02,PCO:PC02:PC02E:PC02EJ02,int,D1余额
+pboc_dracc_abst,PC02EJ03,PCO:PC02:PC02E:PC02EJ03,int,D1最近6个月平均应还款
+pboc_dracc_abst,PC02FS01,PCO:PC02:PC02F:PC02FS01,int,R4管理机构数
+pboc_dracc_abst,PC02FS02,PCO:PC02:PC02F:PC02FS02,int,R4账户数
+pboc_dracc_abst,PC02FJ01,PCO:PC02:PC02F:PC02FJ01,int,R4授信总额
+pboc_dracc_abst,PC02FJ02,PCO:PC02:PC02F:PC02FJ02,int,R4余额
+pboc_dracc_abst,PC02FJ03,PCO:PC02:PC02F:PC02FJ03,int,R4最近6个月平均应还款
+pboc_dracc_abst,PC02GS01,PCO:PC02:PC02G:PC02GS01,int,R1管理机构数
+pboc_dracc_abst,PC02GS02,PCO:PC02:PC02G:PC02GS02,int,R1账户数
+pboc_dracc_abst,PC02GJ01,PCO:PC02:PC02G:PC02GJ01,int,R1授信总额
+pboc_dracc_abst,PC02GJ02,PCO:PC02:PC02G:PC02GJ02,int,R1余额
+pboc_dracc_abst,PC02GJ03,PCO:PC02:PC02G:PC02GJ03,int,R1最近6个月平均应还款
+pboc_dracc_abst,PC02HS01,PCO:PC02:PC02H:PC02HS01,int,R2管理机构数
+pboc_dracc_abst,PC02HS02,PCO:PC02:PC02H:PC02HS02,int,R2账户数
+pboc_dracc_abst,PC02HJ01,PCO:PC02:PC02H:PC02HJ01,int,R2授信总额
+pboc_dracc_abst,PC02HJ02,PCO:PC02:PC02H:PC02HJ02,int,R2单家行最高授信额
+pboc_dracc_abst,PC02HJ03,PCO:PC02:PC02H:PC02HJ03,int,R2单家行最低授信额
+pboc_dracc_abst,PC02HJ04,PCO:PC02:PC02H:PC02HJ04,int,R2已用额度
+pboc_dracc_abst,PC02HJ05,PCO:PC02:PC02H:PC02HJ05,int,R2最近6个月平均使用额度
+pboc_dracc_abst,PC02IS01,PCO:PC02:PC02I:PC02IS01,int,R3管理机构数
+pboc_dracc_abst,PC02IS02,PCO:PC02:PC02I:PC02IS02,int,R3账户数
+pboc_dracc_abst,PC02IJ01,PCO:PC02:PC02I:PC02IJ01,int,R3授信总额
+pboc_dracc_abst,PC02IJ02,PCO:PC02:PC02I:PC02IJ02,int,R3单家行最高授信额
+pboc_dracc_abst,PC02IJ03,PCO:PC02:PC02I:PC02IJ03,int,R3单家行最低授信额
+pboc_dracc_abst,PC02IJ04,PCO:PC02:PC02I:PC02IJ04,int,R3已用额度
+pboc_dracc_abst,PC02IJ05,PCO:PC02:PC02I:PC02IJ05,int,R3最近6个月平均使用额度
+pboc_rel_abst,PC02KD01,PC02KD01,varchar(31),借款人身份
+pboc_rel_abst,PC02KD02,PC02KD02,varchar(31),还款责任类型
+pboc_rel_abst,PC02KS02,PC02KS02,int,账户数
+pboc_rel_abst,PC02KJ01,PC02KJ01,int,担保责任-还款责任金额
+pboc_rel_abst,PC02KJ02,PC02KJ02,int,担保责任-账户余额
+pboc_postfee_abst,PC030D01_1,PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030D01&PC030D01=1,varchar(31),后付费业务类型：1-电信业务
+pboc_postfee_abst,PC030S02_1,PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030S02&PC030D01=1,int,后付费业务类型：1-电信业务|欠费账户数
+pboc_postfee_abst,PC030J01_1,PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030J01&PC030D01=1,int,后付费业务类型：1-电信业务|欠费金额
+pboc_postfee_abst,PC030D01_2,PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030D01&PC030D01=2,varchar(31),后付费业务类型：2-水电费等公共事业
+pboc_postfee_abst,PC030S02_2,PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030S02&PC030D01=2,int,后付费业务类型：2-水电费等公共事业|欠费账户数
+pboc_postfee_abst,PC030J01_2,PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030J01&PC030D01=2,int,后付费业务类型：2-水电费等公共事业|欠费金额
+pboc_postfee_abst,PC030S01,PNO:PC03:PC030S01,int,后付费业务记录数
+pboc_public_abst,PC040D01_1,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040D01&PC040D01=1,varchar(31),公共信息类型：1 欠税信息 
+pboc_public_abst,PC040S02_1,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040S02&PC040D01=1,int,公共信息类型：1 欠税信息|记录数
+pboc_public_abst,PC040J01_1,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040J01&PC040D01=1,int,公共信息类型：1 欠税信息|涉及金额
+pboc_public_abst,PC040D01_2,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040D01&PC040D01=2,varchar(31),公共信息类型：2 民事判决信息 
+pboc_public_abst,PC040S02_2,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040S02&PC040D01=2,int,公共信息类型：2 民事判决信息|记录数
+pboc_public_abst,PC040J01_2,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040J01&PC040D01=2,int,公共信息类型：2 民事判决信息|涉及金额
+pboc_public_abst,PC040D01_3,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040D01&PC040D01=3,varchar(31),公共信息类型：3 强制执行信息 
+pboc_public_abst,PC040S02_3,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040S02&PC040D01=3,int,公共信息类型：3 强制执行信息|记录数
+pboc_public_abst,PC040J01_3,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040J01&PC040D01=3,int,公共信息类型：3 强制执行信息|涉及金额
+pboc_public_abst,PC040D01_4,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040D01&PC040D01=4,varchar(31),公共信息类型：4 行政处罚信息 
+pboc_public_abst,PC040S02_4,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040S02&PC040D01=4,int,公共信息类型：4 行政处罚信息|记录数
+pboc_public_abst,PC040J01_4,PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040J01&PC040D01=4,int,公共信息类型：4 行政处罚信息|涉及金额
+pboc_public_abst,PC040S01,PPO:PC04:PC040S01,int,公共信息记录数
+pboc_public_abst,PC05AR01,PQO:PC05:PC05A:PC05AR01,date,上一次查询日期
+pboc_inq_abst,PC05AI01,PQO:PC05:PC05A:PC05AI01,varchar(255),上一次查询机构代码
+pboc_inq_abst,PC05AD01,PQO:PC05:PC05A:PC05AD01,varchar(31),上一次查询机构机构类型
+pboc_inq_abst,PC05AQ01,PQO:PC05:PC05A:PC05AQ01,varchar(1022),上一次查询原因
+pboc_inq_abst,PC05BS01,PQO:PC05:PC05B:PC05BS01,int,最近1个月内的查询机构数(贷款审批)
+pboc_inq_abst,PC05BS02,PQO:PC05:PC05B:PC05BS02,int,最近1个月内的查询机构数(信用卡审批)
+pboc_inq_abst,PC05BS03,PQO:PC05:PC05B:PC05BS03,int,最近1个月内的查询次数(贷款审批)
+pboc_inq_abst,PC05BS04,PQO:PC05:PC05B:PC05BS04,int,最近1个月内的查询次数(信用卡审批)
+pboc_inq_abst,PC05BS05,PQO:PC05:PC05B:PC05BS05,int,最近1个月内的查询次数(本人查询)
+pboc_inq_abst,PC05BS06,PQO:PC05:PC05B:PC05BS06,int,最近2年内的查询次数(贷后管理)
+pboc_inq_abst,P005BS07,PQO:PC05:PC05B:P005BS07,int,最近2年内的查询次数(担保资格审查)
+pboc_inq_abst,PC05BS08,PQO:PC05:PC05B:PC05BS08,int,最近2年内的查询次数(特约商户实名审查)
+pboc_acc_info,PD01AD01,PD01AD01,varchar(31),基本信息_账户类型
+pboc_acc_info,PD01AD02,PD01AD02,varchar(31),基本信息_业务管理机构类型
+pboc_acc_info,PD01AD03,PD01AD03,varchar(31),基本信息_业务种类
+pboc_acc_info,PD01AD04,PD01AD04,varchar(31),基本信息_币种
+pboc_acc_info,PD01AD05,PD01AD05,varchar(31),基本信息_还款方式
+pboc_acc_info,PD01AD06,PD01AD06,varchar(31),基本信息_还款频率
+pboc_acc_info,PD01AD07,PD01AD07,varchar(31),基本信息_担保方式
+pboc_acc_info,PD01AD08,PD01AD08,varchar(31),基本信息_贷款发放形式
+pboc_acc_info,PD01AD09,PD01AD09,varchar(31),基本信息_共同借款标志
+pboc_acc_info,PD01AD10,PD01AD10,varchar(31),基本信息_债权转移时的还款状态
+pboc_acc_info,PD01AI01,PD01AI01,varchar(255),基本信息_账户编号
+pboc_acc_info,PD01AI02,PD01AI02,varchar(255),基本信息_业务管理机构代码
+pboc_acc_info,PD01AI03,PD01AI03,varchar(255),基本信息_账户标识
+pboc_acc_info,PD01AI04,PD01AI04,varchar(255),基本信息_授信协议编号
+pboc_acc_info,PD01AJ01,PD01AJ01,int,基本信息_借款金额
+pboc_acc_info,PD01AJ02,PD01AJ02,int,基本信息_账户授信额度
+pboc_acc_info,PD01AJ03,PD01AJ03,int,基本信息_共享授信额度
+pboc_acc_info,PD01AR01,PD01AR01,date,基本信息_账户开立日期
+pboc_acc_info,PD01AR02,PD01AR02,date,基本信息_账户到期日期
+pboc_acc_info,PD01AS01,PD01AS01,int,基本信息_还款期数
+pboc_acc_info,PD01BD01,PD01BD01,varchar(31),最新表现信息_账户状态
+pboc_acc_info,PD01BD03,PD01BD03,varchar(31),最新表现信息_五级分类
+pboc_acc_info,PD01BD04,PD01BD04,varchar(31),最新表现信息_还款状态
+pboc_acc_info,PD01BJ01,PD01BJ01,int,最新表现信息_账户余额
+pboc_acc_info,PD01BJ02,PD01BJ02,int,最新表现信息_最近一次还款金额
+pboc_acc_info,PD01BR01,PD01BR01,date,最新表现信息_账户关闭日期
+pboc_acc_info,PD01BR02,PD01BR02,date,最新表现信息_最近一次还款日期
+pboc_acc_info,PD01BR03,PD01BR03,date,最新表现信息_信息报告日期
+pboc_acc_info,PD01BR04,PD01BR04,date,最新表现信息_转出月份
+pboc_acc_info,PD01CD01,PD01CD01,varchar(31),最近一次月度表现信息_账户状态
+pboc_acc_info,PD01CD02,PD01CD02,varchar(31),最近一次月度表现信息_五级分类
+pboc_acc_info,PD01CJ01,PD01CJ01,int,最近一次月度表现信息_账户余额
+pboc_acc_info,PD01CJ02,PD01CJ02,int,最近一次月度表现信息_已用额度
+pboc_acc_info,PD01CJ03,PD01CJ03,int,最近一次月度表现信息_未出单的大额专项分期余额
+pboc_acc_info,PD01CJ04,PD01CJ04,int,最近一次月度表现信息_本月应还款
+pboc_acc_info,PD01CJ05,PD01CJ05,int,最近一次月度表现信息_本月实还款
+pboc_acc_info,PD01CJ06,PD01CJ06,int,最近一次月度表现信息_当前逾期总额
+pboc_acc_info,PD01CJ07,PD01CJ07,int,最近一次月度表现信息_逾期31-60天未还本金
+pboc_acc_info,PD01CJ08,PD01CJ08,int,最近一次月度表现信息_逾期61-90天未还本金
+pboc_acc_info,PD01CJ09,PD01CJ09,int,最近一次月度表现信息_逾期91-180天未还本金
+pboc_acc_info,PD01CJ10,PD01CJ10,int,最近一次月度表现信息_逾期180天以上未还本金
+pboc_acc_info,PD01CJ11,PD01CJ11,int,最近一次月度表现信息_透支180天以上未付余额
+pboc_acc_info,PD01CJ12,PD01CJ12,int,最近一次月度表现信息_最近6个月平均使用额度
+pboc_acc_info,PD01CJ13,PD01CJ13,int,最近一次月度表现信息_最近6个月平均透支余额
+pboc_acc_info,PD01CJ14,PD01CJ14,int,最近一次月度表现信息_最大使用额度
+pboc_acc_info,PD01CJ15,PD01CJ15,int,最近一次月度表现信息_最大透支余额
+pboc_acc_info,PD01CR01,PD01CR01,date,最近一次月度表现信息_月份
+pboc_acc_info,PD01CR02,PD01CR02,date,最近一次月度表现信息_本月应还款日
+pboc_acc_info,PD01CR03,PD01CR03,date,最近一次月度表现信息_最近一次还款日期
+pboc_acc_info,PD01CR04,PD01CR04,date,最近一次月度表现信息_信息报告日期
+pboc_acc_info,PD01CS01,PD01CS01,int,最近一次月度表现信息_剩余还款期数
+pboc_acc_info,PD01CS02,PD01CS02,int,最近一次月度表现信息_当期逾期期数
+pboc_acc_info,PD01DRO1,PD01DRO1,date,近24个月 - 起始年月
+pboc_acc_info,PD01DR02,PD01DR02,date,近24个月 - 截至年月
+pboc_acc_info,PD01ERO1,PD01ERO1,date,近60个月 - 起始年月
+pboc_acc_info,PD01ER02,PD01ER02,date,近60个月 - 截至年月
+pboc_acc_info,PD01ES01,PD01ES01,int,近60个月 - 记录数
+pboc_acc_info,PD01FS01,PD01FS01,int,特殊交易记录数
+pboc_acc_info,PD01GS01,PD01GS01,int,特殊事件记录数
+pboc_acc_info,PD01HS01,PD01HS01,int,大额专项分期记录数
+pboc_acc_info,PD01ZH,PD01ZH,text,标注或声明内容
+pboc_acc_info,PD01ZS01,PD01ZS01,int,PD01ZH 中记录数
+pboc_acc_repay_24_monthly,PD01ER03,PD01DR03,date,近24个月_月份
+pboc_acc_repay_24_monthly,PD01ED01,PD01DD01,varchar(31),近24个月_还款状态
+pboc_acc_repay_60_monthly,PD01ER03,PD01ER03,date,月份
+pboc_acc_repay_60_monthly,PD01ED01,PD01ED01,varchar(31),还款状态
+pboc_acc_repay_60_monthly,PD01EJ01,PD01EJ01,int,逾期（透支）总额
+pboc_acc_special_trans,PD01FDO1,PD01FDO1,varchar(31),特殊交易类型
+pboc_acc_special_trans,PD01FRO1,PD01FRO1,date,特殊交易发生日期
+pboc_acc_special_trans,PD01FS02,PD01FS02,int,到期日期变更月数
+pboc_acc_special_trans,PD01FJ01,PD01FJ01,int,特殊交易发生金额
+pboc_acc_special_trans,PD01FQ01,PD01FQ01,varchar(1022),特殊交易明细记录
+pboc_acc_special_accd,PD01GR01,PD01GR01,date,特殊事件发生月份
+pboc_acc_special_accd,PD01GD01,PD01GD01,varchar(31),特殊事件类型
+pboc_acc_special_insts,PD01HJ01,PD01HJ01,int,大额专项分期额度
+pboc_acc_special_insts,PD01HJ02,PD01HJ02,int,已用分期额度
+pboc_acc_special_insts,PD01HR01,PD01HR01,date,分期额度生效日期
+pboc_acc_special_insts,PD01HR02,PD01HR02,date,分期额度到期日期
+pboc_credit_info,PD02AD01,PD02AD01,varchar(31),授信协议-业务管理机构类型
+pboc_credit_info,PD02AD02,PD02AD02,varchar(31),授信额度用途
+pboc_credit_info,PD02AD03,PD02AD03,varchar(31),币种
+pboc_credit_info,PD02AD04,PD02AD04,varchar(31),授信协议状态
+pboc_credit_info,PD02AI01,PD02AI01,varchar(255),授信协议编号
+pboc_credit_info,PD02AI02,PD02AI02,varchar(255),业务管理机构
+pboc_credit_info,PD02AI03,PD02AI03,varchar(255),授信协议标识
+pboc_credit_info,PD02AI04,PD02AI04,varchar(255),授信限额编号
+pboc_credit_info,PD02AJ01,PD02AJ01,int,授信额度
+pboc_credit_info,PD02AJ03,PD02AJ03,int,授信限额
+pboc_credit_info,PD02AJ04,PD02AJ04,int,已用额度
+pboc_credit_info,PD02AR01,PD02AR01,date,生效日期
+pboc_credit_info,PD02AR02,PD02AR02,date,到期日期
+pboc_credit_info,PD02ZH,PD02ZH,text,标注或声明类型
+pboc_credit_info,PD02ZS01,PD02ZS01,int,PD02ZH 中记录数
+pboc_rel_info,PD03AD01,PD03AD01,varchar(31),相关还款责任-业务管理机构类型
+pboc_rel_info,PD03AD02,PD03AD02,varchar(31),业务种类
+pboc_rel_info,PD03AD03,PD03AD03,varchar(31),相关还款责任人类型
+pboc_rel_info,PD03AD04,PD03AD04,varchar(31),币种
+pboc_rel_info,PD03AD05,PD03AD05,varchar(31),五级分类
+pboc_rel_info,PD03AD06,PD03AD06,varchar(31),账户类型
+pboc_rel_info,PD03AD07,PD03AD07,varchar(31),还款状态
+pboc_rel_info,PD03AD08,PD03AD08,varchar(31),主借款人
+pboc_rel_info,PD03AJ01,PD03AJ01,int,相关还款责任金额
+pboc_rel_info,PD03AJ02,PD03AJ02,int,账户金额
+pboc_rel_info,PD03AQ01,PD03AQ01,varchar(1022),业务管理机构
+pboc_rel_info,PD03AQ02,PD03AQ02,varchar(1022),保证合同编号
+pboc_rel_info,PD03AR01,PD03AR01,date,账户开立日期
+pboc_rel_info,PD03AR02,PD03AR02,date,账户到期日期
+pboc_rel_info,PD03AR03,PD03AR03,date,信息报告日期
+pboc_rel_info,PD03AS01,PD03AS01,int,逾期月数
+pboc_rel_info,PD03ZH,PD03ZH,text,标注或声明类型
+pboc_rel_info,PD03ZS01,PD03ZS01,int,PD03ZH 中记录数
+pboc_postfee_info,PE01AD01,PE01AD01,varchar(31),后付费账户类型
+pboc_postfee_info,PE01AD02,PE01AD02,varchar(31),业务类型
+pboc_postfee_info,PE01AD03,PE01AD03,varchar(31),当前缴费状态
+pboc_postfee_info,PE01AJ01,PE01AJ01,int,当前欠费金额
+pboc_postfee_info,PE01AQ01,PE01AQ01,varchar(1022),机构名称
+pboc_postfee_info,PE01AQ02,PE01AQ02,varchar(1022),最近24个月缴费记录
+pboc_postfee_info,PE01AR01,PE01AR01,date,业务开通日期
+pboc_postfee_info,PE01AR02,PE01AR02,date,记账年月
+pboc_postfee_info,PE01ZH,PE01ZH,text,标注或声明类型
+pboc_postfee_info,PE01ZS01,PE01ZS01,int,PE01ZH 中记录数
+pboc_taxs,PF01AJ01,PF01AJ01,int,欠税总额
+pboc_taxs,PF01AQ01,PF01AQ01,varchar(1022),主管税务机关
+pboc_taxs,PF01AR01,PF01AR01,date,欠税统计日期
+pboc_taxs,PF01ZH[],PF01ZH[],text,标注或声明类型
+pboc_taxs,PF01ZS01,PF01ZS01,int,PF01ZH 记录数
+pboc_lawsuit,PF02AD01,PF02AD01,varchar(31),结案方式
+pboc_lawsuit,PF02AJ01,PF02AJ01,int,诉讼标的金额
+pboc_lawsuit,PF02AQ01,PF02AQ01,varchar(1022),立案法院
+pboc_lawsuit,PF02AQ02,PF02AQ02,varchar(1022),案由
+pboc_lawsuit,PF02AQ03,PF02AQ03,varchar(1022),判决、调解结果
+pboc_lawsuit,PF02AQ04,PF02AQ04,varchar(1022),诉讼标的
+pboc_lawsuit,PF02AR01,PF02AR01,date,立案日期
+pboc_lawsuit,PF02AR02,PF02AR02,date,判决、调节生效日期
+pboc_lawsuit,PF02ZH,PF02ZH,text,标注或声明类型
+pboc_lawsuit,PF02ZS01,PF02ZS01,int,PF02ZH 中记录数
+pboc_enforcement,PF03AD01,PF03AD01,varchar(31),结案方式
+pboc_enforcement,PF03AJ01,PF03AJ01,int,申请执行标的金额
+pboc_enforcement,PF03AJ02,PF03AJ02,int,已执行标的金额
+pboc_enforcement,PF03AQ01,PF03AQ01,varchar(1022),执行法院
+pboc_enforcement,PF03AQ02,PF03AQ02,varchar(1022),执行案由
+pboc_enforcement,PF03AQ03,PF03AQ03,varchar(1022),案件状态
+pboc_enforcement,PF03AQ04,PF03AQ04,varchar(1022),申请执行标的
+pboc_enforcement,PF03AQ05,PF03AQ05,varchar(1022),已执行标的
+pboc_enforcement,PF03AR01,PF03AR01,date,立案日期
+pboc_enforcement,PF03AR02,PF03AR02,date,结案日期
+pboc_enforcement,PF03ZH,PF03ZH,text,标注或声明类型
+pboc_enforcement,PF03ZS01,PF03ZS01,int,PF03ZH 中记录数
+pboc_gov_punishment,PF04AJ01,PF04AJ01,int,处罚金额
+pboc_gov_punishment,PF04AQ01,PF04AQ01,varchar(1022),处罚机构
+pboc_gov_punishment,PF04AQ02,PF04AQ02,varchar(1022),处罚内容
+pboc_gov_punishment,PF04AQ03,PF04AQ03,varchar(1022),行政复议结果
+pboc_gov_punishment,PF04AR01,PF04AR01,date,处罚生效日期
+pboc_gov_punishment,PF04AR02,PF04AR02,date,处罚截至日期
+pboc_gov_punishment,PF04ZH,PF04ZH,text,标注或声明类型
+pboc_gov_punishment,PF04ZS01,PF04ZS01,int,PF04ZH 中记录数
+pboc_housing_fund,PF05AD01,PF05AD01,varchar(31),缴费状态
+pboc_housing_fund,PF05AJ01,PF05AJ01,int,月存缴额
+pboc_housing_fund,PF05AQ01,PF05AQ01,varchar(1022),参缴地
+pboc_housing_fund,PF05AQ02,PF05AQ02,int,个人缴存比例
+pboc_housing_fund,PF05AQ03,PF05AQ03,int,单位缴存比例
+pboc_housing_fund,PF05AQ04,PF05AQ04,varchar(1022),缴费单位
+pboc_housing_fund,PF05AR01,PF05AR01,date,参缴日期
+pboc_housing_fund,PF05AR02,PF05AR02,date,初缴月份
+pboc_housing_fund,PF05AR03,PF05AR03,date,缴至月份
+pboc_housing_fund,PF05AR04,PF05AR04,date,信息更新日期
+pboc_housing_fund,PF05ZH,PF05ZH,text,标注或声明类型
+pboc_housing_fund,PF05ZS01,PF05ZS01,int,PF05ZH 中记录数
+pboc_sub_allowance,PF06AD01,PF06AD01,varchar(31),人员类别
+pboc_sub_allowance,PF06AQ01,PF06AQ01,varchar(1022),所在地
+pboc_sub_allowance,PF06AQ02,PF06AQ02,varchar(1022),工作单位
+pboc_sub_allowance,PF06AQ03,PF06AQ03,varchar(1022),家庭月收入
+pboc_sub_allowance,PF06AR01,PF06AR01,date,申请日期
+pboc_sub_allowance,PF06AR02,PF06AR02,date,批准日期
+pboc_sub_allowance,PF06AR03,PF06AR03,date,信息更新日期
+pboc_sub_allowance,PF06ZH,PF06ZH,text,标注或声明类型
+pboc_sub_allowance,PF06ZS01,PF06ZS01,int,PF06ZH 中记录数
+pboc_pro_cert,PF07AD01,PF07AD01,varchar(31),等级
+pboc_pro_cert,PF07AD02,PF07AD02,varchar(1022),机构所在地
+pboc_pro_cert,PF07AQ01,PF07AQ01,varchar(1022),职业资格名称
+pboc_pro_cert,PF07AQ02,PF07AQ02,varchar(1022),颁发机构
+pboc_pro_cert,PF07AR01,PF07AR01,date,获得年月
+pboc_pro_cert,PF07AR02,PF07AR02,date,到期年月
+pboc_pro_cert,PF07AR03,PF07AR03,date,吊销年月
+pboc_pro_cert,PF07ZH,PF07ZH,text,标注或声明类型
+pboc_pro_cert,PF07ZS01,PF07ZS01,int,PF07ZH 中记录数
+pboc_gov_award,PF08AQ01,PF08AQ01,varchar(1022),奖励机构
+pboc_gov_award,PF08AQ02,PF08AQ02,varchar(1022),奖励内容
+pboc_gov_award,PF08AR01,PF08AR01,date,生效年月
+pboc_gov_award,PF08AR02,PF08AR02,date,截至年月
+pboc_gov_award,PF08ZH,PF08ZH,text,标注或声明类型
+pboc_gov_award,PF08ZS01,PF08ZS01,int,PF08ZH 中记录数
+pboc_inq_rec,PH010D01,PH010D01,varchar(31),查询机构类型
+pboc_inq_rec,PH010Q02,PH010Q02,varchar(1022),查询机构
+pboc_inq_rec,PH010Q03,PH010Q03,varchar(1022),查询原因
+pboc_inq_rec,PH010R01,PH010R01,date,查询日期
+pboc_annotation,PG010D01,PG010D01,varchar(31),标注对象类型
+pboc_annotation,PG010D02,PG010D02,varchar(31),标注对象标识
+pboc_annotation,PG010H,PG010H,text,标注或声明类型
+pboc_annotation,PG010S01,PG010S01,int,PG010H 中记录数量
