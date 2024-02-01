@@ -66,7 +66,7 @@ def test_span_cut():
 
 
 # %%
-def test_ordinal_encode():
+def test_edge_encode():
     arr = np.concatenate([np.arange(10),
                           np.arange(20, 30),
                           np.arange(50, 70)])

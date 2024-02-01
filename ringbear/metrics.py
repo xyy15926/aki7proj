@@ -3,7 +3,7 @@
 #   Name: metrics.py
 #   Author: xyy15926
 #   Created: 2023-04-23 14:32:37
-#   Updated: 2023-12-20 19:46:19
+#   Updated: 2024-01-18 15:30:21
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,9 +11,9 @@
 from __future__ import annotations
 
 import logging
-
 import numpy as np
-from scipy.stats import kendalltau
+from scipy.stats import kendalltau, contingency
+from IPython.core.debugger import set_trace
 
 # %%
 logging.basicConfig(
@@ -26,7 +26,159 @@ logger.info("Logging Start.")
 
 
 # %%
+def cal_lifts_from_ctab(
+    ctab: np.ndarray,
+    acc_map: list | None = None,
+) -> tuple:
+    """Calculate lifts from crosstab.
+
+    Calculate lifts, accumulating lift with crosstab.
+    1. If no specific `acc_keys` are given, accumulating lifts will be
+      calculated among all the keys.
+    2. Accumulating order will be tested with Kendall-tau. And if kendalltau
+      is negative, accumulating order will be reversed to calculate another
+      version of accumulating lifts.
+
+    Params:
+    ----------------
+    ctab: crosstab.
+    acc_map: Bool or integer array indicating how to accumulate.
+
+    Return:
+    ----------------
+    lifts: Lifts of all uniques.
+    acc_lifts: Accumulating lifts.
+    corr_ken: Kendall-tau correlation.
+    pv: P-value of Kendall-tau.
+    """
+    assert ctab.ndim == 2 and ctab.shape[1] == 2
+
+    cavg = ctab[:, 1].sum() / ctab.sum()
+    lifts = ctab[:, 1] / ctab.sum(axis=1) / cavg
+
+    # Accumulating lifts.
+    if acc_map is not None:
+        ctab = ctab[acc_map]
+    acc_ctab = np.add.accumulate(ctab, axis=0)
+    acc_lifts = acc_ctab[:, 1] / acc_ctab.sum(axis=1) / cavg
+
+    # Kendall-tau test.
+    corr_ken, pv = kendalltau(acc_lifts, np.arange(len(acc_lifts), 0, -1))
+    if corr_ken < 0:
+        acc_ctab = np.add.accumulate(ctab[::-1], axis=0)
+        acc_lifts = acc_ctab[:, 1] / acc_ctab.sum(axis=1) / cavg
+
+    return lifts, acc_lifts, corr_ken, pv
+
+
 def cal_lifts(
+    x: np.ndarray,
+    y: np.ndarray,
+    acc_keys: list | None = None,
+) -> np.ndarray:
+    """Calculate lifts.
+
+    Calculate lifts, accumulating lift for 1-D `X` and 1-D `y`.
+    1. If no specific `acc_keys` are given, `acc_keys` will be all uniques
+      factors in `x`.
+    2. Accumulating order will be tested with Kendall-tau. And if kendalltau
+      is negative, accumulating order will be reversed to calculate another
+      version of accumulating lifts.
+
+    Params:
+    ----------------
+    x: 1-D NDA with sortable elements.
+    y: 1-D NDA filled with 0 or 1.
+    acc_keys: List of keys in `x` for caculating accumulating lifts.
+      list: Only keys in `acc_keys` will be used to calculate accumulating
+        lifts. Attention: calculating accumulating lifts forward or backward
+        is determined by `ascending`, instead of this directly.
+      None: Unique factors in `x`.
+
+    Return:
+    ----------------
+    lifts: Lifts of all uniques.
+    acc_lifts: Accumulating lifts.
+    corr_ken: Kendall-tau correlation.
+    pv: P-value of Kendall-tau.
+    """
+    assert x.ndim == 1 and y.ndim == 1
+    (ux, uy), ctab = contingency.crosstab(x, y)
+    if acc_keys is not None:
+        acc_keys = np.searchsorted(ux, acc_keys)
+    return cal_lifts_from_ctab(ctab, acc_keys)
+
+
+def cal_woes_from_ctab(ctab: np.ndarray) -> np.ndarray:
+    """Calculate WOEs and IVs.
+
+    Calculate WOEs, IVs from crosstab.
+
+    Params:
+    ----------------
+    ctab: crosstab.
+
+    Return:
+    ----------------
+    woes: WOEs of each uniques.
+    ivs: IVs of each uniques.
+    """
+
+    assert ctab.ndim == 2 and ctab.shape[1] == 2
+
+    freqr = ctab / ctab.sum(axis=0, keepdims=True)
+    woes = np.log(freqr[:, 1] / freqr[:, 0])
+    ivs = (freqr[:, 1] - freqr[:, 0]) * woes
+
+    # np.nan_to_num(woes, False, 0, 0, 0)
+    np.nan_to_num(ivs, False, 0, 0, 0)
+
+    return woes, ivs
+
+
+def cal_woes(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray]:
+    """Calculate WOEs and IVs for each elements.
+
+    Calculate WOEs, IVs of `x` and `y` each elements in sortable `x`.
+
+    Params:
+    ----------------
+    x: 1-D NDA with sortable elements.
+    y: 1-D NDA filled with 0 or 1.
+
+    Return:
+    ----------------
+    woes: WOEs of each uniques.
+    ivs: IVs of each uniques.
+    """
+    assert x.ndim == 1 and y.ndim == 1
+    (ux, uy), ctab = contingency.crosstab(x, y)
+    return cal_woes_from_ctab(ctab)
+
+
+def cal_ivs(X: np.ndarray, y: np.ndarray) -> float:
+    """Calculate IVs for each column in 2-D NDA.
+
+    Calculate IVs of each columns in 2-D X or just IV for 1-D x, A.K.A. the
+    sum of ivs from `cal_woes` for each column.
+
+    Params:
+    ----------------
+    X: 2-D NDA with sortable elements.
+    y: 1-D NDA filled with 0 or 1.
+
+    Return:
+    ----------------
+    1-D NDA of IVs of each columns of X.
+    """
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+    return np.apply_along_axis(lambda X: cal_woes(X, y)[-1].sum(), 0, X)
+
+
+# %%
+# TODO: replace counting frequencies to `enhanced_freqs`.
+def cal_lifts_weighted(
     x: np.ndarray,
     y: np.ndarray,
     weights: np.ndarray | None = None,
@@ -66,6 +218,7 @@ def cal_lifts(
     unis: Uniques in `x`.
     lifts: Lift of all uniques.
     acc_keys: Keys for calculating accumulating lifts.
+    acc_lifts: Accumulating lifts.
     ascending: If lifts ascends along with `acc_keys`.
     corr_ken: Kendall-tau correlation.
     pv: P-value of Kendall-tau.
@@ -121,7 +274,8 @@ def cal_lifts(
 
 # %%
 # TODO: Extend WOEs from 2-Classification to MultiClf.
-def cal_woes(
+# TODO: replace counting frequencies to `enhanced_freqs`.
+def cal_woes_weighted(
     x: np.ndarray,
     y: np.ndarray,
     weights: np.ndarray | None = None,
@@ -158,7 +312,7 @@ def cal_woes(
         for subarr in np.split(arr, indices[1:])])
 
     # Calculate woes and ives for each split.
-    woes = np.log2(one_zero[:, 0] / one_zero[:, 1])
+    woes = np.log(one_zero[:, 0] / one_zero[:, 1])
     ivs = (one_zero[:, 0] - one_zero[:, 1]) * woes
     ivs[~np.isfinite(ivs)] = 0
 
@@ -166,7 +320,7 @@ def cal_woes(
 
 
 # %%
-def cal_ivs(
+def cal_ivs_weighted(
     X: np.ndarray,
     y: np.ndarray,
     weights: np.ndarray | None = None
@@ -174,7 +328,7 @@ def cal_ivs(
     """Calculate IVs for each column in 2-D NDA.
 
     Calculate IVs of each columns in 2-D X or just IV for 1-D x. These IVs
-    are different from the IVs returned from `woes_ordered`, which are IVs
+    are different from the IVs returned from `cal_woes`, which are IVs
     of each uniques.
 
     Params:
@@ -190,5 +344,5 @@ def cal_ivs(
     if X.ndim == 1:
         X = X.reshape(-1, 1)
     return np.apply_along_axis(
-        lambda X: cal_woes(X, y, weights)[2].sum(), 0, X
+        lambda X: cal_woes_weighted(X, y, weights)[2].sum(), 0, X
     )

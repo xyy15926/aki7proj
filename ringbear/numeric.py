@@ -3,7 +3,7 @@
 #   Name: numeric.py
 #   Author: xyy15926
 #   Created: 2023-03-28 21:17:46
-#   Updated: 2024-01-17 19:35:42
+#   Updated: 2024-01-18 16:20:52
 #   Description:
 # ---------------------------------------------------------
 
@@ -206,13 +206,15 @@ def edge_encode(
     """Labelize array ordinally according to given edges.
 
     Transform sortable array into array of labels, in which elements are
-    represented by integer range from 1 to N, A.K.A. binnize.
-    1. `np.searchsorted` will be used to determine the label.
+    represented by integer range from 0 to N-1, namely binize:
+
+    1. `np.searchsorted` will be used to determine the label, with
+      `edges[0]`、`edges[N]` ignored for convinience.
     2. Then labels will be dispatched after following rules:
-      1: [arr.min()     , edges[0]]
-      2: (edges[1]      , edges[1]]
+      0: [arr.min()     , edges[1]]
+      1: (edges[1]      , edges[2]]
       ...
-      N: (edges[N-1]    , arr.max()]
+      N-1: (edges[N-2]    , arr.max()]
 
     Params:
     -----------------
@@ -232,10 +234,9 @@ def edge_encode(
     -----------------
     Ordially labeled array range from 1, len(edges).
     """
-    if not check_range:
-        edges = edges[1: -1]
-    else:
+    if check_range:
         assert np.all(arr <= edges[-1]) and np.all(arr >= edges[0])
-    labeled = np.apply_along_axis(lambda x: np.searchsorted(edges, x) + 1, 0, arr)
+    edges = edges[1: -1]
+    labeled = np.apply_along_axis(lambda x: np.searchsorted(edges, x), 0, arr)
 
     return labeled
