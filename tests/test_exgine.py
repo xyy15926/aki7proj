@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-02-01 10:07:31
-#   Updated: 2024-02-01 21:06:42
+#   Updated: 2024-02-03 17:25:30
 #   Description:
 # ---------------------------------------------------------
 
@@ -21,6 +21,7 @@ if __name__ == "__main__":
 import numpy as np
 import pandas as pd
 import os
+import json
 ASSETS = os.path.join(os.curdir, "assets")
 from suitbear.exgine import parse_2df, parse_parts, parse_2stages
 from flagbear.fliper import extract_field
@@ -64,6 +65,7 @@ def test_parse_parts():
     part = pconf["part"]
     confs = fconfs[fconfs["part"] == part].copy()
     dest = parse_2df(psrc, confs, 0)
+    assert not np.all(dest == None)
 
 
 def test_parse_2stages():
@@ -77,6 +79,15 @@ def test_parse_2stages():
         part = pconf["part"]
         psrc = parse_parts(src, pconf)
         confs = fconfs[fconfs["part"] == part].copy()
-        rets[part] = parse_2df(psrc, confs, 0)
+        dfret = parse_2df(psrc, confs, 0)
+        dfret.loc[:, confs["key"][confs["dtype"] == "text"]] = (
+            dfret[confs["key"][confs["dtype"] == "text"]].applymap(
+                lambda x: json.dumps(x, ensure_ascii=False)))
+        rets[part] = dfret
+
+    # xlw = pd.ExcelWriter("pboc.xlsx")
+    # for idx, df in rets.items():
+    #     df.to_excel(xlw, sheet_name=idx)
+    # xlw.close()
 
 
