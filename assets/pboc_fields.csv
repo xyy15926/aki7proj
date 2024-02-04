@@ -23,7 +23,7 @@ pboc_basic_info,PB020D01,PMM:PB02:PB020D01,varchar(31),婚姻状态
 pboc_basic_info,PB020D02,PMM:PB02:PB020D02,varchar(31),配偶证件类型
 pboc_basic_info,PB020I01,PMM:PB02:PB020I01,varchar(255),配偶证件号
 pboc_basic_info,PB020Q01,PMM:PB02:PB020Q01,varchar(1022),配偶姓名
-pboc_basic_info,PB02OQ02,PMM:PB02:PB020Q02,varchar(1022),配偶工作单位
+pboc_basic_info,PB020Q02,PMM:PB02:PB020Q02,varchar(1022),配偶工作单位
 pboc_basic_info,PB020Q03,PMM:PB02:PB020Q03,varchar(1022),配偶联系电话
 pboc_mobile,PB01BQ01,PB01BQ01,varchar(1022),手机号
 pboc_mobile,PB01BR01,PB01BR01,date,信息更新日期

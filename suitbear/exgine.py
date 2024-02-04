@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-02-01 20:49:48
+#   Updated: 2024-02-04 11:14:14
 #   Description:
 # ---------------------------------------------------------
 
@@ -89,8 +89,9 @@ def parse_parts(
         could describe.
       steps_<N>: Steps to get the level-N values in list format.
       idkey_<N>: Steps of key to identify the level-N info. The key should be
-        unqiue and identical at least in level-N-1 or a list with the same
-        length of values derived from `step_<N>`.
+        unqiue and identical at least in level-N-1 among all the records.
+        Attention: Multiple keys are allowed, i.e. all columns starts with
+          `idkey_<N>` will be treated as the union primary keys.
 
     Return:
     --------------------
@@ -102,7 +103,9 @@ def parse_parts(
     while curl < level:
         rets = {}
         steps = pconf[f"steps_{curl}"]
-        idkey_steps = pconf[f"idkey_{curl}"]
+        idkey_cols = [col for col in pconf.index
+                      if col.startswith(f"idkey_{curl}")]
+        idkey_steps = pconf[idkey_cols]
         for idx, rec in src.items():
             if rec is None:
                 vals = None
@@ -112,28 +115,23 @@ def parse_parts(
                 except json.JSONDecodeError as e:
                     logger.warning(e)
 
-            # Extract values and id-keys.
+            # Extract values.
             vals = extract_field(rec, steps, envp)
             if vals is None:
                 continue
-            if idkey_steps:
-                idkey = extract_field(rec, idkey_steps, envp)
-            else:
-                idkey = None
+
+            # Extract idkeys from upper level.
+            idkey = []
+            for ele in idkey_steps:
+                idk = extract_field(rec, ele, envp)
+                idkey.append(idk)
+            idkey = tuple(idkey)
 
             # Reconstruct data source with reindexing.
             if not isinstance(idx, tuple):
                 idx = (idx, )
-            if idkey is None:
-                for vidx, val in enumerate(vals):
-                    rets[idx + (vidx,)] = val
-            elif isinstance(idkey, list):
-                assert len(idkey) == len(vals)
-                for vidx, (idk, val) in enumerate(zip(idkey, vals)):
-                    rets[idx + (idk, vidx)] = val
-            else:
-                for vidx, val in enumerate(vals):
-                    rets[idx + (idkey, vidx)] = val
+            for vidx, val in enumerate(vals):
+                rets[idx + idkey + (vidx, )] = val
 
         src = rets
         curl += 1
