@@ -3,7 +3,7 @@
 #   Name: parser.py
 #   Author: xyy15926
 #   Created: 2023-12-02 21:04:21
-#   Updated: 2024-01-24 10:00:42
+#   Updated: 2024-02-26 19:52:54
 #   Description:
 # ---------------------------------------------------------
 
@@ -220,7 +220,7 @@ class EnvParser(LRParser):
         """
         if env is not self.env:
             self.env = env
-            if isinstance(env, dict):
+            if hasattr(env, "get"):
                 envs = ChainMap(env, self.default_env)
             else:
                 envs = self.default_env

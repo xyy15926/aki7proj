@@ -3,7 +3,7 @@
 #   Name: patterns.py
 #   Author: xyy15926
 #   Created: 2023-12-03 21:05:51
-#   Updated: 2024-01-25 09:18:05
+#   Updated: 2024-02-26 21:30:51
 #   Description:
 # ---------------------------------------------------------
 
@@ -112,11 +112,11 @@ LEX_TOKEN_SPECS = {
     "LE"            : r"\<=",
     "LT"            : r"\<",
     "ASG"           : r"=",
-    "AND"           : r"&",
+    "BAND"          : r"&",
     "DAND"          : r"&&",
-    "OR"            : r"\|",
-    "NOT"           : r"\!",
+    "BOR"           : r"\|",
     "DOR"           : r"\|\|",
+    "NOT"           : r"\!",
     "AT"            : r"@",
     "LPAR"          : r"\(",
     "RPAR"          : r"\)",
@@ -174,11 +174,14 @@ SYN_EXPR_PRODS = [
     ("expr"     , ("expr", "LE", "expr")        , lambda x: x[0] <= x[2]            , 2     , "L"),
     ("expr"     , ("expr", "GE", "expr")        , lambda x: x[0] >= x[2]            , 2     , "L"),
     ("expr"     , ("expr", "OR", "expr")        , lambda x: x[0] or x[2]            , 1     , "L"),
+    ("expr"     , ("expr", "BOR", "expr")       , lambda x: x[0].__or__(x[2])       , 1     , "L"),
     ("expr"     , ("expr", "AND", "expr")       , lambda x: x[0] and x[2]           , 1     , "L"),
+    ("expr"     , ("expr", "BAND", "expr")      , lambda x: x[0].__and__(x[2])      , 1     , "L"),
     ("expr"     , ("NOT", "expr")               , lambda x: not x[1]                , 1     , "L"),
     ("expr"     , ("expr", "IN", "expr")        , lambda x: x[0] in x[2]            , 1     , "L"),
     ("expr"     , ("expr", "LSPAR", "expr", "RSPAR")    , lambda x: x[0][x[2]] if x[2] < len(x[0]) else None    , 9     , "L"),
     ("expr"     , ("expr", "LPAR", "expr", "RPAR")      , lambda x: x[0](x[2])                                  , 9     , "L"),
+    ("expr"     , ("expr", "LPAR", "eles", "RPAR")      , lambda x: x[0](*x[2])                                 , 9     , "L"),
 ]
 
 CALLABLE_ENV = {

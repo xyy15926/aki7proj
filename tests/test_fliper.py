@@ -3,7 +3,7 @@
 #   Name: test_fliper.py
 #   Author: xyy15926
 #   Created: 2023-12-18 19:42:15
-#   Updated: 2024-01-26 10:14:11
+#   Updated: 2024-03-02 19:19:04
 #   Description:
 # ---------------------------------------------------------
 
@@ -123,6 +123,51 @@ def test_extract_field():
 
 
 # %%
+def test_extract_field_with_forced_dtype():
+    env = {
+        "a": 1,
+        "b": 2,
+        "c": {
+            "ca": "ca2",
+            "cb": "2",
+            "cc": {
+                "cca": 1,
+                "ccb": [
+                    {"ccba": 1, "ccbb": 2, },
+                    {"ccba": 2, "ccbb": 4, },
+                    {"ccba": 1, "ccbb": 4, },
+                    {
+                        "ccba": "2",
+                        "ccbb": 2,
+                        "ccbc": [
+                            {"ccbca": 1, "ccbcb": 2, },
+                            {"ccbca": 2, "ccbcb": 4, },
+                        ],
+                    },
+                    {
+                        "ccba": 1,
+                        "ccbb": 1,
+                        "ccbc": [
+                            {"ccbca": 1, "ccbcb": 2, },
+                            {"ccbca": 2, "ccbcb": 4, },
+                        ],
+                    },
+                ],
+            },
+        },
+    }
+    assert extract_field(env, "c:cb") == "2"
+    assert extract_field(env, "c:cb", dtype="INT") == 2
+    assert extract_field(env, "c:ca", dtype="INT") == "ca2"
+    assert extract_field(env, "c:ca", dtype="INT", dforced=True) is None
+    assert extract_field(env, "c:ca", dtype="INT", dforced=True, dfill=0) == 0
+    assert extract_field(env, "c:ca", dtype="INT", dforced=True,
+                         dfill={"ca2": 1}) == 1
+    assert extract_field(env, "c:ca", dtype="INT", dforced=True,
+                         dfill={"ca22": 1}) is None
+
+
+# %%
 def test_rebuild_dict():
     env = {
         "a": 1,
@@ -167,3 +212,60 @@ def test_rebuild_dict():
     envp = EnvParser()
     rets_p = rebuild_dict(env, rules, envp)
     assert rets == rets_p
+
+    rules = [
+        ("a"            , None      , "[_]:a"                           , "INT"),
+        ("ca"           , None      , "[_]:c:ca"                        , "INT"),
+        ("ccb_count"    , None      , "[_]:c:cc:ccb:[count(_)]"         , "INT"),
+        ("ccba"         , None      , "[_]:c:cc:ccb:[]:ccba"            , "INT"),
+        ("ccbca"        , None      , "[_]:c:cc:ccb:[]:ccbc:[]:ccbca"   , "INT"),
+    ]
+    rets = rebuild_dict([env, env], rules)
+    envp = EnvParser()
+    rets_p = rebuild_dict([env, env], rules, envp)
+    assert rets == rets_p
+
+
+# %%
+def test_rebuild_dict_with_forced_dtype():
+    env = {
+        "a": 1,
+        "b": 2,
+        "c": {
+            "ca": "ca2",
+            "cb": "2",
+            "cc": {
+                "cca": 1,
+                "ccb": [
+                    {"ccba": 1, "ccbb": 2, },
+                    {"ccba": 2, "ccbb": 4, },
+                    {"ccba": 1, "ccbb": 4, },
+                    {
+                        "ccba": "2",
+                        "ccbb": 2,
+                        "ccbc": [
+                            {"ccbca": 1, "ccbcb": 2, },
+                            {"ccbca": 2, "ccbcb": 4, },
+                        ],
+                    },
+                    {
+                        "ccba": 1,
+                        "ccbb": 1,
+                        "ccbc": [
+                            {"ccbca": 1, "ccbcb": 2, },
+                            {"ccbca": 2, "ccbcb": 4, },
+                        ],
+                    },
+                ],
+            },
+        },
+    }
+    rules = [
+        ("a"            , None      , "a"                           , "INT"),
+        ("ca"           , None      , "c:ca"                        , "INT"),
+        ("caf"          , None      , "c:ca"                        , "INT"     , 0),
+    ]
+    rets = rebuild_dict(env, rules)
+    assert rets == {"a": 1, "ca": "ca2", "caf": 0}
+
+

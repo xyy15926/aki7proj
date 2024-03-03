@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-02-04 11:14:14
+#   Updated: 2024-03-03 20:22:30
 #   Description:
 # ---------------------------------------------------------
 
@@ -12,12 +12,15 @@ from __future__ import annotations
 import logging
 import json
 from typing import Any, TypeVar
+from collections.abc import Mapping
+from collections import ChainMap
 import numpy as np
 import pandas as pd
 from IPython.core.debugger import set_trace
 
 from flagbear.parser import EnvParser
 from flagbear.fliper import rebuild_dict, extract_field
+from flagbear.fliper import regex_caster
 
 # %%
 logging.basicConfig(
@@ -26,6 +29,22 @@ logging.basicConfig(
     force=(__name__ == "__main__"))
 logger = logging.getLogger()
 logger.info("Logging Start.")
+
+
+# %%
+CALLS = {
+    "today"     : pd.Timestamp.today(),
+    "map"       : lambda x, y: x.map(y),
+    "cb_fst"    : pd.Series.combine_first,
+    "mon_itvl"  : lambda x, y: (pd.to_datetime(x) - pd.to_datetime(y)).dt.days / 30,
+    "day_itvl"  : lambda x, y: (pd.to_datetime(x) - pd.to_datetime(y)).dt.days,
+    "count"     : len,
+    "sum"       : lambda x: x.sum(),
+    "max"       : lambda x: x.max(),
+    "min"       : lambda x: x.min(),
+    "nnfilter"  : lambda x: [i for i in x if i is not None],
+    "nncount"   : lambda x: len([i for i in x if i is not None]),
+}
 
 
 # %%
@@ -45,33 +64,37 @@ def parse_2stages(
     ----------------------
     src: Series of records.
     pconfs: DataFrame with Column[level, steps_<N>, idkey_<N>, ...]
-      level: The level of the partition, namely the granularity the partition
-        could describe.
-      steps_<N>: Steps to get the level-N values in list format.
-      idkey_<N>: Steps of key to identify the level-N info. The key should be
-        unqiue and identical at least in level-N-1 or a list with the same
-        length of values derived from `step_<N>`.
+      part: The name of the partition.
+      level: The level of the partition, namely the granularity that the
+        partition could describe.
+      steps_<N>: Steps to get the level-N values(list).
+      idkey_<N>: Steps of key to identify the level-N info.
+        The key should be unqiue and identical at least in level-N-1 as this
+        will be used as key/Index in dict DataFrame to identify `steps_<N>`.
+        Attention: Multiple keys are allowed with `,` as the seperator.
     fconfs: DataFrame with Columns[key, steps, from_, dtype]
-      `key` and `steps` are necessary.
-      `from_`: None will be used as default, namely the fields will be
-         extracted from the original records.
-      `dtype`: VARCHAR(255) will be used as default.
+      key` and `steps` are necessary.
+      from_: None will be used as default, namely the fields will be
+        extracted from the original records.
+      dtype: VARCHAR(255) will be used as default.
 
-
+    Return:
+    ----------------------
+    dict[part, DataFrame of parsed result]
     """
     rets = {}
     for idx, pconf in pconfs.iterrows():
         psrc = parse_parts(src, pconf)
         part = pconf["part"]
-        confs = fconfs[fconfs["part"] == part]
-        ret = parse_2df(psrc, confs, 0)
+        conf = fconfs[fconfs["part"] == part].copy()
+        ret = parse_2df(psrc, conf, 0)
         rets[part] = ret
     return rets
 
 
 # %%
 def parse_parts(
-    src: pd.Series[str, dict],
+    src: pd.Series[str, dict] | dict,
     pconf: pd.Series | dict,
 ) -> dict:
     """Parse Series of records into dict of partitions.
@@ -85,27 +108,40 @@ def parse_parts(
     src: Series of records.
     pconf: Series with Index[level, steps_<N>, idkey_<N>, ...] or dict with
       similar structure.
-      level: The level of the partition, namely the granularity the partition
-        could describe.
-      steps_<N>: Steps to get the level-N values in list format.
-      idkey_<N>: Steps of key to identify the level-N info. The key should be
-        unqiue and identical at least in level-N-1 among all the records.
-        Attention: Multiple keys are allowed, i.e. all columns starts with
-          `idkey_<N>` will be treated as the union primary keys.
+      level: The level of the partition, namely the granularity that the
+        partition could describe.
+      steps_<N>: Steps to get the level-N values(list).
+      idkey_<N>: Steps of key to identify the level-N info.
+        The key should be unqiue and identical at least in level-N-1 as this
+        will be used as key/Index in dict DataFrame to identify `steps_<N>`.
+        Attention: Multiple keys are allowed with `,` as the seperator.
+      idname_<N>: Name for `idkey_<N>.
 
     Return:
     --------------------
-    dict[(idx, [idkey_1,] RANGE_1, [idkey_2,] RANGE_2, ...), partitions]
+    dict[(idx[, idkey_1, RANGE_1, idkey_2, RANGE_2,...]), partitions]
+    or
+    Series if `src` return directly.
     """
     curl = 0
     level = pconf["level"]
     envp = EnvParser()
+
+    if isinstance(src, pd.Series):
+        idx_names = [*src.index.names]
+    else:
+        idx_names = [None, ]
+
+    # Parse part top-down.
     while curl < level:
         rets = {}
         steps = pconf[f"steps_{curl}"]
-        idkey_cols = [col for col in pconf.index
-                      if col.startswith(f"idkey_{curl}")]
-        idkey_steps = pconf[idkey_cols]
+        # It's allowed to set multiple idkeys for one level.
+        idkey_steps = pconf[f"idkey_{curl}"].split(",")
+        idnames = pconf[f"idname_{curl}"].split(",")
+        idx_names.extend(idnames)
+        idx_names.append(f"RANGE_{len(idx_names)}")
+
         for idx, rec in src.items():
             if rec is None:
                 vals = None
@@ -136,14 +172,18 @@ def parse_parts(
         src = rets
         curl += 1
 
+    src = pd.Series(src)
+    if not src.empty:
+        src.index.set_names(idx_names, inplace=True)
+
     return src
 
 
 # %%
 def parse_2df(
     src: pd.Series,
-    confs: pd.DataFrame,
-    level: int = 0
+    conf: pd.DataFrame,
+    level: int = 0,
 ) -> pd.DataFrame:
     """Parse Series of records into DataFrame.
 
@@ -158,11 +198,16 @@ def parse_2df(
     ------------------
     src: pd.Series[index, json-string]
       Each item represents a record.
-    confs: pd.DataFrame with Columns[key, steps, from_, dtype]
-      `key` and `steps` are necessary.
-      `from_`: None will be used as default, namely the fields will be
-         extracted from the original records.
-      `dtype`: VARCHAR(255) will be used as default.
+    conf: pd.DataFrame with Columns[key, steps, from_, dtype]
+      key and `steps` are necessary.
+      from_: None will be used as default, namely the fields will be
+        extracted from the original records.
+      dtype: VARCHAR(255) will be used as default.
+      default: Default value if dtype conversion failed.
+      use_default: If use the default value.
+        It's common to use `None`、`np.nan` or any other value as default, so
+        `use_default`, as flag, indicating if corresponsible `default` will
+        take effect is necessary.
     level: The level of the DataFrame.
 
     Return:
@@ -170,14 +215,31 @@ def parse_2df(
     DataFrame for level-0: Column[keys], Index[src.index]
     DataFrame for level-1: Column[keys], Index[(src.index, Range(N))]
     """
-    if "from_" not in confs:
-        confs["from_"] = None
-    if "dtype" not in confs:
-        confs["dtype"] = "VARCHAR(255)"
+    # Set dtype and default value.
+    if "from_" not in conf:
+        conf["from_"] = None
+    if "dtype" not in conf:
+        conf["dtype"] = "VARCHAR(255)"
 
-    rules = confs[["key", "from_", "steps", "dtype"]].values
+    conf["dtype"] = conf["dtype"].str.upper()
+    if "default" in conf and "use_default" in conf:
+        rules = []
+        for idx, rule_ser in conf.iterrows():
+            if rule_ser["use_default"]:
+                rules.append((rule_ser["key"], rule_ser["from_"],
+                              rule_ser["steps"], rule_ser["dtype"],
+                              rule_ser["default"]))
+            else:
+                rules.append((rule_ser["key"], rule_ser["from_"],
+                              rule_ser["steps"], rule_ser["dtype"]))
+    elif "default" in conf:
+        rules = conf[["key", "from_", "steps", "dtype", "default"]].values
+    else:
+        rules = conf[["key", "from_", "steps", "dtype"]].values
+
+    # Iterate over `src` to parse.
+    idx_names = src.index.names
     envp = EnvParser()
-
     rets = {}
     for idx, rec in src.items():
         if rec is None:
@@ -187,12 +249,13 @@ def parse_2df(
                 rec = json.loads(rec)
             except json.JSONDecodeError as e:
                 logger.warning(e)
+
         vals = rebuild_dict(rec, rules, envp)
 
         if level == 0:
             rets[idx] = vals
         else:
-            # In case `vals` is a list of None or something else invaid.
+            # In case `vals` is a list of None or something else invalid.
             try:
                 vals = pd.DataFrame(vals)
                 rets[idx] = vals
@@ -202,11 +265,222 @@ def parse_2df(
     # In case no valid infos extracted from `src`.
     # For example, all fields are None when level if 2.
     if not rets:
-        return pd.DataFrame(columns=confs["key"])
+        return pd.DataFrame(columns=conf["key"])
 
     if level == 0:
         dfrets = pd.DataFrame(rets).T
+        dfrets.index.set_names(idx_names, inplace=True)
     else:
         dfrets = pd.concat(rets.values(), keys=rets.keys())
+        dfrets.index.set_names(idx_names + [f"RANGE_{len(idx_names)}"],
+                               inplace=True)
 
     return dfrets
+
+
+# %%
+def transform_part(
+    df: pd.DataFrame,
+    conf: pd.DataFrame,
+    env: Mapping = None,
+    envp: EnvParser = None,
+) -> pd.DataFrame:
+    """Apply transformation on DataFrame.
+
+    Apply transformation on `df` and add the result to `df` directly.
+
+    Params:
+    --------------------
+    df: DataFrame of data.
+    conf: DataFrame with Columns["key", "conds", "trans"].
+      key: Column name.
+      conds: Execution string, passed to EnvParser, to filter rows in `df`,
+        which should return boolean Series for filtering.
+      trans: Execution string, passed to EnvParser, to apply
+        element-granularity transformation.
+    env: Mapping to provide extra searching space, mapping reference for
+      example.
+    envp: EnvParser to execute string.
+      ATTENTION: `env` will be ignored is `envp` is passed.
+
+    Return:
+    --------------------
+    `df` with transformation columns.
+    """
+    if envp is None:
+        if env is None:
+            envp = EnvParser(CALLS)
+        else:
+            envp = EnvParser(ChainMap(env, CALLS))
+    envp.bind_env(df)
+
+    for idx, item in conf.iterrows():
+        key = item["key"]
+        filter_ = item["conds"]
+        apply = item["trans"]
+
+        if filter_ is None:
+            df[key] = envp.parse(apply)
+        else:
+            df.loc[envp.parse(filter_), key] = envp.parse(apply)
+
+    return df
+
+
+# %%
+def agg_part(
+    df: pd.DataFrame,
+    conf: pd.DataFrame,
+    group_key: tuple,
+    env: Mapping = None,
+    envp: EnvParser = None,
+) -> pd.DataFrame:
+    """Apply aggregation on DataFrame's groups.
+
+    Aggregate on `df` according to `conf`.
+    1. Aggregations are applied on groups grouped by index or columns alone
+      indicated by `group_key`, which will be determined after testing if keys
+      in `group_key` are included in columns.
+
+    Params:
+    --------------------
+    df: DataFrame of data.
+    conf: DataFrame with Columns["key", "conds", "aggs"].
+      key: Column name.
+      conds: Execution string, passed to EnvParser, to filter rows in `df`,
+        which should return boolean Series for filtering.
+      aggs: Execution string, passed to EnvParser, to apply column-granularity
+        aggregation.
+    group_key: Group keys.
+      Note: `DataFrame.groupby` will search the name of index automatically.
+    env: Mapping to provide extra searching space, mapping reference for
+      example.
+    envp: EnvParser to execute string.
+      ATTENTION: `env` will be ignored is `envp` is passed.
+
+    Return:
+    --------------------
+    DataFrame of aggregations.
+    """
+    if envp is None:
+        if env is None:
+            envp = EnvParser(CALLS)
+        else:
+            envp = EnvParser(ChainMap(env, CALLS))
+
+    # Closure for apply on each group.
+    def exec_agg(x):
+        ret = {}
+        for idx, item in conf.iterrows():
+            key = item["key"]
+            cond = item["conds"]
+            agg = item["aggs"]
+
+            if cond:
+                cc = envp.bind_env(x).parse(cond)
+                ret[key] = envp.bind_env(x[cc]).parse(agg)
+            else:
+                ret[key] = envp.bind_env(x).parse(agg)
+
+        return pd.Series(ret)
+
+    ret = df.groupby(group_key).apply(exec_agg)
+
+    return ret
+
+
+# %%
+def apply_3stages(
+    src: dict[str, pd.DataFrame],
+    tconfs: pd.DataFrame,
+    pconfs: pd.DataFrame,
+    aconfs: pd.DataFrame,
+    env: Mapping,
+) -> dict[str, pd.DataFrame]:
+    """Apply transformation and aggregation.
+
+    1. Transform.
+    2. Join.
+    3. Aggragate on groups.
+
+    Params:
+    ------------------------
+    src: Dict of DataFrame.
+    tconfs:
+      part: Part name.
+      key: Column name.
+      conds: Execution string, passed to EnvParser, to filter rows in `df`,
+        which should return boolean Series for filtering.
+      trans: Execution string, passed to EnvParser, to apply
+        element-granularity transformation.
+    pconfs:
+      part: Part name.
+      level: The level of the partition, namely the granularity that the
+        partition could describe.
+      from_: Part names seperated by `,`.
+      join_key: Primary keys seperated by `,` while joining and grouping.
+    aconfs:
+      part: Part name.
+      key: Column name.
+      conds: Execution string, passed to EnvParser, to filter rows in `df`,
+        which should return boolean Series for filtering.
+      aggs: Execution string, passed to EnvParser, to apply column-granularity
+        aggregation.
+    env: Mapping to provide extra searching space, mapping reference for
+      example.
+
+    Return:
+    ------------------------
+    dict[part, DataFrame of aggregation]
+    """
+    aggret = {}
+    cm = ChainMap(aggret, src)
+    envp = EnvParser(ChainMap(CALLS, env))
+
+    # Apply transformation.
+    for part, df in src.items():
+        tconf = tconfs[tconfs["part"] == part]
+        if tconf.empty:
+            continue
+        transform_part(df, tconf, envp=envp)
+
+    # Apply aggregation.
+    for curl in range(pconfs["level"].max(), pconfs["level"].min() - 1, -1):
+        for idx, pconf in pconfs[pconfs["level"] == curl].iterrows():
+            part = pconf["part"]
+            # Skip if `from_` is None which indicating the `pconf` is not for
+            # aggregating.
+            if pd.isna(pconf["from_"]) or (not pconf["from_"]):
+                continue
+            from_ = pconf["from_"].split(",")
+
+            # Join on the index.
+            if len(from_) == 1:
+                df = src[from_[0]]
+            # Join on the determined columns.
+            # Join-key could be index, as `merge` will search the index's name
+            #   automatically if the index is named.
+            # Attention: `from_` is presumed to be processed before, so that
+            #   to get `join_key` from `jkeys` directly.
+            else:
+                ele = from_[0]
+                df = cm[ele]
+                if df.empty:
+                    continue
+                ljk = pconfs[pconfs["part"] == ele].iloc[0]["join_key"]
+                ljk = ljk.split(",") if ljk else []
+                for ele in from_[1:]:
+                    rjk = pconfs[pconfs["part"] == ele].iloc[0]["join_key"]
+                    rjk = rjk.split(",") if rjk else []
+                    df = df.merge(cm[ele], how="outer", left_on=ljk,
+                                  right_on=rjk)
+
+            aconf = aconfs[aconfs["part"] == part]
+            jk = pconf["join_key"].split(",") if pconf["join_key"] else []
+            if df.empty:
+                aggret[part] = pd.DataFrame()
+            else:
+                ret = agg_part(df, aconf, jk, envp=envp)
+                aggret[part] = ret
+
+    return aggret
