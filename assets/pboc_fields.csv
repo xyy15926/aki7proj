@@ -235,8 +235,8 @@ pboc_acc_info,PD01GS01,PD01G:PD01GS01,int,特殊事件记录数
 pboc_acc_info,PD01HS01,PD01H:PD01HS01,int,大额专项分期记录数
 pboc_acc_info,PD01ZH,PD01Z:PD01ZH,text,标注或声明内容
 pboc_acc_info,PD01ZS01,PD01Z:PD01ZS01,int,PD01ZH 中记录数
-pboc_acc_repay_24_monthly,PD01ER03,PD01DR03,date,近24个月_月份
-pboc_acc_repay_24_monthly,PD01ED01,PD01DD01,varchar(31),近24个月_还款状态
+pboc_acc_repay_24_monthly,PD01DR03,PD01DR03,date,近24个月_月份
+pboc_acc_repay_24_monthly,PD01DD01,PD01DD01,varchar(31),近24个月_还款状态
 pboc_acc_repay_60_monthly,PD01ER03,PD01ER03,date,月份
 pboc_acc_repay_60_monthly,PD01ED01,PD01ED01,varchar(31),还款状态
 pboc_acc_repay_60_monthly,PD01EJ01,PD01EJ01,int,逾期（透支）总额
