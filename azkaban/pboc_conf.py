@@ -3,7 +3,7 @@
 #   Name: ka.py
 #   Author: xyy15926
 #   Created: 2022-11-10 21:44:59
-#   Updated: 2024-03-03 19:34:48
+#   Updated: 2024-03-04 17:54:52
 #   Description:
 # ----------------------------------------------------------
 
@@ -144,126 +144,126 @@ def gen_confs():
 # %%
 MAPPERS = {
     "repay_status": {
-        "1": 1,         # 逾期1-30天
-        "2": 2,         # 逾期31-60天
-        "3": 3,         # 逾期61-90天
-        "4": 4,         # 逾期91-120天
-        "5": 5,         # 逾期121-150天
-        "6": 6,         # 逾期151-180天
-        "7": 7,         # 逾期180天以上
-        "*": 0,         # 当月不需要还款且之前没有拖欠
-        "#": 0,         # 未知
-        "/": 0,         # 跳过
-        "A": 0,         # 账单日调整,当月不出单
-        "B": 7,         # 呆账
-        "C": 0,         # 结清、正常销户
-        "D": 1,         # 担保人代还
-        "G": 7,         # （非正常销户）结束
-        "M": 0,         # 约定还款日后月底前还款
-        "N": 0,         # 正常还款
-        "Z": 1,         # 以资抵债
+        "1": (1  , "逾期1-30天"),
+        "2": (2  , "逾期31-60天"),
+        "3": (3  , "逾期61-90天"),
+        "4": (4  , "逾期91-120天"),
+        "5": (5  , "逾期121-150天"),
+        "6": (6  , "逾期151-180天"),
+        "7": (7  , "逾期180天以上"),
+        "*": (0  , "当月不需要还款且之前没有拖欠"),
+        "#": (0  , "未知"),
+        "/": (0  , "跳过"),
+        "A": (0  , "账单日调整,当月不出单"),
+        "B": (7  , "呆账"),
+        "C": (0  , "结清、正常销户"),
+        "D": (1  , "担保人代还"),
+        "G": (7  , "（非正常销户）结束"),
+        "M": (0  , "约定还款日后月底前还款"),
+        "N": (0  , "正常还款"),
+        "Z": (1  , "以资抵债"),
     },
     "exchange_rate": {
-        "USD": 7,
-        "EUR": 7.7,
-        "JPY": 0.05,
-        "CNY": 1,
-        "AUD": 4.7,
-        "RUB": 0.07,
-        "CAD": 5.3,
+        "USD": (7       , "USD"),
+        "EUR": (7.7     , "EUR"),
+        "JPY": (0.05    , "JPY"),
+        "CNY": (1       , "CNY"),
+        "AUD": (4.7     , "AUD"),
+        "RUB": (0.07    , "RUB"),
+        "CAD": (5.3     , "CAD"),
     },
     "special_trans_type": {
         # 性质逐渐恶劣
-        "1": 1,         # 展期
-        "2": 4,         # 担保人(第三方)代偿
-        "3": 4,         # 以资抵债
-        "4": 0,         # 提前还款
-        "5": 0,         # 提前结清
-        "6": 4,         # 强制平仓,未结清
-        "7": 3,         # 强制平仓,已结清
-        "8": 4,         # 司法追偿
-        "9": 1,         # 其他
-        "11": 2,        # 债务减免
-        "12": 2,        # 资产剥离
-        "13": 2,        # 资产转让
-        "14": 1,        # 信用卡个性化分期
-        "16": 1,        # 落实金融纾困等政策银行主动延期
-        "17": 3,        # 强制平仓
+        "1": (1         , "展期"),
+        "2": (4         , "担保人(第三方)代偿"),
+        "3": (4         , "以资抵债"),
+        "4": (0         , "提前还款"),
+        "5": (0         , "提前结清"),
+        "6": (4         , "强制平仓,未结清"),
+        "7": (3         , "强制平仓,已结清"),
+        "8": (4         , "司法追偿"),
+        "9": (1         , "其他"),
+        "11": (2        , "债务减免"),
+        "12": (2        , "资产剥离"),
+        "13": (2        , "资产转让"),
+        "14": (1        , "信用卡个性化分期"),
+        "16": (1        , "落实金融纾困等政策银行主动延期"),
+        "17": (3        , "强制平仓"),
     },
     "biz_cat": {
         # 贷款类业务
-        "11": 111,      # 个人住房商业贷款
-        "12": 112,      # 个人商用房(含商住两用)贷款
-        "13": 113,      # 个人住房公积金贷款
-        "21": 121,      # 个人汽车消费贷款
-        "31": 131,      # 个人助学贷款
-        "32": 132,      # 国家助学贷款
-        "33": 133,      # 商业助学贷款
-        "41": 141,      # 个人经营性贷款
-        "42": 142,      # 个人创业担保贷款
-        "51": 143,      # 农户贷款
-        "52": 144,      # 经营性农户贷款
-        "53": 151,      # 消费性农户贷款
-        "91": 152,      # 其他个人消费贷款
-        "99": 161,      # 其他贷款
+        "11": (111      , "个人住房商业贷款"),
+        "12": (112      , "个人商用房(含商住两用)贷款"),
+        "13": (113      , "个人住房公积金贷款"),
+        "21": (121      , "个人汽车消费贷款"),
+        "31": (131      , "个人助学贷款"),
+        "32": (132      , "国家助学贷款"),
+        "33": (133      , "商业助学贷款"),
+        "41": (141      , "个人经营性贷款"),
+        "42": (142      , "个人创业担保贷款"),
+        "51": (143      , "农户贷款"),
+        "52": (144      , "经营性农户贷款"),
+        "53": (151      , "消费性农户贷款"),
+        "91": (152      , "其他个人消费贷款"),
+        "99": (161      , "其他贷款"),
         # 信用卡类业务
-        "71": 211,      # 准贷记卡
-        "81": 221,      # 贷记卡
-        "82": 231,      # 大额专项分期卡
+        "71": (211      , "准贷记卡"),
+        "81": (221      , "贷记卡"),
+        "82": (231      , "大额专项分期卡"),
         # 证券融资类业务
-        "61": 311,      # 约定购回式证券交易
-        "62": 321,      # 股票质押式回购交易
-        "63": 331,      # 融资融券业务
-        "64": 341,      # 其他证券类融资
+        "61": (311      , "约定购回式证券交易"),
+        "62": (321      , "股票质押式回购交易"),
+        "63": (331      , "融资融券业务"),
+        "64": (341      , "其他证券类融资"),
         # 融资租赁业务
-        "92": 411,      # 融资租赁业务
+        "92": (411      , "融资租赁业务"),
         # 资产处置
-        "A1": 511,      # 资产处置
+        "A1": (511      , "资产处置"),
         # 代偿
-        "B1": 611,      # 代偿债务
+        "B1": (611      , "代偿债务"),
     },
     "cdr_cat": {
-        "D1": 1,        # 非循环贷账户
-        "R1": 3,        # 循环贷账户
-        "R2": 4,        # 贷记卡账户
-        "R3": 5,        # 准贷记卡账户
-        "R4": 2,        # 循环额度下分账户
-        "C1": 99,       # 催收账户
+        "D1": (1        , "非循环贷账户"),
+        "R1": (3        , "循环贷账户"),
+        "R2": (4        , "贷记卡账户"),
+        "R3": (5        , "准贷记卡账户"),
+        "R4": (2        , "循环额度下分账户"),
+        "C1": (99       , "催收账户"),
     },
     "org_cat": {
         # 银行
-        "11": 11,       # 商业银行
-        "12": 12,       # 村镇银行
-        "14": 14,       # 住房储蓄银行
-        "15": 15,       # 外资银行
+        "11": (11       , "商业银行"),
+        "12": (12       , "村镇银行"),
+        "14": (14       , "住房储蓄银行"),
+        "15": (15       , "外资银行"),
         # 非银金融机构
-        "16": 27,       # 财务公司
-        "21": 21,       # 信托公司
-        "22": 22,       # 融资租赁公司
-        "23": 23,       # 汽车金融公司
-        "24": 24,       # 消费金融公司
-        "25": 25,       # 贷款公司
-        "26": 26,       # 金融资产管理公司
-        "31": 31,       # 证券公司
-        "41": 41,       # 保险公司
-        "51": 51,       # 小额贷款公司
-        "53": 53,       # 融资担保公司
-        "54": 54,       # 保理公司
+        "16": (27       , "财务公司"),
+        "21": (21       , "信托公司"),
+        "22": (22       , "融资租赁公司"),
+        "23": (23       , "汽车金融公司"),
+        "24": (24       , "消费金融公司"),
+        "25": (25       , "贷款公司"),
+        "26": (26       , "金融资产管理公司"),
+        "31": (31       , "证券公司"),
+        "41": (41       , "保险公司"),
+        "51": (51       , "小额贷款公司"),
+        "53": (53       , "融资担保公司"),
+        "54": (54       , "保理公司"),
         # 其他机构
-        "52": 98,       # 公积金管理中心
-        "99": 99,       # 其他机构
+        "52": (98       , "公积金管理中心"),
+        "99": (99       , "其他机构"),
 
     },
     "trans_status": {
-        "0": 0,         # 债务人即将违约时自动垫款
-        "1": 1,         # 逾期1-30天
-        "2": 2,         # 逾期31-60天
-        "3": 3,         # 逾期61-90天
-        "4": 4,         # 逾期91-120天
-        "5": 5,         # 逾期121-150天
-        "6": 6,         # 逾期151-180天
-        "7": 7,         # 逾期180天以上
-        "9": 0,         # 未知
+        "0": (0         , "债务人即将违约时自动垫款"),
+        "1": (1         , "逾期1-30天"),
+        "2": (2         , "逾期31-60天"),
+        "3": (3         , "逾期61-90天"),
+        "4": (4         , "逾期91-120天"),
+        "5": (5         , "逾期121-150天"),
+        "6": (6         , "逾期151-180天"),
+        "7": (7         , "逾期180天以上"),
+        "9": (0         , "未知"),
     },
     # 0: 结清、关闭、未激活
     # 1x: 正常
@@ -271,91 +271,83 @@ MAPPERS = {
     # 3x: 平仓、止付、冻结、转出
     # 99: 呆账
     "c1_acc_status": {
-        "1": 22,    # 催收
-        "2": 0,     # 结束
+        "1": (22        , "催收"),
+        "2": (0         , "结束"),
     },
     "d1_acc_status": {
-        "1": 11,    # 正常
-        "2": 21,    # 逾期
-        "3": 0,     # 结清
-        "4": 99,    # 呆账
-        "5": 36,    # 转出
-        "6": 31,    # 担保物不足
-        "7": 32,    # 强制平仓
-        "8": 23,    # 司法追偿
+        "1": (11        , "正常"),
+        "2": (21        , "逾期"),
+        "3": (0         , "结清"),
+        "4": (99        , "呆账"),
+        "5": (36        , "转出"),
+        "6": (31        , "担保物不足"),
+        "7": (32        , "强制平仓"),
+        "8": (23        , "司法追偿"),
     },
     "r4_acc_status": {
-        "1": 11,    # 正常
-        "2": 21,    # 逾期
-        "3": 0,     # 结清
-        "4": 99,    # 呆账
-        "6": 31,    # 担保物不足
-        "8": 23,    # 司法追偿
+        "1": (11        , "正常"),
+        "2": (21        , "逾期"),
+        "3": (0         , "结清"),
+        "4": (99        , "呆账"),
+        "6": (31        , "担保物不足"),
+        "8": (23        , "司法追偿"),
     },
     "r1_acc_status": {
-        "1": 11,    # 正常
-        "2": 21,    # 逾期
-        "3": 0,     # 结清
-        "4": 99,    # 呆账
-        "5": 33,    # 银行止付
-        "6": 31,    # 担保物不足
-        "8": 23,    # 司法追偿
+        "1": (11        , "正常"),
+        "2": (21        , "逾期"),
+        "3": (0         , "结清"),
+        "4": (99        , "呆账"),
+        "5": (33        , "银行止付"),
+        "6": (31        , "担保物不足"),
+        "8": (23        , "司法追偿"),
     },
     "r23_acc_status": {
-        "1": 11,    # 正常
-        "2": 35,    # 冻结
-        "3": 34,    # 止付
-        "31": 33,   # 银行止付
-        "4": 0,     # 销户
-        "5": 99,    # 呆账
-        "6": 0,     # 未激活
-        "8": 23,    # 司法追偿
+        "1": (11        , "正常"),
+        "2": (35        , "冻结"),
+        "3": (34        , "止付"),
+        "31":(33        , "银行止付"),
+        "4": (0         , "销户"),
+        "5": (99        , "呆账"),
+        "6": (0         , "未激活"),
+        "8": (23        , "司法追偿"),
     },
     "lvl5_status": {
-        "1": 1,         # 正常
-        "2": 2,         # 关注
-        "3": 3,         # 次级
-        "4": 4,         # 可疑
-        "5": 5,         # 损失
-        "6": 6,         # 违约
-        "9": 1,         # 未分类
+        "1": (1         , "正常"),
+        "2": (2         , "关注"),
+        "3": (3         , "次级"),
+        "4": (4         , "可疑"),
+        "5": (5         , "损失"),
+        "6": (6         , "违约"),
+        "9": (1         , "未分类"),
     },
-    "postfee_cat": {
-        "TE": 1,        # 电信缴费账户
-        "UE": 2,        # 公用事业缴费账户
+    "postfee_acc_cat_M": {
+        "TE": (1        , "电信缴费账户"),
+        "UE": (2        , "公用事业缴费账户"),
     },
-    "postfee_status": {
-        "0": 0,         # 正常
-        "1": 1,         # 欠费
+    "postfee_acc_status_M": {
+        "0": (0         , "正常"),
+        "1": (1         , "欠费"),
     },
     "inq_reason_cat": {
         # 1x: 贷前、保前、授信首批
         # 2x: 贷后、保后管理
         # 3x: 关联业务审查
         # 4x: 司法调查
-        "1": 21,        # 贷后管理
-        "2": 11,        # 贷款审批
-        "3": 12,        # 信用卡审批
-        "8": 13,        # 担保资格审查
-        "9": 41,        # 司法调查
-        "16": 14,       # 公积金提取复核查询
-        "18": 15,       # 股指期货开户
-        "19": 31,       # 特约商户实名审查
-        "20": 16,       # 保前审查
-        "21": 22,       # 保后管理
-        "22": 32,       # 法人代表、负责人、高管等资信审查
-        "23": 33,       # 客户准入资格审查
-        "24": 17,       # 融资审批
-        "25": 34,       # 资信审查
-        "26": 18,       # 额度审批
-    },
-    "postfee_acc_cat_M": {
-        "TE": 1,        # 电信缴费账户
-        "UE": 2,        # 公共事业缴费账户
-    },
-    "postfee_acc_status_M": {
-        "1": 1,         # 正常
-        "0": 0,         # 欠费
+        "1": (21        , "贷后管理"),
+        "2": (11        , "贷款审批"),
+        "3": (12        , "信用卡审批"),
+        "8": (13        , "担保资格审查"),
+        "9": (41        , "司法调查"),
+        "16": (14       , "公积金提取复核查询"),
+        "18": (15       , "股指期货开户"),
+        "19": (31       , "特约商户实名审查"),
+        "20": (16       , "保前审查"),
+        "21": (22       , "保后管理"),
+        "22": (32       , "法人代表、负责人、高管等资信审查"),
+        "23": (33       , "客户准入资格审查"),
+        "24": (17       , "融资审批"),
+        "25": (34       , "资信审查"),
+        "26": (18       , "额度审批"),
     },
 }
 
@@ -363,71 +355,71 @@ MAPPERS = {
 # %%
 TRANS_CONF = {
     "pboc_acc_repay_60_monthly": [
-        ["acc_repay_status"             , "map(PD01ED01, repay_status)"             , None],
-        ["acc_repay_moi"                , "mon_itvl(PD01ER03, today)"               , None]
+        ["acc_repay_status"             , "map(PD01ED01, repay_status)"         , None  , "还款状态"],
+        ["acc_repay_moi"                , "mon_itvl(PD01ER03, today)"           , None  , "还款月距今月"]
     ],
     "pboc_acc_special_trans": [
-        ["acc_special_trans_type"       , "map(PD01FD01, special_trans_type)"       , None],
-        ["acc_special_trans_moi"        , "mon_itvl(PD01FR01, today)"               , None],
+        ["acc_special_trans_type"       , "map(PD01FD01, special_trans_type)"   , None  , "特殊交易类型"],
+        ["acc_special_trans_moi"        , "mon_itvl(PD01FR01, today)"           , None  , "特殊交易距今月"],
     ],
     "pboc_acc_special_accd": [
-        ["acc_special_accd_moi"         , "mon_itvl(PD01GR01, today)"               , None],
+        ["acc_special_accd_moi"         , "mon_itvl(PD01GR01, today)"           , None  , "特殊事件距今月"],
     ],
     "pboc_acc_special_insts": [
-        ["acc_special_insts_moi_start"  , "mon_itvl(PD01HR01, today)"               , None],
-        ["acc_special_insts_moi_end"    , "mon_itvl(PD01HR02, today)"               , None],
+        ["acc_special_insts_moi_start"  , "mon_itvl(PD01HR01, today)"           , None  , "大额分期起始距今月"],
+        ["acc_special_insts_moi_end"    , "mon_itvl(PD01HR02, today)"           , None  , "大额分期结束距今月"],
     ],
     "pboc_acc_info": [
         # 账户信息
-        ["acc_cat"                      , "map(PD01AD01, cdr_cat)"                  , None],
-        ["acc_org_cat"                  , "map(PD01AD02, org_cat)"                  , None],
-        ["acc_biz_cat"                  , "map(PD01AD03, biz_cat)"                  , None],
-        ["acc_trans_status"             , "map(PD01AD10, trans_status)"             , None],
-        ["acc_lmt"                      , "cb_fst(PD01AJ01, PD01AJ02)"              , None],
-        ["acc_moi_start"                , "mon_itvl(PD01AR01, today)"               , None],
-        ["acc_moi_end"                  , "mon_itvl(PD01AR02, today)"               , None],
-        ["last_6m_avg_usd"              , "cb_fst(PD01CJ12, PD01CJ13)"              , None],
-        ["last_6m_max_usd"              , "cb_fst(PD01CJ14, PD01CJ15)"              , None],
+        ["acc_cat"                      , "map(PD01AD01, cdr_cat)"              , None  , "账户类型"],
+        ["acc_org_cat"                  , "map(PD01AD02, org_cat)"              , None  , "管理机构类型"],
+        ["acc_biz_cat"                  , "map(PD01AD03, biz_cat)"              , None  , "账户业务类型"],
+        ["acc_trans_status"             , "map(PD01AD10, trans_status)"         , None  , "C1账户转移时状态"],
+        ["acc_lmt"                      , "cb_fst(PD01AJ01, PD01AJ02)"          , None  , "账户借款、授信额"],
+        ["acc_moi_start"                , "mon_itvl(PD01AR01, today)"           , None  , "账户起始距今月"],
+        ["acc_moi_end"                  , "mon_itvl(PD01AR02, today)"           , None  , "账户结束距今月"],
+        ["last_6m_avg_usd"              , "cb_fst(PD01CJ12, PD01CJ13)"          , None  , "R23账户最近6月平均透支额"],
+        ["last_6m_max_usd"              , "cb_fst(PD01CJ14, PD01CJ15)"          , None  , "R23账户最近6月最大透支额"],
         # 最新表现
-        ["cur_acc_status"               , "map(PD01BD01, c1_acc_status)"            , "acc_cat == 99"],
-        ["cur_acc_status"               , "map(PD01BD01, d1_acc_status)"            , "acc_cat == 1"],
-        ["cur_acc_status"               , "map(PD01BD01, r4_acc_status)"            , "acc_cat == 2"],
-        ["cur_acc_status"               , "map(PD01BD01, r1_acc_status)"            , "acc_cat == 3"],
-        ["cur_acc_status"               , "map(PD01BD01, r23_acc_status)"           , "(acc_cat >= 4) & (acc_cat <= 5)"],
-        ["cur_lvl5_status"              , "map(PD01BD03, lvl5_status)"              , None],
-        ["cur_repay_status"             , "map(PD01BD03, repay_status)"             , None],
-        ["cur_moi_closed"               , "mon_itvl(PD01BR01, today)"               , None],
-        ["cur_doi_last_repay"           , "day_itvl(PD01BR02, today)"               , None],
-        ["cur_doi_report"               , "day_itvl(PD01BR03, today)"               , None],
+        ["cur_acc_status"               , "map(PD01BD01, c1_acc_status)"        , "acc_cat == 99"   , "最近状态"],
+        ["cur_acc_status"               , "map(PD01BD01, d1_acc_status)"        , "acc_cat == 1"    , "最近状态"],
+        ["cur_acc_status"               , "map(PD01BD01, r4_acc_status)"        , "acc_cat == 2"    , "最近状态"],
+        ["cur_acc_status"               , "map(PD01BD01, r1_acc_status)"        , "acc_cat == 3"    , "最近状态"],
+        ["cur_acc_status"               , "map(PD01BD01, r23_acc_status)"       , "(acc_cat >= 4) & (acc_cat <= 5)" , "最近状态"],
+        ["cur_lvl5_status"              , "map(PD01BD03, lvl5_status)"          , None  , "最近5级分类"],
+        ["cur_repay_status"             , "map(PD01BD03, repay_status)"         , None  , "最近还款状态"],
+        ["cur_moi_closed"               , "mon_itvl(PD01BR01, today)"           , None  , "最近关闭时间"],
+        ["cur_doi_last_repay"           , "day_itvl(PD01BR02, today)"           , None  , "最近还款距今日"],
+        ["cur_doi_report"               , "day_itvl(PD01BR03, today)"           , None  , "最近报告日期距今日"],
         # 月度表现
-        ["monthly_acc_status"           , "map(PD01CD01, d1_acc_status)"            , "acc_cat == 1"],
-        ["monthly_acc_status"           , "map(PD01CD01, r4_acc_status)"            , "acc_cat == 2"],
-        ["monthly_acc_status"           , "map(PD01CD01, r1_acc_status)"            , "acc_cat == 3"],
-        ["monthly_acc_status"           , "map(PD01CD01, r23_acc_status)"           , "(acc_cat >= 4) & (acc_cat <= 5)"],
-        ["monthly_lvl5_status"          , "map(PD01CD02, lvl5_status)"              , None],
-        ["monthly_doi_last_repay"       , "day_itvl(PD01CR03, today)"               , None],
-        ["monthly_doi_report"           , "day_itvl(PD01CR01, today)"               , None],
+        ["monthly_acc_status"           , "map(PD01CD01, d1_acc_status)"        , "acc_cat == 1"    , "月度状态"],
+        ["monthly_acc_status"           , "map(PD01CD01, r4_acc_status)"        , "acc_cat == 2"    , "月度状态"],
+        ["monthly_acc_status"           , "map(PD01CD01, r1_acc_status)"        , "acc_cat == 3"    , "月度状态"],
+        ["monthly_acc_status"           , "map(PD01CD01, r23_acc_status)"       , "(acc_cat >= 4) & (acc_cat <= 5)" , "月度状态"],
+        ["monthly_lvl5_status"          , "map(PD01CD02, lvl5_status)"          , None  , "月度5级分类"],
+        ["monthly_doi_last_repay"       , "day_itvl(PD01CR03, today)"           , None  , "月度还款距今日"],
+        ["monthly_doi_report"           , "day_itvl(PD01CR01, today)"           , None  , "月度报告日期距今日"],
     ],
     "pboc_credit_info": [
-        ["credit_org_cat"               , "map(PD02AD01, org_cat)"                  , None],
-        ["credit_moi_start"             , "mon_itvl(PD02AR01, today)"               , None],
-        ["credit_moi_end"               , "mon_itvl(PD02AR02, today)"               , None],
+        ["credit_org_cat"               , "map(PD02AD01, org_cat)"              , None  , "授信账户管理机构类型"],
+        ["credit_moi_start"             , "mon_itvl(PD02AR01, today)"           , None  , "授信起始距今月"],
+        ["credit_moi_end"               , "mon_itvl(PD02AR02, today)"           , None  , "授信截至距今月"],
     ],
     "pboc_rel_info": [
-        ["rel_org_cat"                  , "map(PD03AD01, org_cat)"                  , None],
-        ["rel_biz_cat"                  , "map(PD03AD02, biz_cat)"                  , None],
-        ["rel_lvl5_status"              , "map(PD03AD05, lvl5_status)"              , None],
-        ["rel_repay_status"             , "map(PD03AD07, repay_status)"             , None],
-        ["rel_moi_start"                , "mon_itvl(PD03AR01, today)"               , None],
-        ["rel_moi_end"                  , "mon_itvl(PD03AR02, today)"               , None],
+        ["rel_org_cat"                  , "map(PD03AD01, org_cat)"              , None  , "相关还款责任管理机构类型"],
+        ["rel_biz_cat"                  , "map(PD03AD02, biz_cat)"              , None  , "相关还款责任业务类型"],
+        ["rel_lvl5_status"              , "map(PD03AD05, lvl5_status)"          , None  , "相关还款责任5级分类"],
+        ["rel_repay_status"             , "map(PD03AD07, repay_status)"         , None  , "相关还款责任还款状态"],
+        ["rel_moi_start"                , "mon_itvl(PD03AR01, today)"           , None  , "相关还款责任起始距今"],
+        ["rel_moi_end"                  , "mon_itvl(PD03AR02, today)"           , None  , "相关还款责任截至距今"],
     ],
     "pboc_postfee_info": [
-        ["postfee_acc_cat"              , "map(PE01AD01, postfee_acc_cat_M)"        , None],
-        ["postfee_acc_status"           , "map(PE01AD03, postfee_acc_status_M)"     , None],
+        ["postfee_acc_cat"              , "map(PE01AD01, postfee_acc_cat_M)"    , None  , "后付费账户类型"],
+        ["postfee_acc_status"           , "map(PE01AD03, postfee_acc_status_M)" , None  , "后付费账户状态"],
     ],
     "pboc_inq_rec": [
-        ["inq_rec_org_cat"              , "map(PH010D01, org_cat)"                  , None],
-        ["inq_rec_reason_cat"           , "map(PH010Q03, inq_reason_cat)"           , None],
+        ["inq_rec_org_cat"              , "map(PH010D01, org_cat)"              , None  , "查询机构类型"],
+        ["inq_rec_reason_cat"           , "map(PH010Q03, inq_reason_cat)"       , None  , "查询原因类型"],
     ],
 }
 
@@ -442,7 +434,7 @@ LV2_AGG_CONF = {
         "group_key": None,
         "key_fmt": "acc_repay_{}_{}",
         "conds": {
-            "mois": ([(f"last_{moi}m", f"acc_repay_moi >= {moi}", f"近{moi}月")
+            "mois": ([(f"last_{moi}m", f"acc_repay_moi >= -{moi}", f"近{moi}月")
                       for moi in [3, 6, 9, 12, 24, 36, 48]]
                      + [("all", None, "历史"), ]),
             "status": [(f"eq{rs}", f"acc_repay_status == {rs}", f"还款状态为{rs}")
@@ -451,13 +443,15 @@ LV2_AGG_CONF = {
         "aggs": {
             "cnt": ("cnt", "count(_)", "期数"),
             "status_max": ("status_max", "max(acc_repay_status)", "最大还款状态"),
+            "status_ovd_conl_max": ("status_ovd_conl_max", "flat1_max(acc_repay_status > 0)", "最长连续逾期期数"),
             "status_sum": ("status_sum", "sum(acc_repay_status)", "还款状态之和"),
             "ovd_max": ("ovd_max", "max(PD01EJ01)", "最大逾期（透支）金额"),
             "ovd_sum": ("ovd_sum", "sum(PD01EJ01)", "逾期（透支）金额之和"),
         },
         "cros": [
             (["cnt",]                           , ["mois", "status"]),
-            (["status_max", "status_sum"]       , ["mois", ]),
+            (["status_max", "status_sum", "status_ovd_conl_max"],
+             ["mois", ]),
             (["ovd_max", "ovd_sum"]             , ["mois", "status"]),
             (["ovd_max", "ovd_sum"]             , ["mois", ]),
         ],
@@ -470,7 +464,7 @@ LV2_AGG_CONF = {
         "group_key": None,
         "key_fmt": "acc_special_trans_{}_{}",
         "conds": {
-            "mois": ([(f"last_{moi}m", f"acc_special_trans_moi >= {moi}", f"近{moi}月")
+            "mois": ([(f"last_{moi}m", f"acc_special_trans_moi >= -{moi}", f"近{moi}月")
                       for moi in [12, 24, 36, 48]]
                      + [("all", None, "历史"), ]),
             "trans": [("nor", "acc_special_trans_type <= 1", "正常类"),
@@ -493,7 +487,7 @@ LV2_AGG_CONF = {
         "group_key": None,
         "key_fmt": "acc_special_accd_{}_{}",
         "conds": {
-            "mois": ([(f"last_{moi}m", f"acc_special_accd_moi >= {moi}",
+            "mois": ([(f"last_{moi}m", f"acc_special_accd_moi >= -{moi}",
                        f"近{moi}月")
                       for moi in [12, 24, 36, 48]]
                      + [("all", None, "历史"), ]),
@@ -709,8 +703,8 @@ LV1_AGG_CONF = {
             "cur_ots_max": ("cur_ots_max", "max(PD01BJ01)", "最新余额最大值"),
             "last_repay_mcnt": ("last_repay_mcnt", "min(mon_itvl(today, PD01BR02))", "最近还款距今"),
             # TODO: implement `argmin`
-            # "last_repay_amt": ("last_repay_amt", "PD01BJ02[argmin(mon_itvl(today, PD01BR02))]", "最近还款金额"),
-            # "last_repay_amt": ("last_repay_amt", "PD01BJ02[argmin(mon_itvl(today, PD01BR02))]", "最近还款金额"),
+            "last_repay_amt": ("last_repay_amt", "PD01BJ02[argmin(mon_itvl(today, PD01BR02))]", "最近还款金额"),
+            "last_repay_amt": ("last_repay_amt", "PD01BJ02[argmin(mon_itvl(today, PD01BR02))]", "最近还款金额"),
             # 月度表现
             "monthly_ots_sum": ("monthly_ots_sum", "sum(PD01CJ01)", "月度余额之和"),
             "monthly_ots_max": ("monthly_ots_max", "max(PD01CJ01)", "月度余额最大值"),

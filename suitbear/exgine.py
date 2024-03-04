@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-03-03 20:22:30
+#   Updated: 2024-03-04 18:21:48
 #   Description:
 # ---------------------------------------------------------
 
@@ -32,6 +32,21 @@ logger.info("Logging Start.")
 
 
 # %%
+def flat1_max(x: pd.Series):
+    """Count the length of max-continuous 1's in x.
+    """
+    x = np.sign(np.asarray(x, dtype=np.int8))
+    if len(x) == 0:
+        return 0
+    if len(x) == 1:
+        return x[0]
+    x = np.concatenate([[0,], x[1:] - x[:-1], [1 if x[-1] == 0 else -1,]])
+    xx = x[x != 0]
+    edges = np.concatenate([[0,], np.arange(len(x))[x != 0]])
+    flat1s = (edges[1:] - edges[:-1])[xx < 0]
+    return 0 if len(flat1s) == 0 else flat1s.max()
+
+
 CALLS = {
     "today"     : pd.Timestamp.today(),
     "map"       : lambda x, y: x.map(y),
@@ -44,6 +59,12 @@ CALLS = {
     "min"       : lambda x: x.min(),
     "nnfilter"  : lambda x: [i for i in x if i is not None],
     "nncount"   : lambda x: len([i for i in x if i is not None]),
+    "flat1_max" : flat1_max,
+    "argmax"    : np.argmax,
+    "argmin"    : np.argmin,
+    "getn"      : lambda x, y: x.iloc[y],
+    "head"      : lambda x, y: x.iloc[:y],
+    "tail"      : lambda x, y: x.iloc[-y:],
 }
 
 
@@ -172,7 +193,7 @@ def parse_parts(
         src = rets
         curl += 1
 
-    src = pd.Series(src)
+    src = pd.Series(src, dtype=object)
     if not src.empty:
         src.index.set_names(idx_names, inplace=True)
 
@@ -478,7 +499,7 @@ def apply_3stages(
             aconf = aconfs[aconfs["part"] == part]
             jk = pconf["join_key"].split(",") if pconf["join_key"] else []
             if df.empty:
-                aggret[part] = pd.DataFrame()
+                aggret[part] = pd.DataFrame(dtype=int)
             else:
                 ret = agg_part(df, aconf, jk, envp=envp)
                 aggret[part] = ret

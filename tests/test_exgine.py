@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-02-01 10:07:31
-#   Updated: 2024-03-03 20:38:26
+#   Updated: 2024-03-04 18:16:03
 #   Description:
 # ---------------------------------------------------------
 
@@ -27,6 +27,8 @@ from suitbear.exgine import parse_2df, parse_parts, parse_2stages
 from suitbear.exgine import transform_part, agg_part, apply_3stages
 from flagbear.fliper import extract_field
 from azkaban.pboc_conf import gen_confs, MAPPERS, TRANS_CONF
+
+MAPPERS_ = {k: {kk: vv[0] for kk, vv in v.items()} for k, v in MAPPERS.items()}
 
 ASSETS = os.path.join(os.curdir, "assets")
 
@@ -145,8 +147,8 @@ def test_transform_part():
     rets = test_parse_2stages()
     df = rets["pboc_acc_info"].copy()
     conf = pd.DataFrame(TRANS_CONF["pboc_acc_info"],
-                        columns=["key", "trans", "conds"])
-    tdf = transform_part(df, conf, MAPPERS)
+                        columns=["key", "trans", "conds", "cmt"])
+    tdf = transform_part(df, conf, MAPPERS_)
 
     assert np.all(tdf.columns.intersection(conf["key"])
                   == conf["key"].drop_duplicates())
@@ -159,7 +161,7 @@ def test_agg_part():
     df = test_transform_part()
     pconfs, aconfs = gen_confs()
     conf = aconfs[aconfs["part"] == "acc_no_cat_info"]
-    adf = agg_part(df, conf, ["rid", "certno"], MAPPERS)
+    adf = agg_part(df, conf, ["rid", "certno"], MAPPERS_)
 
     assert np.all(adf.columns == conf["key"])
 
@@ -177,7 +179,7 @@ def test_apply_3stage():
     ppconfs.loc[ppconfs["part"] == "pboc_acc_info", "join_key"] = "index,PD01AI01"
 
     pconfs, aconfs = gen_confs()
-    tconfs = (pd.concat([pd.DataFrame(val, columns=["key", "trans", "conds"])
+    tconfs = (pd.concat([pd.DataFrame(val, columns=["key", "trans", "conds", "cmt"])
                         for val in TRANS_CONF.values()],
                         keys=TRANS_CONF.keys())
               .droplevel(1)
@@ -187,6 +189,17 @@ def test_apply_3stage():
     pconfs.loc[pconfs["level"] == 0, "join_key"] = "index"
     pconfs.loc[pconfs["level"] == 1, "join_key"] = "index,accid"
 
+    # import csv
+    # pconfs.to_csv("pboc_vars_parts.csv", encoding="gbk")
+    # tconfs.to_csv("pboc_vars_trans.csv", encoding="gbk")
+    # aconfs.to_csv("pboc_vars_aggs.csv", encoding="gbk")
+    # pd.concat([pd.DataFrame(v).T for v in MAPPERS.values()],
+    #           axis=0, keys=MAPPERS.keys()).to_csv("pboc_vars_maps.csv",
+    #                                               quoting=csv.QUOTE_NONNUMERIC,
+    #                                               encoding="gbk")
+
     pconfs_ = pd.concat([ppconfs, pconfs], axis=0)
 
-    ret = apply_3stages(src, tconfs, pconfs_, aconfs, MAPPERS)
+    ret = apply_3stages(src, tconfs, pconfs_, aconfs, MAPPERS_)
+
+    return ret
