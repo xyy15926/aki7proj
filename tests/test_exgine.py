@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-02-01 10:07:31
-#   Updated: 2024-03-04 18:16:03
+#   Updated: 2024-03-11 10:37:09
 #   Description:
 # ---------------------------------------------------------
 
@@ -167,17 +167,7 @@ def test_agg_part():
 
 
 # %%
-def test_apply_3stage():
-    # Parse pboc.
-    src = test_parse_2stages()
-    for part, df in src.items():
-        df.index.set_names(["index"] + df.index.names[1:], inplace=True)
-
-    # Get the part conf for parsing.
-    ppconfs = pd.read_csv(PBOC_PARTS)
-    ppconfs.loc[ppconfs["level"] == 0, "join_key"] = "index"
-    ppconfs.loc[ppconfs["part"] == "pboc_acc_info", "join_key"] = "index,PD01AI01"
-
+def test_pboc_agg_conf(to_csv: int = 0):
     pconfs, aconfs = gen_confs()
     tconfs = (pd.concat([pd.DataFrame(val, columns=["key", "trans", "conds", "cmt"])
                         for val in TRANS_CONF.values()],
@@ -189,16 +179,34 @@ def test_apply_3stage():
     pconfs.loc[pconfs["level"] == 0, "join_key"] = "index"
     pconfs.loc[pconfs["level"] == 1, "join_key"] = "index,accid"
 
-    # import csv
-    # pconfs.to_csv("pboc_vars_parts.csv", encoding="gbk")
-    # tconfs.to_csv("pboc_vars_trans.csv", encoding="gbk")
-    # aconfs.to_csv("pboc_vars_aggs.csv", encoding="gbk")
-    # pd.concat([pd.DataFrame(v).T for v in MAPPERS.values()],
-    #           axis=0, keys=MAPPERS.keys()).to_csv("pboc_vars_maps.csv",
-    #                                               quoting=csv.QUOTE_NONNUMERIC,
-    #                                               encoding="gbk")
+    if to_csv:
+        import csv
+        pconfs.to_csv("pboc_vars_parts.csv", encoding="gbk")
+        tconfs.to_csv("pboc_vars_trans.csv", encoding="gbk")
+        aconfs.to_csv("pboc_vars_aggs.csv", encoding="gbk")
+        pd.concat([pd.DataFrame(v).T for v in MAPPERS.values()],
+                  axis=0,
+                  keys=MAPPERS.keys()).to_csv("pboc_vars_maps.csv",
+                                              quoting=csv.QUOTE_NONNUMERIC,
+                                              encoding="gbk")
+
+    # Get the part conf for parsing.
+    ppconfs = pd.read_csv(PBOC_PARTS)
+    ppconfs.loc[ppconfs["level"] == 0, "join_key"] = "index"
+    ppconfs.loc[ppconfs["part"] == "pboc_acc_info", "join_key"] = "index,PD01AI01"
 
     pconfs_ = pd.concat([ppconfs, pconfs], axis=0)
+
+    return tconfs, pconfs_, aconfs
+
+
+def test_apply_3stage():
+    # Parse pboc.
+    src = test_parse_2stages()
+    for part, df in src.items():
+        df.index.set_names(["index"] + df.index.names[1:], inplace=True)
+
+    tconfs, pconfs_, aconfs = test_pboc_agg_conf()
 
     ret = apply_3stages(src, tconfs, pconfs_, aconfs, MAPPERS_)
 

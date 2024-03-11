@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-03-04 18:21:48
+#   Updated: 2024-03-11 10:17:32
 #   Description:
 # ---------------------------------------------------------
 
@@ -219,8 +219,11 @@ def parse_2df(
     ------------------
     src: pd.Series[index, json-string]
       Each item represents a record.
-    conf: pd.DataFrame with Columns[key, steps, from_, dtype]
-      key and `steps` are necessary.
+    conf: pd.DataFrame with
+        Columns[key, steps, from_, dtype, default, use_default].
+      key: Column names.
+      steps: Steps to get values from `src`.
+        `key` and `steps` are necessary.
       from_: None will be used as default, namely the fields will be
         extracted from the original records.
       dtype: VARCHAR(255) will be used as default.

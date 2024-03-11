@@ -387,7 +387,7 @@ TRANS_CONF = {
         ["cur_acc_status"               , "map(PD01BD01, r1_acc_status)"        , "acc_cat == 3"    , "最近状态"],
         ["cur_acc_status"               , "map(PD01BD01, r23_acc_status)"       , "(acc_cat >= 4) & (acc_cat <= 5)" , "最近状态"],
         ["cur_lvl5_status"              , "map(PD01BD03, lvl5_status)"          , None  , "最近5级分类"],
-        ["cur_repay_status"             , "map(PD01BD03, repay_status)"         , None  , "最近还款状态"],
+        ["cur_repay_status"             , "map(PD01BD04, repay_status)"         , None  , "最近还款状态"],
         ["cur_moi_closed"               , "mon_itvl(PD01BR01, today)"           , None  , "最近关闭时间"],
         ["cur_doi_last_repay"           , "day_itvl(PD01BR02, today)"           , None  , "最近还款距今日"],
         ["cur_doi_report"               , "day_itvl(PD01BR03, today)"           , None  , "最近报告日期距今日"],
