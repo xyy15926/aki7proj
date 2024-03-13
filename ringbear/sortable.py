@@ -3,7 +3,7 @@
 #   Name: sortable.py
 #   Author: xyy15926
 #   Created: 2023-12-06 21:29:38
-#   Updated: 2024-01-18 09:28:29
+#   Updated: 2024-03-12 10:32:13
 #   Description: Modules with functions to handle sortable features.
 # -----------------------------------------------------------------------------
 
@@ -69,8 +69,11 @@ def tree_cut(
 
     Return:
     -----------------
-    threshs: List of bin edges for cutting, including left nor right edges
-      to keep the pace with `np.histogram`.
+    threshs: List of bin edges for cutting.
+      Note: At first, both lower and upper bound are included. But it's seems
+      that `np.histogram` and `pd.cut` behave differently by default.
+      `numpy` prefers left-closed interval, `pandas` vice versa. So neither
+      lower bound nor higher bound is included but their exteriors.
     ctab: Cross table of final bins.
     """
     if x.ndim == 1:
@@ -89,9 +92,9 @@ def tree_cut(
     # Select leaf node by compare its children node with -1.
     leaf_node_map = ((cl == -1) & (cr == -1))
     # Get thresholds directly.
-    threshs = np.concatenate([[np.min(x)],
+    threshs = np.concatenate([[np.min(x) - 1e-6],
                               np.sort(tree.tree_.threshold[~leaf_node_map]),
-                              [np.max(y)]])
+                              [np.max(x) + 1e-6]])
 
     def leaf_post_order(cl, cr):
         ctab = []

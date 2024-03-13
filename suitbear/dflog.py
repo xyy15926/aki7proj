@@ -3,7 +3,7 @@
 #   Name: dlog.py
 #   Author: xyy15926
 #   Created: 2023-12-05 08:55:37
-#   Updated: 2024-01-26 18:19:27
+#   Updated: 2024-03-13 18:51:09
 #   Description:
 # ---------------------------------------------------------
 
@@ -345,12 +345,20 @@ def serlog(ser: pd.Series, label: pd.Series):
 
 # %%
 # TODO: Annotations.
-def serdiffm(sero: pd.Series, sern: pd.Series) -> pd.Series:
+def serdiffm(sero: pd.Series, sern: pd.Series,
+             to_interval:bool = False) -> pd.Series:
     assert len(sero) == len(sern)
     # (uo, un), ctab = contingency.crosstab(sero.values, sern.values)
+
+    # `np.unique` bases on sort which will:
+    # 1. Cast data type to down to the same.
+    # 2. Can't handle no-comparable value, `None` for example.
+    #
+    # `pd.unique` instead of `set` directly is used to filter repeated
+    # `np.nan`.
     mapper = (pd.Series(sern.values, index=sero.values)
-              .groupby(level=0, dropna=False)
-              .aggregate(lambda x:tuple(set(x))))
+              .groupby(level=0, dropna=False, sort=True)
+              .aggregate(lambda x:tuple(pd.unique(x))))
 
     mapper_1n = mapper.apply(len) > 1
     if mapper_1n.sum() > 0:
@@ -360,50 +368,36 @@ def serdiffm(sero: pd.Series, sern: pd.Series) -> pd.Series:
         if np.all(mapper.index == dest):
             return None
 
-    # try:
-    #     (uo, un), ctab = contingency.crosstab(sero.values, sern.values)
-    # except TypeError as e:
-    #     logger.warning(f"{e}. And an encoder will applied silently.")
-
-    #     codesx, fux = pd.factorize(sero, sort=True)
-    #     fux = fux.insert(len(fux), pd.NA)
-    #     codesy, fuy = pd.factorize(sern, sort=True)
-    #     fuy = fuy.insert(len(fuy), pd.NA)
-
-    #     (uo, un), ctab = contingency.crosstab(codesx, codesy)
-
-    # Skip unchanged columns.
-    # unchanged = 1
-    # mapper = {}
-    # for ele, row in zip(uo, ctab):
-    #     dest = un[row != 0]
-    #     if np.any(dest != ele):
-    #         unchanged = 0
-    #     if len(dest) > 1:
-    #         logger.warning(f"Invalid mapping from single {ele} to multiple {dest}.")
-    #         mapper[ele] = dest
-    #     else:
-    #         mapper[ele] = dest[0]
-    # if unchanged:
-    #     return None
-
     # Set intervals for numeric series.
-    if infer_dtype(sero) in ["integer", "floating", "mixed-integer-floating"]:
+    if to_interval and (infer_dtype(sero) in
+                        ["integer", "floating", "mixed-integer-floating"]):
         range_mapper = {}
         ti = iter(mapper.items())
-        start, last = next(ti)
+        start, (last, *ele) = next(ti)
         end = start
-        for end, cur in ti:
+        for cur_edge, (cur, *ele) in ti:
+            # Break when encountering `nan`.
+            # ATTENTION: It's assumed that `nan` will always be the last item
+            # in `mapper` from `ser.groupby`.
+            if np.isnan(cur_edge):
+                range_mapper[(start, end)] = last
+                range_mapper[(cur_edge, cur_edge)] = cur
+                break
             if last == cur:
                 continue
+            end = cur_edge
+
             range_mapper[(start, end - EPSILON)] = last
             start = end - EPSILON
             last = cur
         else:
             range_mapper[(start, end)] = last
-        return pd.Series(range_mapper)
+
+        return (pd.Series(range_mapper)
+                .rename_axis(["left[", "right)(EXCEPT_LAST)"])
+                .rename("to"))
     else:
-        return mapper.map(lambda x:x[0])
+        return mapper.map(lambda x:x[0]).rename_axis("from").rename("to")
 
 
 # %%
@@ -530,12 +524,14 @@ class DataProc(DFLoggerMixin):
         # Fill NaN for numeric columns.
         num_df = df.select_dtypes(include=["integer", "floating", "complex"])
         if num_df is not None and not num_df.empty:
-            df.loc[:, num_df.columns].fillna(NUM_NA_FLAG, inplace=True)
+            df.fillna({col: NUM_NA_FLAG for col in num_df.columns},
+                      inplace=True)
 
         # Fill NaN for categorical columns.
         cat_df = df.select_dtypes(exclude=["integer", "floating", "complex"])
         if cat_df is not None and not cat_df.empty:
-            df.loc[:, cat_df.columns].fillna(CAT_NA_FLAG, inplace=True)
+            df.fillna({col: CAT_NA_FLAG for col in cat_df.columns},
+                      inplace=True)
 
     @DFLoggerMixin.malog
     def ordinize(self, cols: list | tuple | None = None):

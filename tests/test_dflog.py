@@ -3,7 +3,7 @@
 #   Name: test_dflog.py
 #   Author: xyy15926
 #   Created: 2024-01-18 20:28:51
-#   Updated: 2024-01-26 16:13:44
+#   Updated: 2024-03-13 18:59:07
 #   Description:
 # ---------------------------------------------------------
 
@@ -44,10 +44,26 @@ def test_serlog():
 
 
 def test_serdiffm():
-    ser = pd.Series([99, 2, 3, "a", 99, None, float('nan')])
+    ser = pd.Series([99, 2, 3, "a", 99, None, float("nan"), float("nan")])
     codes = pd.Series(pd.factorize(ser)[0])
     mapper = serdiffm(ser, codes)
     assert np.all(ser.map(mapper).fillna(-1) == codes)
+
+    mapper = serdiffm(ser, ser)
+    assert not np.all(mapper.index == mapper.values)
+
+    # Check how to handle `np.nan` in numeric interval ocassion.
+    ser = pd.Series([99, 2, 3, 4, 99, 2, float("nan")])
+    codes = pd.Series(pd.factorize(ser)[0])
+    itvl_mapper = serdiffm(ser, codes, to_interval=True)
+    assert max(itvl_mapper.index.levels[1]) == ser.max()
+    assert np.all(np.isnan(itvl_mapper.index[-1]))
+
+    # Check how to handle only one unique element.
+    ser = pd.Series([99, 99, 99])
+    codes = pd.Series(pd.factorize(ser)[0])
+    itvl_mapper = serdiffm(ser, codes, to_interval=True)
+    assert max(itvl_mapper.index.levels[1]) == ser.max()
 
 
 # %%
@@ -103,7 +119,7 @@ def mock_data(row_n=100):
 
 # %%
 @mark.filterwarnings("ignore: divide by zero encountered")
-def test_data_sketch():
+def test_data_sketch_procedure_1():
     rown = 100
     df, y = mock_data(rown)
     sort_keys = {"range_int_half": 1}
@@ -145,10 +161,11 @@ def test_data_sketch():
 
 
 # %%
-# Refer to following link for the warning.
+# Refer to the following link for the `FutureWarning` threw in comparion
+# between python `str` and `np.numeric`.
 # https://stackoverflow.com/questions/40659212/futurewarning-elementwise-comparison-failed-returning-scalar-but-in-the-futur
 @mark.filterwarnings("ignore: divide by zero encountered")
-def test_data_sketch_2():
+def test_data_sketch_procedure_2():
     rown = 100
     df, y = mock_data(rown)
     sort_keys = {"range_int_half": 1}
