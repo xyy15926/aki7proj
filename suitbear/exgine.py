@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-03-11 10:17:32
+#   Updated: 2024-04-07 12:09:01
 #   Description:
 # ---------------------------------------------------------
 
@@ -51,9 +51,12 @@ CALLS = {
     "today"     : pd.Timestamp.today(),
     "map"       : lambda x, y: x.map(y),
     "cb_fst"    : pd.Series.combine_first,
+    "cb_max"    : lambda x, y: pd.concat([x, y], axis=1).max(axis=1),
+    "cb_min"    : lambda x, y: pd.concat([x, y], axis=1).min(axis=1),
     "mon_itvl"  : lambda x, y: (pd.to_datetime(x) - pd.to_datetime(y)).dt.days / 30,
     "day_itvl"  : lambda x, y: (pd.to_datetime(x) - pd.to_datetime(y)).dt.days,
     "count"     : len,
+    "unique"    : np.unique,
     "sum"       : lambda x: x.sum(),
     "max"       : lambda x: x.max(),
     "min"       : lambda x: x.min(),
@@ -65,6 +68,10 @@ CALLS = {
     "getn"      : lambda x, y: x.iloc[y],
     "head"      : lambda x, y: x.iloc[:y],
     "tail"      : lambda x, y: x.iloc[-y:],
+    "sadd"      : lambda x, y: x + y,
+    "ssub"      : lambda x, y: x - y,
+    "smul"      : lambda x, y: x * y,
+    "sdiv"      : lambda x, y: x / y,
 }
 
 

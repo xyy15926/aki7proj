@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-02-01 10:07:31
-#   Updated: 2024-03-11 10:37:09
+#   Updated: 2024-04-07 19:08:12
 #   Description:
 # ---------------------------------------------------------
 
@@ -123,13 +123,8 @@ def test_parse_2stages_sep():
 
     return rets
 
-    # xlw = pd.ExcelWriter("pboc.xlsx")
-    # for idx, df in rets.items():
-    #     df.to_excel(xlw, sheet_name=idx)
-    # xlw.close()
 
-
-def test_parse_2stages():
+def test_parse_2stages(to_excel:bool = False):
     pboc = open(PBOC_JSON, "r").read()
     pboc2 = pboc.replace("2019101617463675115707", "2019101617463675115708")
     src = pd.Series({"xfy": pboc, "xfy2": pboc2})
@@ -138,6 +133,12 @@ def test_parse_2stages():
     fconfs["default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_DEFAULT)
     fconfs["use_default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_USE_DEFAULT)
     rets = parse_2stages(src, pconfs, fconfs)
+
+    if to_excel:
+        xlw = pd.ExcelWriter("pboc.xlsx")
+        for idx, df in rets.items():
+            df.to_excel(xlw, sheet_name=idx)
+        xlw.close()
 
     return rets
 
@@ -160,7 +161,7 @@ def test_transform_part():
 def test_agg_part():
     df = test_transform_part()
     pconfs, aconfs = gen_confs()
-    conf = aconfs[aconfs["part"] == "acc_no_cat_info"]
+    conf = aconfs[aconfs["part"] == "acc_cat_info"]
     adf = agg_part(df, conf, ["rid", "certno"], MAPPERS_)
 
     assert np.all(adf.columns == conf["key"])
@@ -200,7 +201,7 @@ def test_pboc_agg_conf(to_csv: int = 0):
     return tconfs, pconfs_, aconfs
 
 
-def test_apply_3stage():
+def test_apply_3stage(to_csv:bool = False):
     # Parse pboc.
     src = test_parse_2stages()
     for part, df in src.items():
@@ -209,5 +210,9 @@ def test_apply_3stage():
     tconfs, pconfs_, aconfs = test_pboc_agg_conf()
 
     ret = apply_3stages(src, tconfs, pconfs_, aconfs, MAPPERS_)
+
+    if to_csv:
+        for parts, var_df in ret.items():
+            var_df.to_csv(f"pboc_vars_{parts}.csv", encoding="gbk")
 
     return ret
