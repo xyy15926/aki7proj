@@ -229,16 +229,19 @@ def rebuild_dict(
 
     Params:
     ----------------
-    obj: dict | str
+    obj: Dict from which to get the value according to the rules.
       dict: Dict where fields will be found.
-      str: JSON string, which dict will loaded from.
+      str: JSON string, from which dict will loaded.
     rules: [(key, from_, steps, dtype), ...]
-      key: Key in the new dict.
-      from_: Dependency and source from which get the value and will be passed
-        to `extract_field` as `obj.`
-      steps: Steps passed to `extract_field` as `steps`.
-      dtype: Dtype passed to `extract_field` as `dtype`.
-      default: Default value passed to `extract_field` as `dfill`.
+      2-Tuple: [key, steps]
+      4-Tuple: [key, from_, steps, dtype]
+      5-Tuple: [key, from_, steps, dtype, default]
+        key: Key in the new dict.
+        from_: Dependency and source from which get the value and will be
+          passed to `extract_field` as `obj.`
+        steps: Steps passed to `extract_field` as `steps`.
+        dtype: Dtype passed to `extract_field` as `dtype`.
+        default: Default value passed to `extract_field` as `dfill`.
     envp: EvnParser to execute the conditions and the aggragation.
       EvnParser with default arguments will be used as default.
 
@@ -251,12 +254,22 @@ def rebuild_dict(
     rets = {}
     rule_Q = deque(rules)
     for rule in rules:
-        if len(rule) == 4:
+        if len(rule) == 2:
+            dforced, dfill = False, None
+            from_, dtype = None, None
+            key, steps = rule
+        elif len(rule) == 3:
+            dforced, dfill = False, None
+            from_ = None
+            key, steps, dtype = rule
+        elif len(rule) == 4:
             dforced, dfill = False, None
             key, from_, steps, dtype = rule
-        else:
+        elif len(rule) == 5:
             dforced = True
             key, from_, steps, dtype, dfill = rule
+        else:
+            continue
 
         # Set `obj` as default data source.
         if from_ is None:

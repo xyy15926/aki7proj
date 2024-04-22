@@ -2,8 +2,8 @@
 # ---------------------------------------------------------
 #   Name: test_exgine.py
 #   Author: xyy15926
-#   Created: 2024-02-01 10:07:31
-#   Updated: 2024-04-07 19:08:12
+#   Created: 2024-04-15 18:17:58
+#   Updated: 2024-04-18 17:00:39
 #   Description:
 # ---------------------------------------------------------
 
@@ -12,207 +12,186 @@ import pytest
 
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear import fliper
-    from suitbear import exgine
-    from azkaban import pboc_conf
+    from flagbear import fliper, exgine
     reload(fliper)
     reload(exgine)
-    reload(pboc_conf)
 
 import numpy as np
 import pandas as pd
 import os
 import json
-from suitbear.exgine import parse_2df, parse_parts, parse_2stages
-from suitbear.exgine import transform_part, agg_part, apply_3stages
-from flagbear.fliper import extract_field
-from azkaban.pboc_conf import gen_confs, MAPPERS, TRANS_CONF
-
-MAPPERS_ = {k: {kk: vv[0] for kk, vv in v.items()} for k, v in MAPPERS.items()}
+from flagbear.fliper import extract_field, rebuild_dict
+from flagbear.exgine import rebuild_rec2df, agg_on_df, trans_on_df
 
 ASSETS = os.path.join(os.curdir, "assets")
-
-DTYPE_DEFAULT = {
-    "INT": np.nan,
-    "FLO": np.nan,
-    "VAR": "",
-    "CHA": "",
-    "DAT": pd.to_datetime,
-}
-DTYPE_USE_DEFAULT = {
-    "INT": 1,
-    "FLO": 1,
-    "VAR": 0,
-    "CHA": 0,
-    "DAT": 0,
-}
-
 PBOC_JSON = os.path.join(ASSETS, "pboc_utf8.json")
 PBOC_PARTS = os.path.join(ASSETS, "pboc_parts.csv")
 PBOC_FIELDS = os.path.join(ASSETS, "pboc_fields.csv")
 
 
 # %%
-def test_parse2df():
-    pboc = open(PBOC_JSON, "r").read()
-    src = pd.Series({"xfy": pboc, "xfy2": pboc})
-    pconfs = pd.read_csv(PBOC_PARTS)
-    fconfs = pd.read_csv(PBOC_FIELDS)
-    fconfs["default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_DEFAULT)
-    fconfs["use_default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_USE_DEFAULT)
-
-    confs = fconfs[fconfs["part"] == "pboc_basic_info"].copy()
-    basic_info = parse_2df(src, confs, 0)
-    assert not np.all(basic_info.isna())
-
-    for part in ["pboc_mobile", "pboc_acc_info"]:
-        confs = fconfs[fconfs["part"] == part].copy()
-        confs["steps"] = (pconfs.loc[pconfs["part"] == part, "steps_0"].iloc[0]
-                          + ":" + confs["steps"])
-        df = parse_2df(src, confs, 1)
-        assert not np.all(df.isna())
-
-
-# %%
-def test_parse_parts():
-    pboc = open(PBOC_JSON, "r").read()
-    src = pd.Series({"xfy": pboc, "xfy2": pboc})
-    pconfs = pd.read_csv(PBOC_PARTS)
-    fconfs = pd.read_csv(PBOC_FIELDS)
-    fconfs["default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_DEFAULT)
-    fconfs["use_default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_USE_DEFAULT)
-
-    pconf = pconfs.iloc[0]
-    psrc = parse_parts(src, pconf)
-    assert not np.all(psrc.isna())
-
-    pconf = pconfs[pconfs["level"] == 1].iloc[0]
-    psrc = parse_parts(src, pconf)
-    assert not np.all(psrc.isna())
-
-    pconf = pconfs[pconfs["level"] == 2].iloc[0]
-    psrc = parse_parts(src, pconf)
-    assert not np.all(psrc.isna())
-    part = pconf["part"]
-    confs = fconfs[fconfs["part"] == part].copy()
-    dest = parse_2df(psrc, confs, 0)
-    assert not np.all(dest.isna())
-
-
-# %%
-def test_parse_2stages_sep():
+def pboc_src():
     pboc = open(PBOC_JSON, "r").read()
     pboc2 = pboc.replace("2019101617463675115707", "2019101617463675115708")
     src = pd.Series({"xfy": pboc, "xfy2": pboc2})
-    pconfs = pd.read_csv(PBOC_PARTS)
-    fconfs = pd.read_csv(PBOC_FIELDS)
-    fconfs["default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_DEFAULT)
-    fconfs["use_default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_USE_DEFAULT)
 
-    rets = {}
-    for idx, pconf in pconfs.iterrows():
-        part = pconf["part"]
-        psrc = parse_parts(src, pconf)
-        confs = fconfs[fconfs["part"] == part].copy()
-        dfret = parse_2df(psrc, confs, 0)
-        # Dumps into json-string for `.to_sql`.
-        # dfret.loc[:, confs["key"][confs["dtype"] == "text"]] = (
-        #     dfret[confs["key"][confs["dtype"] == "text"]].applymap(
-        #         lambda x: json.dumps(x, ensure_ascii=False)))
-        rets[part] = dfret
-
-    return rets
-
-
-def test_parse_2stages(to_excel:bool = False):
-    pboc = open(PBOC_JSON, "r").read()
-    pboc2 = pboc.replace("2019101617463675115707", "2019101617463675115708")
-    src = pd.Series({"xfy": pboc, "xfy2": pboc2})
-    pconfs = pd.read_csv(PBOC_PARTS)
-    fconfs = pd.read_csv(PBOC_FIELDS)
-    fconfs["default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_DEFAULT)
-    fconfs["use_default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_USE_DEFAULT)
-    rets = parse_2stages(src, pconfs, fconfs)
-
-    if to_excel:
-        xlw = pd.ExcelWriter("pboc.xlsx")
-        for idx, df in rets.items():
-            df.to_excel(xlw, sheet_name=idx)
-        xlw.close()
-
-    return rets
+    return src
 
 
 # %%
-def test_transform_part():
-    rets = test_parse_2stages()
-    df = rets["pboc_acc_info"].copy()
-    conf = pd.DataFrame(TRANS_CONF["pboc_acc_info"],
-                        columns=["key", "trans", "conds", "cmt"])
-    tdf = transform_part(df, conf, MAPPERS_)
+def test_rebuild_rec2df():
+    src = pboc_src()
+    rec = src.iloc[0]
 
-    assert np.all(tdf.columns.intersection(conf["key"])
-                  == conf["key"].drop_duplicates())
+    # Test basic function.
+    val_rules = [
+        ["pboc_acc_info", "PDA:PD01:[_]"],
+    ]
+    index_rules = [
+        ["rid", "PRH:PA01:PA01A:PA01AI01"],
+        ["certno", "PRH:PA01:PA01B:PA01BI01"],
+    ]
+    nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=False)
+    assert len(nrec) == 1
+    assert np.all(nrec.columns == [i[0] for i in val_rules])
 
-    return tdf
+    index_rules = []
+    nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
+    assert len(nrec) > 1
+    assert np.all(nrec.columns == [i[0] for i in val_rules])
+
+    val_rules = [
+        ["pboc_basic_info_A", "PRH:PA01"],
+        ["pboc_basic_info_B", "PIM:PB01"],
+    ]
+    nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
+    assert len(nrec) == 1
+    assert np.all(nrec.columns == [i[0] for i in val_rules])
+
+    val_rules = [
+        ["pboc_acc_info", "PDA:PD01:[_]"],
+    ]
+    index_rules = [
+        ["rid", "PRH:PA01:PA01A:PA01AI01"],
+        ["certno", "PRH:PA01:PA01B:PA01BI01"],
+        ["PD01AI01", "PDA:PD01:[_]:PD01A:PD01AI01"]
+    ]
+    nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
+    assert len(nrec) >= 1
+    assert np.all(nrec.columns == [i[0] for i in val_rules])
+
+    # Test `explode` shouldn't be set when extractions don't share the same
+    # length.
+    val_rules = [
+        ["pboc_acc_info", "PDA:PD01:[_]"],
+        ["pboc_basic_info_A", "PRH:PA01"],
+        ["pboc_basic_info_B", "PIM:PB01"],
+    ]
+    index_rules = [
+        ["rid", "PRH:PA01:PA01A:PA01AI01"],
+        ["certno", "PRH:PA01:PA01B:PA01BI01"],
+    ]
+    nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=False)
+    assert len(nrec) == 1
+    assert np.all(nrec.columns == [i[0] for i in val_rules])
+
+    with pytest.raises(ValueError):
+        nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
+
+    # Null fields test.
+    val_rules = [
+        ["pboc_acc_None", "a:b:c"],
+        ["pboc_basic_None", "c:d"],
+    ]
+    index_rules = [
+        ["rid", "a:b:c"],
+        ["certno", "c:d"],
+    ]
+    nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=False)
+    assert len(nrec) == 1
+    assert np.all(nrec.columns == [i[0] for i in val_rules])
 
 
 # %%
-def test_agg_part():
-    df = test_transform_part()
-    pconfs, aconfs = gen_confs()
-    conf = aconfs[aconfs["part"] == "acc_cat_info"]
-    adf = agg_part(df, conf, ["rid", "certno"], MAPPERS_)
+def pboc_acc_info():
+    src = pboc_src()
+    rec = src.iloc[0]
+    val_rules = [
+        ["pboc_acc_info", "PDA:PD01:[_]"],
+    ]
+    index_rules = [
+        ["rid", "PRH:PA01:PA01A:PA01AI01"],
+        ["certno", "PRH:PA01:PA01B:PA01BI01"],
+    ]
+    nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
 
-    assert np.all(adf.columns == conf["key"])
+    fval_rules = [
+        ["PD01AD01", "PD01A:PD01AD01", "VARCHAR(31)",],
+        ["PD01AD02", "PD01A:PD01AD02", "VARCHAR(31)",],
+        ["PD01AD03", "PD01A:PD01AD03", "VARCHAR(31)",],
+        ["PD01AD04", "PD01A:PD01AD04", "VARCHAR(31)",],
+    ]
+    findex_rules = [
+        ["accid", "PD01A:PD01AI01"]
+    ]
+    fields = nrec["pboc_acc_info"].apply(rebuild_rec2df,
+                                         val_rules=fval_rules,
+                                         index_rules=findex_rules,
+                                         explode=True)
+    fields = pd.concat(fields.values, keys=nrec.index)
+
+    return fields
+
+
+def test_trans_on_df():
+    src = pboc_acc_info()
+    mapper = {
+        "cdr_cat": {
+            "D1": (1        , "非循环贷账户"),
+            "R1": (3        , "循环贷账户"),
+            "R2": (4        , "贷记卡账户"),
+            "R3": (5        , "准贷记卡账户"),
+            "R4": (2        , "循环额度下分账户"),
+            "C1": (99       , "催收账户"),
+        },
+        "exchange_rate": {
+            "USD": (7       , "USD"),
+            "EUR": (7.7     , "EUR"),
+            "JPY": (0.05    , "JPY"),
+            "CNY": (1       , "CNY"),
+            "AUD": (4.7     , "AUD"),
+            "RUB": (0.07    , "RUB"),
+            "CAD": (5.3     , "CAD"),
+        },
+    }
+    mapper = {k: {kk: vv[0] for kk, vv in v.items()} for k,v in mapper.items()}
+
+    trans_rules = [
+        ["acc_cat", "map(PD01AD01, cdr_cat)"],
+        ["acc_exchange_rate", "acc_cat != 99", "map(PD01AD04, exchange_rate)"],
+    ]
+    transed = trans_on_df(src, trans_rules, mapper)
+    assert np.all(transed.loc[transed["acc_cat"] == 99, "acc_exchange_rate"].isna())
+    assert np.all(transed.loc[transed["acc_cat"] != 99, "acc_exchange_rate"].notna())
+    assert ({k: v for i, k, v in transed[["PD01AD01", "acc_cat"]].itertuples()}
+            == mapper["cdr_cat"])
+
+    return transed
 
 
 # %%
-def test_pboc_agg_conf(to_csv: int = 0):
-    pconfs, aconfs = gen_confs()
-    tconfs = (pd.concat([pd.DataFrame(val, columns=["key", "trans", "conds", "cmt"])
-                        for val in TRANS_CONF.values()],
-                        keys=TRANS_CONF.keys())
-              .droplevel(1)
-              .reset_index()
-              .rename(columns={"index": "part"}))
-
-    pconfs.loc[pconfs["level"] == 0, "join_key"] = "index"
-    pconfs.loc[pconfs["level"] == 1, "join_key"] = "index,accid"
-
-    if to_csv:
-        import csv
-        pconfs.to_csv("pboc_vars_parts.csv", encoding="gbk")
-        tconfs.to_csv("pboc_vars_trans.csv", encoding="gbk")
-        aconfs.to_csv("pboc_vars_aggs.csv", encoding="gbk")
-        pd.concat([pd.DataFrame(v).T for v in MAPPERS.values()],
-                  axis=0,
-                  keys=MAPPERS.keys()).to_csv("pboc_vars_maps.csv",
-                                              quoting=csv.QUOTE_NONNUMERIC,
-                                              encoding="gbk")
-
-    # Get the part conf for parsing.
-    ppconfs = pd.read_csv(PBOC_PARTS)
-    ppconfs.loc[ppconfs["level"] == 0, "join_key"] = "index"
-    ppconfs.loc[ppconfs["part"] == "pboc_acc_info", "join_key"] = "index,PD01AI01"
-
-    pconfs_ = pd.concat([ppconfs, pconfs], axis=0)
-
-    return tconfs, pconfs_, aconfs
-
-
-def test_apply_3stage(to_csv:bool = False):
-    # Parse pboc.
-    src = test_parse_2stages()
-    for part, df in src.items():
-        df.index.set_names(["index"] + df.index.names[1:], inplace=True)
-
-    tconfs, pconfs_, aconfs = test_pboc_agg_conf()
-
-    ret = apply_3stages(src, tconfs, pconfs_, aconfs, MAPPERS_)
-
-    if to_csv:
-        for parts, var_df in ret.items():
-            var_df.to_csv(f"pboc_vars_{parts}.csv", encoding="gbk")
-
-    return ret
+def test_agg_on_df():
+    src = test_trans_on_df()
+    agg_rules = [
+        ["c1_acc_cat_cnt", "acc_cat == 99", "count(_)"],
+        ["d1r41_acc_cat_cnt", "acc_cat <=3", "count(_)"],
+        ["d1r4_acc_cat_cnt", "(acc_cat == 1) | (acc_cat == 2)", "count(_)"],
+        ["cnt", None, "count(_)"],
+        ["cnt2", "count(_)"],
+    ]
+    agged = agg_on_df(src, agg_rules)
+    assert agged["cnt"] == len(src)
+    assert agged["cnt2"] == len(src)
+    assert agged["c1_acc_cat_cnt"] == (src["acc_cat"] == 99).sum()
+    assert agged["d1r41_acc_cat_cnt"] == (src["acc_cat"] <= 3).sum()
+    assert agged["d1r4_acc_cat_cnt"] == (src["acc_cat"] <= 2).sum()
