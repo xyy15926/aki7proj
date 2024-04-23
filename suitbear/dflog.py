@@ -3,7 +3,7 @@
 #   Name: dlog.py
 #   Author: xyy15926
 #   Created: 2023-12-05 08:55:37
-#   Updated: 2024-03-13 18:51:09
+#   Updated: 2024-03-27 15:22:39
 #   Description:
 # ---------------------------------------------------------
 
@@ -19,29 +19,15 @@ except ImportError:
 from IPython.core.debugger import set_trace
 
 from functools import wraps, partial
-from datetime import date
 import numpy as np
 import pandas as pd
 from pandas.api.types import infer_dtype
-from collections import defaultdict
 from scipy.stats import contingency
-from sklearn.preprocessing import OrdinalEncoder
 
-from flagbear.patterns import CALLABLE_ENV
-from ringbear.numeric import std_outlier
 from ringbear.metrics import cal_lifts_from_ctab, cal_woes_from_ctab
-from ringbear.metrics import cal_lifts, cal_woes, cal_ivs
-from ringbear.sortable import tree_cut
-from ringbear.numeric import edge_encode
-from flagbear.fliper import rename_duplicated
 
 
-Keys = TypeVar("DataFrame Keys")
-CAT_NA_FLAG = "ZNA"
-NUM_NA_FLAG = -999999
-FACTOR_MAX = 10
 EPSILON = 1e-6
-
 RC_NAME = "RC"
 MA_NAME = "MAP"
 VA_NAME = "VAL"
@@ -70,22 +56,23 @@ class DFLoggerMixin:
       gathering the necessary sketches.
 
     Attrs:
-      data: pd.DataFrame
-        Data.
-      label: pd.Series
-        Labels.
-      stage: str
-        String indicating the stage of data processing.
-      logs: dict[str: DataFrame]
-        Dict storing DataFrame of
-        {
-          stage:{
-            "__RC__": DF sketch down to column level,
-            "__MAP__": DF of mapping of values,
-            "__VAL__": DF sketch down to value level,
-            "__PCORR__": DF of pearson correlation,
-          }
+    -----------------------------
+    data: pd.DataFrame
+      Data.
+    label: pd.Series
+      Labels.
+    stage: str
+      String indicating the stage of data processing.
+    logs: dict[str: DataFrame]
+      Dict storing DataFrame of
+      {
+        stage:{
+          "RC": DF sketch down to column level,
+          "MAP": DF of mapping of values,
+          "VAL": DF sketch down to value level,
+          "PCORR": DF of pearson correlation,
         }
+      }
     """
     def __init__(self):
         self.data = None
@@ -94,10 +81,41 @@ class DFLoggerMixin:
         self.logs = {}
 
     @staticmethod
-    def rclog(mark: str = None, type_: str = RC_NAME):
+    def rclog(ltag: str = None, type_: str = RC_NAME):
+        """Decorator logging for row or column changes.
+
+        1. The final log will be stored in the log-dict for the stage.
+        2. The log will be a dataframe with Column[ltag] and
+          Index[data.columns, ROWN_NAME], which will be like:
+                    ltag
+            Col_1
+            Col_2
+            ...
+            ROWN
+        3. Logs generated with the same `type_` will be concatenated along the
+          row axis, namely the final log, `logs[stage][type_]`, will be:
+                    ltag_1  ltag_2
+            Col_1
+            Col_2
+            ...
+            ROWN
+
+        Params(keyword-only) added for the decorated:
+        ----------------
+        new_stage: New stage name.
+
+        Params:
+        ----------------
+        ltag: Tag remarking the log
+          `func.__name__` will be set as default if None is passed.
+        type_: Log type.
+          Log type indicates the content in the log, and log of the same type
+            in the same stage will be concatenated.
+        """
         def decorate(func: callable):
             @wraps(func)
             def wrapper(self, *args, **kwargs):
+                # Update stage and record the original index and columns.
                 new_stage = kwargs.pop("new_stage", None)
                 if new_stage is not None:
                     self.stage = new_stage
@@ -107,24 +125,25 @@ class DFLoggerMixin:
                 ret = func(self, *args[1:], **kwargs)
 
                 df = self.data
-                nonlocal mark
-                if mark is None:
-                    mark = func.__name__
+                nonlocal ltag
+                if ltag is None:
+                    ltag = func.__name__
 
+                # Check and record the changes from index and columns.
                 log = dict.fromkeys(set(ori_cols) - set(df.columns), 1)
                 log.update(dict.fromkeys(set(df.columns) - set(ori_cols), -1))
                 log[ROWN_NAME] = len(df.index) - len(ori_rows)
-                log = pd.DataFrame({mark: log})
+                log = pd.DataFrame({ltag: log})
 
+                # Update the log with the `type_` of current stage.
                 slogs = self.logs.setdefault(self.stage, {})
                 if type_ in slogs:
                     slogs[type_] = pd.concat([slogs[type_], log], axis=1)
                 else:
                     slogs[type_] = log
 
-                pcorr = self.data.select_dtypes(
-                    include=["integer", "floating"]
-                ).corr(method="pearson")
+                pcorr = (self.data.select_dtypes(include=np.number)
+                         .corr(method="pearson"))
                 slogs[PCORR_NAME] = pcorr
 
                 return ret
@@ -132,52 +151,132 @@ class DFLoggerMixin:
         return decorate
 
     @staticmethod
-    def valog(func: callable = None, type_: str = RC_NAME):
+    def valog(func: callable = None,
+              rctype_: str = RC_NAME,
+              vatype_: str = VA_NAME):
+        """Decorator logging for description of values columns.
+
+        1. This log includes both column-level and factor-level granularity
+          for each column.
+        2. For column-level granularity, stats such as Chi, P-value, IV will be
+          calculated and updated to log dict, namely the log will be like:
+                    Chi     P-value     IV
+            Col_1
+            Col_2
+            ...
+        3. For factor-level granularity, stats such as value-count, IV, WOE
+          will be calculated for each factor.
+                            Count   IV      WOE
+            Col_1   Val_1
+                    Val_2
+                    ...
+            Col_2   Val_1
+            ...
+
+        Params(keyword-only) added for the decorated:
+        ----------------
+        new_stage: New stage name.
+
+        Params:
+        ----------------
+        rctype_: Log type for column-level granularity stats.
+          Log type indicates the content in the log, and log of the same type
+            in the same stage will be concatenated.
+        vatype_: Log type for factor-level granularity stats.
+          Log type indicates the content in the log, and log of the same type
+            in the same stage will be concatenated.
+        """
         if func is None:
-            return partial(__class__.valog, type_=type_)
+            return partial(__class__.valog, rctype_=rctype_, vatype_=vatype_)
 
         @wraps(func)
         def wrapper(self, *args, **kwargs):
+            # Update stage.
             new_stage = kwargs.pop("new_stage", None)
             if new_stage is not None:
                 self.stage = new_stage
 
             ret = func(self, *args[1:], **kwargs)
 
-            # Sketch for data down to both value level and column level.
-            # Value level: crosstabs, lifts, woes, ivs
-            # Column level: Chi2, IV
+            # Sketch for data down to both factor level and column level.
+            # 1. Factor level: crosstabs, lifts, woes, ivs
+            # 2. Column level: Chi2, IV
             df = self.data
             label = self.label
             uni_dfs = []
             col_Ds = []
             cols = df.columns
+
+            # Log for each column.
             for colname in cols:
                 ser = df[colname]
                 uni_df, col_D = serlog(ser, label)
                 uni_dfs.append(uni_df)
                 col_Ds.append(col_D)
 
+            # Update factor-level granularity log.
+            log = pd.concat(uni_dfs, axis=0, keys=cols)
             slogs = self.logs.setdefault(self.stage, {})
-            slogs[VA_NAME] = pd.concat(uni_dfs, keys=cols)
+            if vatype_ in slogs:
+                slogs[vatype_] = pd.concat([slogs[vatype_], log], axis=1)
+            else:
+                slogs[vatype_] = log
 
+            # Update column-level granularity log.
             log = pd.DataFrame(col_Ds, index=cols)
             slogs = self.logs.setdefault(self.stage, {})
-            if type_ in slogs:
-                slogs[type_] = pd.concat([slogs[type_], log], axis=1)
+            if rctype_ in slogs:
+                slogs[rctype_] = pd.concat([slogs[rctype_], log], axis=1)
             else:
-                slogs[type_] = log
+                slogs[rctype_] = log
 
             return ret
         return wrapper
 
     @staticmethod
     def malog(func: callable = None, type_: str = MA_NAME):
+        """Decorator logging for mapping of values.
+
+        1. `serdiffm` will be called to build the mapping relations between
+          the data before and after processed by func.
+        2. Mostly the mapping could be represented by a 1-to-1 mapper, which
+          will be the format:
+                    from_       to_
+            Col_1   val_1       new_1
+                    val_2       new_2
+                    ...
+            Col_2   ...
+            ...
+        3. But the mapping for numeric columns may be from interval to scalar,
+          which will be stored seperately with the format:
+                    start       end         to_
+            Col_1   s1[         e1)        new_1
+                    e1[         e2)        new_2
+                    ...
+                    e_n-1[      e_n]       new_n
+            Col_2   ...
+            ...
+
+        Params(keyword-only) added for the decorated:
+        ----------------
+        new_stage: str
+          New stage name.
+        to_interval: bool
+          If to build the mapping from interval to a scalar.
+
+        Params:
+        ------------------
+        type_: Log type.
+          Log type indicates the content in the log.
+          Only the latest log of the same type in the same stage will be kept.
+        """
         if func is None:
             return partial(__class__.malog, type_=type_)
 
         @wraps(func)
         def wrapper(self, *args, **kwargs):
+            # Update stage and make a copy of the original data.
+            to_interval = kwargs.pop("to_interval", False)
             new_stage = kwargs.pop("new_stage", None)
             if new_stage is not None:
                 self.stage = new_stage
@@ -191,7 +290,8 @@ class DFLoggerMixin:
             colmaps_cat = {}
             colmaps_num = {}
             for colname in cols:
-                colmap = serdiffm(df_ori[colname], df_new[colname])
+                colmap = serdiffm(df_ori[colname], df_new[colname],
+                                  to_interval=to_interval)
                 if colmap is None:
                     continue
                 elif colmap.index.nlevels == 1:
@@ -199,7 +299,7 @@ class DFLoggerMixin:
                 elif colmap.index.nlevels == 2:
                     colmaps_num[colname] = colmap
 
-            # Set for categorical and numeric columns seperately.
+            # Set log for categorical and numeric columns seperately.
             slogs = self.logs.setdefault(self.stage, {})
             if colmaps_cat:
                 slogs[f"{type_}_{CAT_NAME}"] = pd.concat(
@@ -213,67 +313,75 @@ class DFLoggerMixin:
             return ret
         return wrapper
 
-    def log2excel(self, dest: str):
+    def log2excel(self, dest: str) -> None:
+        """Output logs to excel.
+
+        Each sheet will store only one log type of one stage with stage and
+        log type as its name.
+
+        Params:
+        ----------------------
+        dest: File name.
+        """
         xlwriter = pd.ExcelWriter(dest, mode="w")
         for stage, slogs in self.logs.items():
             for log_type, log in slogs.items():
                 log.to_excel(xlwriter, f"{stage}_{log_type}")
         xlwriter.save()
 
+    @staticmethod
+    def read_dflog_file(filename: str) -> dict[str, pd.DataFrame]:
+        """Read logs from excel.
 
-# %%
-# TODO: Annotations.
-def read_dflog_file(log_fname: str, stage: str) -> dict[str, pd.DataFrame]:
-    log_fname = "ka.xlsx"
-    xlr = pd.ExcelFile(log_fname)
-    logdfs = {}
-    for sheet_name in xlr.sheet_names:
-        stage, type_s = sheet_name.split("_")
-        slog = logdfs.setdefault(stage, {})
-        slog["_".join(type_s)] = pd.read_excel(xlr, sheet_name)
-    return slog
+        Params:
+        ----------------------
+        filename: File name.
 
-
-# %%
-# TODO: Annotation
-# TODO: Is't this necessary with `pd.factorize`?
-class SeriesEncoder():
-    def __init__(self):
-        pass
-
-    def fit_transform(self, label: pd.Series):
-        codes, unis = pd.factorize(label, sort=True)
-        self.factors = unis
-        self.invs_L = unis.insert(len(unis), None)
-        self.trans_D = {v: k for k, v in enumerate(unis)}
-        return codes
-
-    def fit(self, label: pd.Series):
-        self.fit_transform(label)
-        return self
-
-    def transform(self, label):
-        return label.map(self.trans_D).fillna(-1).astype(int)
-
-    def inverse(self, codes):
-        return pd.Series(self.invs_L.take(codes), index=codes.index)
+        Return:
+        -----------------------
+        dict["stage_type", DataFrame of log]
+        """
+        xlr = pd.ExcelFile(filename)
+        logdfs = {}
+        for sheet_name in xlr.sheet_names:
+            stage, type_s = sheet_name.split("_")
+            slog = logdfs.setdefault(stage, {})
+            slog["_".join(type_s)] = pd.read_excel(xlr, sheet_name)
+        return slog
 
 
 # %%
-# TODO: Annotations.
-def serlog(ser: pd.Series, label: pd.Series):
-    """
-        "t1_lift": lifts.max(),
-        "t1_alift": acc_lifts.max(),
-        "acc_corr": kcorr,
-        "acc_pv": pv,
-        "ACC_KEYS": ",".join([str(i) for i in acc_keys]),
-        "pearson": pcorr,
-        "kendall": kcorr,
-        "spearman": scorr,
-        "chi": chi,
-        "chi_pv": pv,
-        "IV": IV,
+# TODO: Check flags.
+def serlog(ser: pd.Series, label: pd.Series = None,
+           with_woe: bool = True,
+           with_lift: bool = True):
+    """Decribe Series.
+
+    Params:
+    ---------------------
+    ser: Series to be described.
+    label: Label.
+    with_woe: If to calculate WOEs and related etc.
+    with_lift: If to calculate Lift and related etc.
+
+    Return:
+    ---------------------
+    uni_df: DataFrame of factor-level granularity index.
+            labels...     freqr       WOEs    IVs     Lifts     AccLifts
+        f1
+        f2
+        ...
+    col_D: Dict of column-level granularity index.
+        chi_2: Chi-square.
+        chi2_pv: P-value of Chi-square.
+        IV: IV,
+        t1_lift: Maximum lift.
+        t1_acl: Maximum accumulating lift.
+        acc_kcorr: Kendell correlations for lifts and values.
+        acc_kpv: P-value of Kendell correlations.
+        pearson: Pearson correltions for values and labels.
+        kendall: Ditto.
+        spearman: Ditto.
     """
     # 1. `contingency.crosstab` can only handle sortable array, namely NA and
     #   mixture dtype are not allowed.
@@ -291,11 +399,6 @@ def serlog(ser: pd.Series, label: pd.Series):
         uni_df = pd.DataFrame(ctab, index=ux, columns=uy)
     except TypeError as e:
         logger.warning(f"{e}. And an encoder will applied silently.")
-
-        # sse = SeriesEncoder().fit(ser)
-        # serv = sse.transform(ser)
-        # lse = SeriesEncoder().fit(label)
-        # labelv = lse.transform(label)
 
         codesx, fux = pd.factorize(ser, sort=True)
         fux = fux.insert(len(fux), pd.NA)
@@ -316,21 +419,23 @@ def serlog(ser: pd.Series, label: pd.Series):
 
     # Crosstab, woes, and lifts for binary label.
     if len(uy) == 2:
-        woes, ivs = cal_woes_from_ctab(ctab)
-        uni_df["woes"] = woes
-        uni_df["ivs"] = ivs
-        col_D["IV"] = ivs.sum()
+        if with_woe:
+            woes, ivs = cal_woes_from_ctab(ctab)
+            uni_df["woes"] = woes
+            uni_df["ivs"] = ivs
+            col_D["IV"] = ivs.sum()
 
-        lifts, acc_lifts, lkcorr, lkpv = cal_lifts_from_ctab(ctab)
-        uni_df["lifts"] = lifts
-        if lkcorr > 0:
-            uni_df["acc_lifts"] = acc_lifts
-        else:
-            uni_df["acc_lifts"] = acc_lifts[::-1]
-        col_D["acl_kcorr"] = lkcorr
-        col_D["acl_kpv"] = lkpv
-        col_D["t1_lift"] = lifts.max()
-        col_D["t1_acl"] = acc_lifts.max()
+        if with_lift:
+            lifts, acc_lifts, lkcorr, lkpv = cal_lifts_from_ctab(ctab)
+            uni_df["lifts"] = lifts
+            if lkcorr > 0:
+                uni_df["acc_lifts"] = acc_lifts
+            else:
+                uni_df["acc_lifts"] = acc_lifts[::-1]
+            col_D["acl_kcorr"] = lkcorr
+            col_D["acl_kpv"] = lkpv
+            col_D["t1_lift"] = lifts.max()
+            col_D["t1_acl"] = acc_lifts.max()
 
     # Correlation rate, outliers for numeric series.
     if (infer_dtype(ser) in ["integer", "floating"]
@@ -344,9 +449,24 @@ def serlog(ser: pd.Series, label: pd.Series):
 
 
 # %%
-# TODO: Annotations.
 def serdiffm(sero: pd.Series, sern: pd.Series,
              to_interval:bool = False) -> pd.Series:
+    """Match, compare and build mapping between 2 series.
+
+    1. 2 Series should share the same index.
+
+    Params:
+    --------------------
+    sero: Source Series to be compared.
+    sern: Destinated Series to be compared.
+    to_interval: If to build the mapping from interval to a scalar.
+
+    Return:
+    --------------------
+    Series representing the mapping from `sero` to `sern`.
+    Series[factor from `sero`, factor from `sern`]
+    Series[interval from `sero`, factor from `sern`]
+    """
     assert len(sero) == len(sern)
     # (uo, un), ctab = contingency.crosstab(sero.values, sern.values)
 
@@ -360,6 +480,7 @@ def serdiffm(sero: pd.Series, sern: pd.Series,
               .groupby(level=0, dropna=False, sort=True)
               .aggregate(lambda x:tuple(pd.unique(x))))
 
+    # Check if one value will be map to multiple value.
     mapper_1n = mapper.apply(len) > 1
     if mapper_1n.sum() > 0:
         logger.warning(f"Invalid 1-N mapping {mapper[mapper_1n]}.")
@@ -398,221 +519,3 @@ def serdiffm(sero: pd.Series, sern: pd.Series,
                 .rename("to"))
     else:
         return mapper.map(lambda x:x[0]).rename_axis("from").rename("to")
-
-
-# %%
-# TODO: Annotations.
-class DataProc(DFLoggerMixin):
-    def __init__(
-        self,
-        data: pd.Series | pd.DataFrame,
-        label: pd.Series,
-        factors: list | dict | int = FACTOR_MAX,
-        sort_keys: Keys = None,
-        uni_keys: Keys = None,
-        uni_keep: Keys = None,
-        na_thresh: float = 0.99,
-        flat_thresh: float = 0.99,
-        key_accs: dict[str, list] = None,
-    ):
-        """
-        1. `data` and `label` should share the same row index.
-
-        Attrs:
-        """
-        super().__init__()
-        self.data = data.copy()
-        self.label = label.copy()
-
-        self.factors = factors
-        self.sort_keys = sort_keys      # {key: asc, ...}
-        self.uni_keys = uni_keys        # [key, ...]
-        self.uni_keep = uni_keep        # {key: keep, ...} | str
-
-        self.na_thresh = na_thresh
-        self.flat_thresh = flat_thresh
-        self.key_accs = {} if key_accs is None else key_accs
-
-    @DFLoggerMixin.rclog(mark="Rename")
-    def check_index(self):
-        """Prepare data.
-
-        1. Sort rows.
-        2. Rename duplicated column names.
-        3. Fill nan with `NUM_NA_FLAG` or `CAT_NA_FLAG`.
-        """
-        df = self.data
-
-        # Sort rows.
-        sort_keys = self.sort_keys
-        if sort_keys:
-            sort_by = list(sort_keys.keys())
-            sort_ascs = list(sort_keys.values())
-            df.sort_values(by=sort_by, ascending=sort_ascs, inplace=True)
-
-        # Rename duplicated column names.
-        new_colnames = rename_duplicated(df.columns)
-        if new_colnames is not None:
-            df.columns = new_colnames
-
-        self.label = self.label[df.index]
-
-    @DFLoggerMixin.valog
-    @DFLoggerMixin.rclog(mark="DropDup")
-    def drop_duplicates(self):
-        """Drop dupicated rows.
-
-        1. Drop duplicated rows according to `uni_keys`.
-        2. `DataFrame.drop_duplicates` will be called for simple keep-strategy
-            for all columns.
-        3. `DataFrame.groupby` and `aggregate` will be called for each column
-            with different strategies.
-        """
-        uni_keys = self.uni_keys
-        if not uni_keys:
-            return
-        df = self.data
-
-        if uni_keys:
-            keep = self.uni_keep if self.uni_keep is not None else "first"
-            # Use default aggregation powered by `drop_duplicates` if possible.
-            if isinstance(keep, str):
-                df = df.drop_duplicates(subset=uni_keys, keep=keep)
-            # Group by unique keys and apply aggregation for each fields.
-            elif isinstance(keep, dict):
-                for key in keep:
-                    if isinstance(keep[key], str):
-                        keep[key] = CALLABLE_ENV[key]
-                df = df.groupby(uni_keys, sort=False).aggregate(keep)
-
-        # Update `label`.
-        self.label = self.label[df.index]
-        self.data = df
-
-    @DFLoggerMixin.rclog(mark="DropNA")
-    def drop_flat(self):
-        """Drop null, flat columns.
-        """
-        df = self.data
-        na_thresh = self.na_thresh
-        flat_thresh = self.flat_thresh
-
-        # No duplicated column names are allowed, since column names are used
-        # to mark Series.
-        na_cols = []
-        flat_cols = []
-        row_n = df.shape[0]
-        for colname in df.columns:
-            ser = df[colname]
-            vcnts = pd.value_counts(ser, sort=True, ascending=False,
-                                    normalize=False, dropna=True)
-            nna_n = vcnts.sum()
-            na_r = (row_n - nna_n) / nna_n
-            if na_thresh is not None and na_r >= na_thresh:
-                na_cols.append(colname)
-            if (flat_thresh is not None and len(vcnts) > 0
-                    and vcnts.iloc[0] / nna_n >= flat_thresh):
-                flat_cols.append(colname)
-
-        # Drop inplace.
-        df.drop(na_cols + flat_cols, axis=1, inplace=True)
-
-    @DFLoggerMixin.malog
-    def fillna(self):
-        df = self.data
-
-        # Fill NaN for numeric columns.
-        num_df = df.select_dtypes(include=["integer", "floating", "complex"])
-        if num_df is not None and not num_df.empty:
-            df.fillna({col: NUM_NA_FLAG for col in num_df.columns},
-                      inplace=True)
-
-        # Fill NaN for categorical columns.
-        cat_df = df.select_dtypes(exclude=["integer", "floating", "complex"])
-        if cat_df is not None and not cat_df.empty:
-            df.fillna({col: CAT_NA_FLAG for col in cat_df.columns},
-                      inplace=True)
-
-    @DFLoggerMixin.malog
-    def ordinize(self, cols: list | tuple | None = None):
-        """Convert data into quantitative dtype.
-
-        1. Encode categorical columns with OrdinalEncoder.
-        2. NaN will be filled with `NUM_NA_FLAG`.
-        """
-        df = self.data
-        if cols is None:
-            cols = df.select_dtypes(
-                exclude=["integer", "floating", "complex"]).columns
-
-        # Return directly.
-        if len(cols) == 0:
-            return
-
-        oe = OrdinalEncoder(dtype=np.int_, encoded_missing_value=NUM_NA_FLAG)
-        df.loc[:, cols] = oe.fit_transform(df[cols])
-
-        # mapper = pd.DataFrame(oe.categories_, index=cols).stack()
-
-    @DFLoggerMixin.valog
-    @DFLoggerMixin.malog
-    def binize(self, cols: list | tuple | None = None):
-        """Cut columns into bins.
-        """
-        df = self.data
-        label = self.label
-        factor_n = (self.factors if isinstance(self.factors, int)
-                    else len(self.factors))
-
-        # All column will be binized by default.
-        if cols is None:
-            cols = df.columns
-        if len(cols) == 0:
-            return
-        # Binize columns.
-        for colname in cols:
-            ser = df[colname]
-            edges, ctab = tree_cut(ser.values, label.values, factor_n)
-            df.loc[:, colname] = edge_encode(ser.values, edges)
-
-            # edge_index = [f"{f},{l}" for f, l in zip(edges[:-1], edges[1:])]
-            # ctab_df = pd.DataFrame(ctab, index=edge_index)
-            # recs.append(ctab_df)
-
-    @DFLoggerMixin.valog
-    @DFLoggerMixin.malog
-    def woeze(self, cols: list | tuple | None = None):
-        df = self.data
-        label = self.label
-
-        # All column will be transformed into WOEs by default.
-        if cols is None:
-            cols = df.columns
-        if len(cols) == 0:
-            return
-        # Calculate WOEs from crosstab and map values into WOEs.
-        for colname in cols:
-            ser = df[colname]
-            (ux, uy), ctab = contingency.crosstab(ser.values, label.values)
-            woes, ivs = cal_woes_from_ctab(ctab)
-            df.loc[:, colname] = woes[np.searchsorted(ux, ser.values)]
-
-    @DFLoggerMixin.rclog(mark="DropPCorr")
-    def drop_pcorr(self, thresh: float = 0.8):
-        df = self.data
-        label = self.label
-        df_num = df.select_dtypes(include=["integer", "floating"])
-        cols = df_num.columns
-
-        pcorr = df_num.corr(method="pearson")
-        ivs = cal_ivs(df_num.values, label.values)
-
-        col_map = np.ones(len(cols), dtype=np.bool_)
-        for col in cols:
-            bmap = pcorr[col] >= thresh
-            if bmap.sum() > 1:
-                rivs = np.select([bmap, ], [ivs, ], 0)
-                bmap[np.argmax(rivs)] = False
-                col_map &= ~bmap
-
-        self.data = df.loc[:, col_map]
