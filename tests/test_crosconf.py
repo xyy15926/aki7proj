@@ -3,7 +3,7 @@
 #   Name: test_crosconf.py
 #   Author: xyy15926
 #   Created: 2024-04-19 21:11:08
-#   Updated: 2024-04-22 09:40:48
+#   Updated: 2024-04-22 16:08:02
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,6 +18,7 @@ if __name__ == "__main__":
 
 from suitbear.crosconf import cproduct_aggs_and_filters, cross_aggs_and_filters
 from suitbear.crosconf import cross_aggs_from_lower, agg_confs_from_dict
+
 
 # %%
 def test_cproduct_aggs_and_filters():
@@ -38,7 +39,9 @@ def test_cproduct_aggs_and_filters():
             ("lvl5_inf"     , "mixed_lvl5_status >= 3"      , "五级分类次级及以上"),
         ],
     }
-    agg_conf = cproduct_aggs_and_filters(aggs.values(), filters.values(), "{}_{}")
+    agg_conf = cproduct_aggs_and_filters(aggs.values(),
+                                         filters.values(),
+                                         "{cond}_{agg}")
     cond_prod_n = 1
     for filter_ in filters.values():
         cond_prod_n *= len(filter_)
@@ -71,16 +74,16 @@ def test_cross_aggs_and_filters():
         (["cnt", "sum"]     , [("orgs", "bank", "nbank"), "mixed_lvl5_status"]),
     ]
 
-    agg_conf_1 = cross_aggs_and_filters(cros[:1], aggs, filters, "{}_{}")
-    agg_conf_2 = cross_aggs_and_filters(cros[1:2], aggs, filters, "{}_{}")
+    agg_conf_1 = cross_aggs_and_filters(cros[:1], aggs, filters, "{cond}_{agg}")
+    agg_conf_2 = cross_aggs_and_filters(cros[1:2], aggs, filters, "{cond}_{agg}")
     assert len(agg_conf_2) == len(agg_conf_1) * 2
 
-    agg_conf_3 = cross_aggs_and_filters(cros[2:3], aggs, filters, "{}_{}")
-    agg_conf_4 = cross_aggs_and_filters(cros[3:4], aggs, filters, "{}_{}")
+    agg_conf_3 = cross_aggs_and_filters(cros[2:3], aggs, filters, "{cond}_{agg}")
+    agg_conf_4 = cross_aggs_and_filters(cros[3:4], aggs, filters, "{cond}_{agg}")
     assert len(agg_conf_3) == len(agg_conf_4)
     assert len(agg_conf_3) * 3 == len(agg_conf_2) * 2
 
-    return cross_aggs_and_filters(cros, aggs, filters, "{}_{}")
+    return cross_aggs_and_filters(cros, aggs, filters, "{cond}_{agg}")
 
 
 # %%
@@ -114,20 +117,20 @@ def test_agg_confs_from_dict():
             "level": 1,
             "from_": None,
             "prikey": None,
-            "aggs": aggs,
-            "conds": filters,
+            "agg": aggs,
+            "cond": filters,
             "cros": cros,
-            "key_fmt": "foo_{}_{}",
+            "key_fmt": "foo_{cond}_{agg}",
         },
         "bar": {
             "part": "bar",
             "level": 1,
             "from_": None,
             "prikey": None,
-            "aggs": aggs,
-            "conds": filters,
+            "agg": aggs,
+            "cond": filters,
             "cros": cros,
-            "key_fmt": "bar_{}_{}",
+            "key_fmt": "bar_{cond}_{agg}",
         }
     }
     pconf, aconf = agg_confs_from_dict(conf)
@@ -137,10 +140,10 @@ def test_agg_confs_from_dict():
 # %%
 def test_cross_aggs_from_lower():
     aggs = {
-        "sum": ("{}_sum", "sum({})", "{}_之和"),
-        "max": ("{}_max", "max({})", "{}_最大值"),
-        "amt_sum": ("{}_sum", "smul(sum({}), acc_exchange_rate)", "{}_之和（本币）"),
-        "amt_max": ("{}_sum", "smul(max({}), acc_exchange_rate)", "{}_最大值（本币）"),
+        "sum": ("{}_sum", "sum({})", "{}之和"),
+        "max": ("{}_max", "max({})", "{}最大值"),
+        "amt_sum": ("{}_sum", "smul(sum({}), acc_exchange_rate)", "{}之和（本币）"),
+        "amt_max": ("{}_sum", "smul(max({}), acc_exchange_rate)", "{}最大值（本币）"),
     }
     filters_D = {
         "acc_cat": {

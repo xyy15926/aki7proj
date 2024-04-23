@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-04-19 22:37:51
+#   Updated: 2024-04-23 21:20:38
 #   Description:
 # ---------------------------------------------------------
 
@@ -111,7 +111,7 @@ EXGINE_ENV = {
     "sadd"      : lambda x, y: x + y,
     "ssub"      : lambda x, y: x - y,
     "smul"      : lambda x, y: x * y,
-    "sdiv"      : lambda x, y: x / y,
+    "sdiv"      : lambda x, y: np.nan if isinstance(y, int) and y == 0 else x / y,
 }
 
 
@@ -123,6 +123,7 @@ def rebuild_rec2df(
     env: Mapping = None,
     envp: EnvParser = None,
     explode: bool = False,
+    range_index: str = None,
 ) -> pd.DataFrame:
     """Parse fields from record to construct DataFrame.
 
@@ -141,6 +142,7 @@ def rebuild_rec2df(
         steps: Steps passed to `extract_field` as `steps`.
         dtype: Dtype passed to `extract_field` as `dtype`.
         default: Default value passed to `extract_field` as `dfill`.
+      None: Keep original value.
     index_rules: List of 2/4/5-Tuple of rules for value extraction.
       Each of the extractions could be a scalar or a list with the same length
       as the value extractions. So the whole extractions could be broadcasted
@@ -152,6 +154,8 @@ def rebuild_rec2df(
       the values are lists.
       So the values must be all scalar or list with the same length if this is
       set.
+    range_index: True value represents to add RangeIndex named with
+      `range_index`.
 
     Return:
     -------------------------
@@ -164,12 +168,16 @@ def rebuild_rec2df(
         else:
             envp = EnvParser(ChainMap(env, EXGINE_ENV))
 
-    if isinstance(rec, str):
-        try:
-            rec = json.loads(rec)
-        except json.JSONDecodeError as e:
-            logger.warning(e)
-    val_dict = rebuild_dict(rec, val_rules, envp)
+    # Extract some fields as index while keeping the record untouched.
+    if val_rules is None:
+        val_dict = {None: rec}
+    else:
+        if isinstance(rec, str):
+            try:
+                rec = json.loads(rec)
+            except json.JSONDecodeError as e:
+                logger.warning(e)
+        val_dict = rebuild_dict(rec, val_rules, envp)
 
     # In case that no valid values extracted.
     if not val_dict:
@@ -180,11 +188,12 @@ def rebuild_rec2df(
     else:
         vals = pd.Series(val_dict).to_frame().T
 
+    index_arrays = []
+    index_names = []
     if index_rules:
         index_dict = rebuild_dict(rec, index_rules, envp)
+        index_names = list(index_dict.keys())
         # Convert `index_dict` into MultiIndex.
-        index_arrays = []
-        # set_trace()
         for ival in index_dict.values():
             if isinstance(ival, list):
                 assert (len(ival) == len(vals))
@@ -192,11 +201,16 @@ def rebuild_rec2df(
             else:
                 index_arrays.append([ival] * len(vals))
 
-        # In case that no valid values extracted.
-        if index_arrays:
-            index_ = pd.MultiIndex.from_arrays(index_arrays,
-                                               names=index_dict.keys())
-            vals.index = index_
+    # Check if to add a new level of index.
+    if range_index:
+        index_arrays.append(np.arange(len(vals), dtype=np.int_))
+        index_names.append(range_index)
+
+    # In case that no valid values extracted.
+    if index_arrays:
+        index_ = pd.MultiIndex.from_arrays(index_arrays,
+                                           names=index_names)
+        vals.index = index_
 
     return vals
 
@@ -252,7 +266,7 @@ def trans_on_df(
             continue
 
         # Transform.
-        if cond is None:
+        if not cond:
             df[key] = envp.bind_env(df).parse(trans)
         else:
             cond_flags = envp.bind_env(df).parse(cond)
@@ -315,7 +329,7 @@ def agg_on_df(
             continue
 
         # Aggregation.
-        if cond is None:
+        if not cond:
             ret[key] = envp.bind_env(df).parse(agg)
         else:
             cond_flag = envp.bind_env(df).parse(cond)

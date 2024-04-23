@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-04-15 18:17:58
-#   Updated: 2024-04-18 17:00:39
+#   Updated: 2024-04-23 21:10:56
 #   Description:
 # ---------------------------------------------------------
 
@@ -60,6 +60,9 @@ def test_rebuild_rec2df():
     assert len(nrec) > 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
 
+    nrec = rebuild_rec2df(rec, None, index_rules, explode=True, range_index="ridx")
+    assert len(nrec) == 1
+
     val_rules = [
         ["pboc_basic_info_A", "PRH:PA01"],
         ["pboc_basic_info_B", "PIM:PB01"],
@@ -79,6 +82,12 @@ def test_rebuild_rec2df():
     nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
     assert len(nrec) >= 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
+    assert nrec.index.nlevels == len(index_rules)
+
+    nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True, range_index="ridx")
+    assert len(nrec) >= 1
+    assert np.all(nrec.columns == [i[0] for i in val_rules])
+    assert nrec.index.nlevels == len(index_rules) + 1
 
     # Test `explode` shouldn't be set when extractions don't share the same
     # length.

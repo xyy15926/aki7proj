@@ -3,7 +3,7 @@
 #   Name: crosconf.py
 #   Author: xyy15926
 #   Created: 2024-04-19 21:09:34
-#   Updated: 2024-04-19 21:56:11
+#   Updated: 2024-04-22 16:05:07
 #   Description:
 # ---------------------------------------------------------
 
@@ -37,7 +37,7 @@ logger.info("Logging Start.")
 def cproduct_aggs_and_filters(
     aggs: list,
     filters: list,
-    varn_fmt: str = "{}_{}",
+    key_fmt: str = "{cond}_{agg}",
 ) -> pd.DataFrame:
     """Generate Cartesian Product for aggregations and filters.
 
@@ -56,7 +56,7 @@ def cproduct_aggs_and_filters(
         joining with other parts.
     filters: List of 3-tuples[NAME, FILTER, COMMENT] describing the
       the filters.
-    varn_fmt: Formation string for constructing the key's names.
+    key_fmt: Formation string for constructing the key's names.
 
     Return:
     -----------------------
@@ -81,14 +81,15 @@ def cproduct_aggs_and_filters(
             cond_cond_str = " & ".join([f"({ele})" for ele in cond_cond])
             cond_cmt_str = "".join(cond_cmt)
 
-            conds.append((varn_fmt.format(cond_varn_str, agg_varn),
+            conds.append((key_fmt.format(cond=cond_varn_str,
+                                         agg=agg_varn),
                           cond_cond_str,
                           agg_fn,
                           cond_cmt_str + agg_cmt,
                           lvup_flags))
 
     return pd.DataFrame.from_records(conds,
-                                     columns=["key", "conds", "aggs",
+                                     columns=["key", "cond", "agg",
                                               "cmt", "lvup_flags"])
 
 
@@ -97,7 +98,7 @@ def cross_aggs_and_filters(
     cros: tuple[list, list],
     aggs_D: dict[str, list],
     filters_D: dict[str, list | dict],
-    key_fmt: str = "{}_{}",
+    key_fmt: str = "{cond}_{agg}",
 ) -> pd.DataFrame:
     """Cross the aggregations and filters according to `cros`.
 
@@ -110,7 +111,7 @@ def cross_aggs_and_filters(
 
     Params:
     ----------------------
-    cros: 2-Tuple[AGG-CODE-LIST, FILTER-CODE-LIST], indicating how to combine
+    cros: 2-Tuple[AGG-CODE-LIST, FILTER-CODE-LIST], indicating how to pair
       aggregations and filters.
       AGG-CODE-LIST: List of str indicating the aggregations.
       FILTER-CODE-LIST: List of str or tuple indicating the filters.
@@ -119,15 +120,15 @@ def cross_aggs_and_filters(
         simple str: filter-code from `filters_D`
     aggs_D: Dict[AGG-CODE, 3-Tuple aggregation description], from which to get
       the aggregation description with the code.
-    filters_D: Dict[FILTER-CODE, dict or list of filter description], from which
-      to get the filter description with the code.
+    filters_D: Dict[FILTER-CODE, dict or list of filter description], from
+      which to get the filter description with the code.
       list: [(NAME, FILTER, COMMENT), ...]
       dict: {FILTER-BRANCH: (NAME, FILTER, COMMENT), ...}
 
     Return:
     ----------------------
-    DataFrame with columns[key, conds, aggs, cmt], which fits for
-      `exgine.agg_part`.
+    DataFrame with columns[key, conds, agg, cmt], which fits for
+      `fxgine.agg_from_dfs`.
     """
     conf_dfs = []
     for agg_codes, filter_indcs in cros:
@@ -165,7 +166,7 @@ def cross_aggs_and_filters(
     if conf_dfs:
         cdf = pd.concat(conf_dfs, axis=0)
     else:
-        cdf = pd.DataFrame(columns=["key", "conds", "aggs", "cmt"])
+        cdf = pd.DataFrame(columns=["key", "cond", "agg", "cmt"])
 
     return cdf
 
@@ -202,37 +203,77 @@ def agg_confs_from_dict(confs: dict):
         pconfs.append((pconf["part"], pconf["level"], pconf["from_"],
                        pconf["prikey"]))
         aconfs[pname] = cross_aggs_and_filters(pconf["cros"],
-                                               pconf["aggs"],
-                                               pconf["conds"],
+                                               pconf["agg"],
+                                               pconf["cond"],
                                                pconf["key_fmt"])
 
     pconfs = pd.DataFrame.from_records(pconfs,
                                        columns=["part", "level",
                                                 "from_", "prikey"])
     aconfs = pd.concat(aconfs.values(), keys=aconfs.keys()).droplevel(level=1)
-    aconfs.index.name = "part"
+    aconfs.index.set_names("part", inplace=True)
+    aconfs = aconfs.reset_index()
 
     return pconfs, aconfs
 
 
 # %%
 def cross_aggs_from_lower(
-    agg_desc: pd.Series,
+    lower_agg: pd.Series,
     cros_D: dict[str, list],
     aggs_D: dict[str, list],
     filters_D: dict[str, list | dict],
-    key_fmt: str = "{}_{}",
+    key_fmt: str = "{cond}_{agg}",
 ) -> pd.DataFrame:
-    """
-    """
-    key = agg_desc["key"]
-    cmt = agg_desc["cmt"]
-    flags = agg_desc["lvup_flags"] or []
+    """Cross aggregations and filters from config of lower-level.
 
+    Generate upper-level aggregation config from lower-level config.
+    1. Proper aggregations are determined by the `lvup_flags` from the
+      lower-level aggregation descriptor passed in.
+    2. Aggregations descriptions in `aggs_D` will be formated with key-name
+      to fit for different lower-aggregations.
+
+    Params:
+    ---------------------------
+    lower_agg: Series or dict with keys[key, cmt, lvup_flags].
+      Aggregation returned by `cproduct_aggs_and_filters`.
+      key: Field name.
+      cmt: Comment.
+      lvup_flags: List of agg-codes in `aggs_D` indicating proper aggregations
+        for upper level or string seperated by comma.
+    cros_D: Dict[AGG-CODE, FILTER-CODE-LIST] indicating how to pair
+      aggregations and filters, but with dict instead of tuple or list so to
+      get proper filters for specified aggregation easily.
+      AGG-CODE:
+      FILTER-CODE-LIST: List of str or tuple indicating the filters.
+        tuple: [FILTER-CODE, FILTER-BRANCHES,...]
+        str-tuple: <FILTER-CODE>.[FILTRE-BRANCHES,...]
+        simple str: filter-code from `filters_D`
+    aggs_D: Dict[AGG-CODE, 3-Tuple aggregation description], from which to get
+      the aggregation description with the code.
+      Key, cond and comment in aggregation descriptions will be formatted with
+        key-name to fit for different lower-aggregations.
+    filters_D: Dict[FILTER-CODE, dict or list of filter description], from which
+      to get the filter description with the code.
+      list: [(NAME, FILTER, COMMENT), ...]
+      dict: {FILTER-BRANCH: (NAME, FILTER, COMMENT), ...}
+
+    Return:
+    DataFrame with columns[key, conds, aggs, cmt], which fits for
+      `fxgine.agg_from_dfs`.
+    ---------------------------
+    """
+    key = lower_agg["key"]
+    cmt = lower_agg["cmt"]
+    flags = lower_agg["lvup_flags"] or []
+    if isinstance(flags, str):
+        flags = [i.strip() for i in flags.split(",")]
+
+    # Format aggregations with key-name and comment from lower aggregation
+    # config.
     aggs_D = {agg_code: (name.format(key), func.format(key), cmt_.format(cmt))
               for agg_code, (name, func, cmt_) in aggs_D.items()}
+    # Construct cross rules according to level-up flags in agg-desc.
     cros = [([flag,], cros_D[flag]) for flag in flags]
 
     return cross_aggs_and_filters(cros, aggs_D, filters_D, key_fmt)
-
-

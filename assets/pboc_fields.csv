@@ -48,25 +48,25 @@ pboc_biz_abst,PC02AD01_11,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02
 pboc_biz_abst,PC02AD02_11,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""11""",varchar(31),业务类型:11 个人住房贷款|业务大类：贷款
 pboc_biz_abst,PC02AR02_11,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""11""",date,首笔住房贷款发放月份
 pboc_biz_abst,PC02AS03_11,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""11""",int,住房贷款账户数
-pboc_biz_abst,PC02AD01_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""12""",int,业务类型:12 个人商用房（包括商住两用房）贷款
-pboc_biz_abst,PC02AD02_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""12""",int,业务类型:12 个人商用房（包括商住两用房）贷款|业务大类：贷款
-pboc_biz_abst,PC02AR02_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""12""",varchar(31),首笔商用房贷款发放月份
-pboc_biz_abst,PC02AS03_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""12""",varchar(31),商用房贷款账户数
-pboc_biz_abst,PC02AD01_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""19""",date,业务类型:19 其他类贷款
-pboc_biz_abst,PC02AD02_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""19""",int,业务类型:19 其他类贷款|业务大类：贷款
-pboc_biz_abst,PC02AR02_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""19""",int,首笔其他类贷款发放月份
+pboc_biz_abst,PC02AD01_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""12""",varchar(31),业务类型:12 个人商用房（包括商住两用房）贷款
+pboc_biz_abst,PC02AD02_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""12""",varchar(21),业务类型:12 个人商用房（包括商住两用房）贷款|业务大类：贷款
+pboc_biz_abst,PC02AR02_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""12""",date,首笔商用房贷款发放月份
+pboc_biz_abst,PC02AS03_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""12""",int,商用房贷款账户数
+pboc_biz_abst,PC02AD01_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""19""",varchar(31),业务类型:19 其他类贷款
+pboc_biz_abst,PC02AD02_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""19""",varchar(31),业务类型:19 其他类贷款|业务大类：贷款
+pboc_biz_abst,PC02AR02_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""19""",date,首笔其他类贷款发放月份
 pboc_biz_abst,PC02AS03_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""19""",int,其他类贷款账户数
 pboc_biz_abst,PC02AD01_21,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""21""",varchar(31),业务类型:21 贷记卡
 pboc_biz_abst,PC02AD02_21,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""21""",varchar(31),业务类型:21 贷记卡|业务大类：信用卡
 pboc_biz_abst,PC02AR02_21,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""21""",date,贷记卡首笔业务发放月份
 pboc_biz_abst,PC02AS03_21,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""21""",int,贷记卡账户数
-pboc_biz_abst,PC02AD01_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""22""",int,业务类型:22 准贷记卡
-pboc_biz_abst,PC02AD02_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""22""",int,业务类型:22 准贷记卡|业务大类：信用卡
-pboc_biz_abst,PC02AR02_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""22""",varchar(31),准贷记卡首笔业务发放月份
-pboc_biz_abst,PC02AS03_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""22""",varchar(31),准贷记卡账户数
-pboc_biz_abst,PC02AD01_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""99""",date,业务类型:99 其他
-pboc_biz_abst,PC02AD02_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""99""",int,业务类型:99 其他|业务大类：其他
-pboc_biz_abst,PC02AR02_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""99""",int,首笔其他信贷账户业务发放月份
+pboc_biz_abst,PC02AD01_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""22""",varchar(31),业务类型:22 准贷记卡
+pboc_biz_abst,PC02AD02_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""22""",varchar(31),业务类型:22 准贷记卡|业务大类：信用卡
+pboc_biz_abst,PC02AR02_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""22""",date,准贷记卡首笔业务发放月份
+pboc_biz_abst,PC02AS03_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""22""",int,准贷记卡账户数
+pboc_biz_abst,PC02AD01_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""99""",varchar(31),业务类型:99 其他
+pboc_biz_abst,PC02AD02_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""99""",varchar(31),业务类型:99 其他|业务大类：其他
+pboc_biz_abst,PC02AR02_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""99""",date,首笔其他信贷账户业务发放月份
 pboc_biz_abst,PC02AS03_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""99""",int,其他信贷账户业务账户数
 pboc_biz_abst,PC02AS01,PCO:PC02:PC02A:PC02AS01,int,账户数合计
 pboc_biz_abst,PC02AS02,PCO:PC02:PC02A:PC02AS02,int,业务类型记录数

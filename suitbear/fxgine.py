@@ -3,7 +3,7 @@
 #   Name: fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:52:59
-#   Updated: 2024-04-22 09:07:00
+#   Updated: 2024-04-23 21:25:10
 #   Description:
 # ---------------------------------------------------------
 
@@ -62,6 +62,7 @@ def compress_hierarchy(
     conf: Dict of with keys[steps_<N>, idkey_<N>, idname_<N>,...] or Series
       with similar Index.
       steps_<N>: Steps to get the level-N values(list).
+        Null indicates to not extract any field.
       idkey_<N>: Steps of key to identify the level-N info.
         The key should be unqiue and identical at least in level-N-1 as this
         will be used as key/Index in dict DataFrame to identify `steps_<N>`.
@@ -83,19 +84,36 @@ def compress_hierarchy(
 
     cur_lv = 0
     while f"steps_{cur_lv}" in conf:
-        val_rules = [(None, conf[f"steps_{cur_lv}"])]
-        if f"idkey_{cur_lv}" in conf:
-            index_rules = list(zip(conf[f"idname_{cur_lv}"].split(","),
-                                   conf[f"idkey_{cur_lv}"].split(",")))
+        val_steps = conf[f"steps_{cur_lv}"]
+        # Don't extract any fields.
+        if pd.isna(val_steps):
+            val_rules = None
         else:
-            index_rules = []
+            val_rules = [(None, conf[f"steps_{cur_lv}"])]
+        index_rules = []
+        range_index = False
+
+        if f"idkey_{cur_lv}" in conf:
+            for idname, idkey in zip(conf[f"idname_{cur_lv}"].split(","),
+                                     conf[f"idkey_{cur_lv}"].split(",")):
+                idname = idname.strip()
+                idkey = idkey.strip()
+                # Add an `RangeIndex` to the result.
+                if idkey == "RANGEINDEX":
+                    range_index = idname
+                else:
+                    index_rules.append((idname, idkey))
+
         psrc = src.apply(rebuild_rec2df,
                          val_rules=val_rules,
                          index_rules=index_rules,
                          envp=envp,
-                         explode=True)
+                         explode=True,
+                         range_index=range_index)
+        # set_trace()
         src = pd.concat(psrc.values, keys=src.index)[None]
         cur_lv += 1
+
     return src
 
 
@@ -153,7 +171,7 @@ def flat_records(
     confs["dtype"] = confs["dtype"].str.upper()
 
     if "default" in confs and "use_default" in confs:
-        confs["default"][~confs["use_default"].astype(bool)] = None
+        confs.loc[~confs["use_default"].astype(bool), "default"] = None
 
     if "default" in confs:
         rules = confs[["key", "from_", "steps", "dtype", "default"]].values
@@ -199,7 +217,7 @@ def agg_from_dfs(
       key: Field name.
       cond: Execution string, passed to EnvParser, to filter rows in `df`,
         which should return boolean Series for filtering.
-      aggs: Execution string, passed to EnvParser, to apply column-granularity
+      agg: Execution string, passed to EnvParser, to apply column-granularity
         aggregation.
     trans_confs: DataFrame with C[part, key, cond, trans].
       part: Part name of the key.
