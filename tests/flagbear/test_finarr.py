@@ -3,7 +3,7 @@
 #   Name: test_finarr.py
 #   Author: xyy15926
 #   Created: 2024-04-11 09:11:58
-#   Updated: 2024-04-22 09:29:48
+#   Updated: 2024-04-25 12:18:12
 #   Description:
 # ---------------------------------------------------------
 
@@ -17,7 +17,8 @@ if __name__ == "__main__":
     from flagbear import finarr
     reload(finarr)
 
-from flagbear.finarr import pivot_tags, ovdd_from_duepay_records
+from flagbear.finarr import pivot_tags
+from flagbear.finarr import ovdd_from_duepay_records, month_date
 
 
 # %%
@@ -42,11 +43,70 @@ def test_pivot_tags():
 
 
 # %%
-def test_ovdd_from_duepay_records_part2():
+def test_month_date():
     recs = pd.DataFrame([
         ("2022-01-11"   , 0     , 0     , 2200),
         # Repay date overpassing the observation date within the next duepay date.
         ("2022-02-11"   , 23     , 100   , 2100),
+        # Repay date overpassing the next duepay date.
+        ("2022-03-11"   , 37    , 100   , 2000),
+        # 37 - 31 = 6 > 4: Invalid overdue days.
+        # Repay date within the observation date.
+        ("2022-04-11"   , 4     , 100   , 1900),
+        ("2022-05-11"   , 35    , 100   , 1800),
+        ("2022-06-11"   , 75    , 100   , 1700),
+        # Increasing overdue days over 4 periods.
+        ("2022-07-11"   , 98    , 100   , 1600),
+        ("2022-08-11"   , 75    , 100   , 1500),
+        ("2022-09-11"   , 46    , 100   , 1400),
+        # Repay date overpassing the observation date within the next duepay date.
+        ("2022-10-11"   , 20    , 100   , 1300),
+        ("2022-11-11"   , 0     , 100   , 1200),
+        ("2022-12-11"   , 17    , 100   , 1100),
+        ("2023-01-11"   , 17    , 100   , 1000),
+        ("2023-02-11"   , 28    , 100   , 900),
+        ("2023-03-11"   , 31    , 100   , 800),
+        ("2023-04-11"   , 0     , 100   , 700),
+        # No ending tail.
+        ("2023-05-11"   , 34    , 100   , 600),
+    ], columns=["due_date", "ovd_days", "due_amt", "rem_amt"])
+    due_date = np.asarray(recs["due_date"], dtype="datetime64[D]")
+
+    next_due = month_date(due_date, "nextdue")
+    assert np.all(next_due[:-1] == due_date[1:])
+    assert next_due[-1] - due_date[-1] == np.timedelta64(30, "D")
+
+    next_due_noend = month_date(due_date, "nextdue_noend")
+    assert np.all(next_due_noend[:-1] == due_date[1:])
+    assert next_due_noend[-1] - due_date[-1] > np.timedelta64(30, "D")
+
+    month_end = month_date(due_date, "monthend")
+    assert np.all(month_end - month_end.astype("M8[M]").astype("M8[D]")
+                  >= np.timedelta64(27, "D"))
+
+    fixed_date = month_date(due_date, 28)
+    assert np.all(fixed_date - fixed_date.astype("M8[M]").astype("M8[D]")
+                  == np.timedelta64(27, "D"))
+    assert np.all(fixed_date > due_date)
+
+    fixed_date = month_date(due_date, 1, False)
+    assert np.all(fixed_date - fixed_date.astype("M8[M]")
+                  == np.timedelta64(0, "D"))
+
+    fixed_date = month_date(due_date, 1, True)
+    assert np.all(fixed_date > due_date)
+    fixed_date_ = fixed_date - np.timedelta64(30, "D")
+    assert np.all(fixed_date_ - fixed_date_.astype("M8[M]")
+                  == np.timedelta64(0, "D"))
+
+
+# %%
+def test_ovdd_from_duepay_records():
+    recs = pd.DataFrame([
+        ("2021-12-11"   , None  , 0     , 2200),
+        ("2022-01-11"   , 0     , 0     , 2200),
+        # Repay date overpassing the observation date within the next duepay date.
+        ("2022-02-11"   , 23    , 100   , 2100),
         # Repay date overpassing the next duepay date.
         ("2022-03-11"   , 37    , 100   , 2000),
         # 37 - 31 = 6 > 4: Invalid overdue days.
@@ -98,7 +158,7 @@ def test_ovdd_from_duepay_records_part2():
 
         recs_b = recs.copy()
         recs_b["repay_date"] = due_date + ovd_days
-        recs_b["ob_date"] = ob_date
+        # recs_b["ob_date"] = ob_date
         recs_b["ever_ovdd"] = ever_ovdd
         recs_b["ever_ovdp"] = ever_ovdp
         recs_b["ever_duea"] = ever_duea
@@ -108,19 +168,14 @@ def test_ovdd_from_duepay_records_part2():
         return (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp,
                 ever_duea, stop_duea, ever_rema, stop_rema)
 
-    ob_date = np.concatenate(
-        [due_date[1:], np.array(["2099-12-31"], dtype="datetime64[D]")])
+    ob_date = month_date(due_date, "nextdue_noend")
     check(ob_date)
 
     # assert check(ob_date) == check(None)
-
-    ob_date = np.asarray(np.arange("2022-01", "2023-06",
-                                   step=np.timedelta64(1, "M"),
-                                   dtype="datetime64[M]"),
-                         dtype="datetime64[D]") + np.timedelta64(27, "D")
+    ob_date = month_date(due_date, "monthend")
     check(ob_date)
 
-    ob_date = np.array(["2099-12"] * 17, dtype="datetime64[M]")
+    ob_date = np.array(["2099-12"] * len(recs), dtype="datetime64[M]")
     (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp,
      ever_duea, stop_duea, ever_rema, stop_rema) = ovdd_from_duepay_records(
         due_date, ovd_days, ob_date, due_amt, rem_amt)
