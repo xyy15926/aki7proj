@@ -3,7 +3,7 @@
 #   Name: fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:52:59
-#   Updated: 2024-04-23 21:25:10
+#   Updated: 2024-04-27 20:27:16
 #   Description:
 # ---------------------------------------------------------
 
@@ -40,6 +40,7 @@ def compress_hierarchy(
     conf: pd.Series | dict,
     env: Mapping = None,
     envp: EnvParser = None,
+    dropna: bool = True,
 ) -> pd.Series:
     """Compress the hierarchy of the records in Series.
 
@@ -112,6 +113,9 @@ def compress_hierarchy(
                          range_index=range_index)
         # set_trace()
         src = pd.concat(psrc.values, keys=src.index)[None]
+        if dropna:
+            src = src.dropna()
+
         cur_lv += 1
 
     return src
@@ -123,12 +127,16 @@ def flat_records(
     confs: pd.DataFrame,
     env: Mapping = None,
     envp: EnvParser = None,
+    drop_rid: bool = True,
 ) -> pd.DataFrame:
     """Flat Series of records into DataFrame.
 
     Extract multiple fields from records once upon a time.
     1. Values of fields could be scalar or list of the same length. And list
       will be exploded vertically.
+    2. As the `explode` is always set and no `index_rules` is provided, the
+      result of `rebuild_rec2df` will always be a DataFrame with meaningless
+      index, which will be dropped default.
 
     Params:
     ------------------
@@ -150,6 +158,8 @@ def flat_records(
     env: Mapping to provide extra searching space for EnvParser.
     envp: EnvParser to execute string.
       ATTENTION: `env` will be ignored if `envp` is passed.
+    drop_rid: If to drop the meaningless last level of index created by
+      `rebuild_rec2df` with `explode`.
 
     Return:
     ------------------
@@ -183,7 +193,15 @@ def flat_records(
                     envp=envp,
                     explode=True)
 
-    return pd.concat(ret.values, keys=src.index)
+    # In case empty result that doesn't support `pd.concat`.
+    if ret.empty:
+        ret = pd.DataFrame()
+    else:
+        ret = pd.concat(ret.values, keys=src.index)
+        if drop_rid:
+            ret = ret.droplevel(-1)
+
+    return ret
 
 
 # %%
@@ -263,9 +281,13 @@ def agg_from_dfs(
             continue
         from_ = [i.strip() for i in from_.split(",")]
 
+        # if part_name == "acc_special_accd":
+        #     set_trace()
+
         # 2.1 Prepare DataFrame for aggregation.
         joined_df = df_space[from_[0]]
         if joined_df.empty:
+            agg_ret[part_name] = pd.DataFrame()
             continue
 
         # The group-key for aggregation must be the join-key of the result

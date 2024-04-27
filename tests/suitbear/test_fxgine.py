@@ -3,7 +3,7 @@
 #   Name: test_fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:58:22
-#   Updated: 2024-04-19 21:06:09
+#   Updated: 2024-04-27 20:39:56
 #   Description:
 # ---------------------------------------------------------
 
@@ -97,8 +97,8 @@ def test_compress_hierarchy():
         "idname_0": "rid,certno,accid",
     }
     acc_info_psrc = compress_hierarchy(src, acc_info_part)
-    assert acc_info_psrc.index.nlevels == src.index.nlevels + 2 + 1
     assert len(acc_info_psrc) > len(src)
+    assert acc_info_psrc.index.nlevels == src.index.nlevels + 2 + 1
 
     repay_60m_part = {
         "part": "acc_info",
@@ -127,6 +127,36 @@ def test_compress_hierarchy():
     return acc_info_psrc, repay_60m_psrc
 
 
+def test_compress_hierarchy_range_idx():
+    src = pboc_src()
+    repay_60m_part = {
+        "part": "acc_info",
+        "desc": "近60个月还款",
+        "level": 1,
+        "steps_0": "PDA:PD01:[_]:PD01E",
+        "idkey_0": "PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,RANGEINDEX",
+        "idname_0": "rid,certno,accid",
+        "steps_1": "PD01EH:[_]",
+    }
+    repay_60m_psrc = compress_hierarchy(src, repay_60m_part)
+    assert repay_60m_psrc.index.nlevels == src.index.nlevels + 3 + 1
+
+
+def test_compress_hierarchy_null_vals():
+    src = pboc_src()
+    repay_60m_part = {
+        "part": "acc_info",
+        "desc": "近60个月还款",
+        "level": 1,
+        "steps_0": "PDA:PD01:[_]:PD01E",
+        "idkey_0": "PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,RANGEINDEX",
+        "idname_0": "rid,certno,accid",
+        "steps_1": "PD01AH:[_]",
+    }
+    repay_60m_psrc = compress_hierarchy(src, repay_60m_part)
+    assert repay_60m_psrc.empty
+
+
 # %%
 def test_flat_record():
     acc_info_psrc, repay_60m_psrc = test_compress_hierarchy()
@@ -139,7 +169,7 @@ def test_flat_record():
         ["PD01AI01", "PD01AI01", "varchar(255)", "基本信息_账户编号"],
     ], columns=["key", "steps", "dtype", "desc"])
     acc_info_vals = flat_records(acc_info_psrc, acc_info_fields)
-    assert acc_info_vals.index.nlevels == acc_info_psrc.index.nlevels + 1
+    assert np.all(acc_info_vals.index.names == acc_info_psrc.index.names)
     assert len(acc_info_vals) == len(acc_info_psrc)
 
     repay_60m_fields = pd.DataFrame.from_records([
@@ -147,8 +177,8 @@ def test_flat_record():
         ("PD01ED01", "PD01ED01", "varchar(31)", "还款状态"),
         ("PD01EJ01", "PD01EJ01", "int", "逾期（透支）总额"),
     ], columns=["key", "steps", "dtype", "desc"])
-    repay_60m_vals = flat_records(repay_60m_psrc, repay_60m_fields)
-    assert repay_60m_vals.index.nlevels == repay_60m_psrc.index.nlevels + 1
+    repay_60m_vals = flat_records(repay_60m_psrc, repay_60m_fields, drop_rid=False)
+    assert np.all(repay_60m_vals.index.names[:-1] == repay_60m_psrc.index.names)
     assert len(repay_60m_vals) == len(repay_60m_psrc)
 
     return acc_info_vals, repay_60m_vals

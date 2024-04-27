@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-04-23 21:20:38
+#   Updated: 2024-04-27 20:09:28
 #   Description:
 # ---------------------------------------------------------
 
@@ -66,6 +66,9 @@ def _mon_itvl(x: pd.Series | pd.Timestamp, y: pd.Series | pd.Timestamp):
     # x = np.array(x, dtype="datetime64[M]")
     # y = np.array(y, dtype="datetime64[M]")
     # return np.asarray(x - y, dtype=int)
+    if x is None or y is None:
+        return np.nan
+
     if isinstance(x, pd.Series):
         x = pd.to_datetime(x).dt.to_period("M")
     else:

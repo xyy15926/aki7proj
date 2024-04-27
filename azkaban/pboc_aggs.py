@@ -3,7 +3,7 @@
 #   Name: pboc_aggs.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-04-23 21:44:07
+#   Updated: 2024-04-27 20:19:56
 #   Description:
 # ---------------------------------------------------------
 
@@ -116,18 +116,20 @@ def concat_confs():
 
 
 # %%
-def cal_vars(
+def pboc_fields(
     src: pd.Series,
+    write_fields: bool = False,
 ) -> dict[str, pd.DataFrame]:
-    """Calculate index from PBOC records.
+    """Extract fields from PBOC records.
 
     Params:
     ---------------------------
     src: Series of PBOC records.
+    write_fields: The filename for writing the extractions to.
 
     Return:
     ---------------------------
-    Dict[part-name, aggregation result]
+    Dict[part-name, DataFrame of values of parts]
     """
     # Read fields extraction config and addup some default settings.
     pconfs = pd.read_csv(PBOC_PARTS)
@@ -144,6 +146,34 @@ def cal_vars(
         ret = flat_records(psrc, fconfs_)
         dfs[pconf["part"]] = ret
 
+    if write_fields:
+        xlw = pd.ExcelWriter(write_fields)
+        for parts, var_df in dfs.items():
+            if not var_df.empty:
+                var_df.to_excel(xlw, sheet_name=parts)
+        xlw.close()
+
+    return dfs
+
+
+# %%
+def pboc_vars(
+    dfs: dict[str, pd.DataFrame],
+    write_aggconf: bool = False,
+    write_vars: bool = False,
+) -> dict[str, pd.DataFrame]:
+    """Calculate index from PBOC records.
+
+    Params:
+    ---------------------------
+    src: Series of PBOC records.
+    write_aggconf: The filename for writing the aggregations configs to.
+    write_vars: The filename for writing the variables to.
+
+    Return:
+    ---------------------------
+    Dict[part-name, aggregation result]
+    """
     # Construct transformation and aggregation config.
     part_confs, agg_confs = concat_confs()
     trans_confs = [pd.DataFrame(val, columns=["key", "trans", "cond", "cmt"])
@@ -153,9 +183,30 @@ def cal_vars(
                    .reset_index()
                    .rename(columns={"index": "part"}))
 
-    # Apply aggregations.
+    # Read `PBOC_PARTS` for primary key of each part.
+    pconfs = pd.read_csv(PBOC_PARTS)
     part_confs_ = pd.concat([pconfs, part_confs])
+
+    if write_aggconf:
+        xlw = pd.ExcelWriter(write_aggconf)
+        part_confs.to_excel(xlw, sheet_name="pboc_vars_parts")
+        trans_confs.to_excel(xlw, sheet_name="pboc_vars_trans")
+        agg_confs.to_excel(xlw, sheet_name="pboc_vars_aggs")
+        pd.concat([pd.DataFrame(v).T for v in MAPPERS.values()],
+                  axis=0,
+                  keys=MAPPERS.keys()).to_excel(xlw,
+                                                sheet_name="pboc_vars_maps.csv")
+        xlw.close()
+
+    # Apply aggregations.
     ret = agg_from_dfs(dfs, part_confs_, agg_confs, trans_confs, MAPPERS_)
+
+    if write_vars:
+        xlw = pd.ExcelWriter(write_vars)
+        for parts, var_df in ret.items():
+            if not var_df.empty:
+                var_df.to_excel(xlw, sheet_name=parts)
+        xlw.close()
 
     return ret
 
@@ -166,9 +217,5 @@ if __name__ == "__main__":
     pboc = open(PBOC_JSON, "r").read()
     pboc2 = pboc.replace("2019101617463675115707", "2019101617463675115708")
     src = pd.Series({"xfy": pboc, "xfy2": pboc2})
-    ret = cal_vars(src)
-
-    xlw = pd.ExcelWriter("pboc_vars.xlsx")
-    for parts, var_df in ret.items():
-        var_df.to_excel(xlw, sheet_name=parts)
-    xlw.close()
+    dfs = pboc_fields(src, "pboc_fields.xlsx")
+    ret = pboc_vars(dfs, "pboc_aggconf.xlsx", "pboc_vars.xlsx")

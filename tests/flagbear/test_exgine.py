@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-04-15 18:17:58
-#   Updated: 2024-04-23 21:10:56
+#   Updated: 2024-04-27 18:09:25
 #   Description:
 # ---------------------------------------------------------
 
@@ -39,7 +39,7 @@ def pboc_src():
 
 
 # %%
-def test_rebuild_rec2df():
+def test_rebuild_rec2df_basic():
     src = pboc_src()
     rec = src.iloc[0]
 
@@ -55,14 +55,6 @@ def test_rebuild_rec2df():
     assert len(nrec) == 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
 
-    index_rules = []
-    nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
-    assert len(nrec) > 1
-    assert np.all(nrec.columns == [i[0] for i in val_rules])
-
-    nrec = rebuild_rec2df(rec, None, index_rules, explode=True, range_index="ridx")
-    assert len(nrec) == 1
-
     val_rules = [
         ["pboc_basic_info_A", "PRH:PA01"],
         ["pboc_basic_info_B", "PIM:PB01"],
@@ -70,6 +62,17 @@ def test_rebuild_rec2df():
     nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
     assert len(nrec) == 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
+
+    nrec = rebuild_rec2df(rec, val_rules, [], explode=True)
+    assert np.all(nrec.columns == [i[0] for i in val_rules])
+
+    nrec = rebuild_rec2df(rec, None, index_rules, explode=True)
+    assert np.all(nrec.index.names == [i[0] for i in index_rules])
+
+
+def test_rebuild_rec2df_range_index():
+    src = pboc_src()
+    rec = src.iloc[0]
 
     val_rules = [
         ["pboc_acc_info", "PDA:PD01:[_]"],
@@ -82,12 +85,17 @@ def test_rebuild_rec2df():
     nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
     assert len(nrec) >= 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
-    assert nrec.index.nlevels == len(index_rules)
+    assert np.all(nrec.index.names == [i[0] for i in index_rules])
 
     nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True, range_index="ridx")
     assert len(nrec) >= 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
-    assert nrec.index.nlevels == len(index_rules) + 1
+    assert np.all(nrec.index.names == [i[0] for i in index_rules] + ["ridx"])
+
+
+def test_rebuild_rec2df_explode():
+    src = pboc_src()
+    rec = src.iloc[0]
 
     # Test `explode` shouldn't be set when extractions don't share the same
     # length.
@@ -106,6 +114,11 @@ def test_rebuild_rec2df():
 
     with pytest.raises(ValueError):
         nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
+
+
+def test_rebuild_rec2df_null_fields():
+    src = pboc_src()
+    rec = src.iloc[0]
 
     # Null fields test.
     val_rules = [

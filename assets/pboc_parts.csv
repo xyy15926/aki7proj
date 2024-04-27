@@ -13,11 +13,11 @@ PBOC,pboc_postfee_abst,后付费业务概要,,"PRH:PA01:PA01A:PA01AI01,PRH:PA01:
 PBOC,pboc_public_abst,公共信息概要,,"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01","rid,certno",,,,"rid,certno",0
 PBOC,pboc_inq_abst,查询记录概要,,"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01","rid,certno",,,,"rid,certno",0
 PBOC,pboc_acc_info,分帐户明细,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,RANGEINDEX","rid,certno,accid",,,,"rid,certno,accid",1
-PBOC,pboc_acc_repay_24_monthly,分帐户明细_近24个月还款,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01","rid,certno",PD01D:PD01DH:[_],RANGEINDEX,accid,"rid,certno,accid,None",2
-PBOC,pboc_acc_repay_60_monthly,分帐户明细_近60个月还款,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01","rid,certno",PD01E:PD01EH:[_],RANGEINDEX,accid,"rid,certno,accid,None",2
-PBOC,pboc_acc_special_trans,分帐户明细_特殊交易,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01","rid,certno",PD01F:PD01FH:[_],RANGEINDEX,accid,"rid,certno,accid,None",2
-PBOC,pboc_acc_special_accd,分账户明细_特殊事件,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01","rid,certno",PD01G:PD01GH:[_],RANGEINDEX,accid,"rid,certno,accid,None",2
-PBOC,pboc_acc_special_insts,分帐户明细_大额专项分期,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01","rid,certno",PD01H:PD01HH:[_],RANGEINDEX,accid,"rid,certno,accid,None",2
+PBOC,pboc_acc_repay_24_monthly,分帐户明细_近24个月还款,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,RANGEINDEX","rid,certno,accid",PD01D:PD01DH:[_],RANGEINDEX,monid,"rid,certno,accid,None",2
+PBOC,pboc_acc_repay_60_monthly,分帐户明细_近60个月还款,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,RANGEINDEX","rid,certno,accid",PD01E:PD01EH:[_],RANGEINDEX,monid,"rid,certno,accid,None",2
+PBOC,pboc_acc_special_trans,分帐户明细_特殊交易,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,RANGEINDEX","rid,certno,accid",PD01F:PD01FH:[_],RANGEINDEX,acctid,"rid,certno,accid,None",2
+PBOC,pboc_acc_special_accd,分账户明细_特殊事件,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,RANGEINDEX","rid,certno,accid",PD01G:PD01GH:[_],RANGEINDEX,acctid,"rid,certno,accid,None",2
+PBOC,pboc_acc_special_insts,分帐户明细_大额专项分期,PDA:PD01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,RANGEINDEX","rid,certno,accid",PD01H:PD01HH:[_],RANGEINDEX,acctid,"rid,certno,accid,None",2
 PBOC,pboc_credit_info,授信协议明细,PCA:PD02:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01","rid,certno",,,,"rid,certno,None",1
 PBOC,pboc_rel_info,相关还款责任,PCR:PD03:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01","rid,certno",,,,"rid,certno,None",1
 PBOC,pboc_postfee_info,非信贷交易明细,PND:PE01:[_],"PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01","rid,certno",,,,"rid,certno,None",1
