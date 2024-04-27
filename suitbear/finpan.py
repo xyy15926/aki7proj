@@ -89,11 +89,14 @@ def addup_ob_records(
         ob_date = month_date(due_date, ob_date)
 
     # Set MOBs.
-    if start_date is None:
-        start_date = np.datetime64(due_date.min(), "M")
+    if "MOB" not in records:
+        if start_date is None:
+            start_date = np.datetime64(due_date.min(), "M")
+        else:
+            start_date = np.datetime64(start_date, "M")
+        mobs = (due_date.astype("M8[M]") - start_date).astype(np.int_)
     else:
-        start_date = np.datetime64(start_date, "M")
-    mobs = (due_date.astype("M8[M]") - start_date).astype(np.int_)
+        mobs = records["MOB"]
     # set_trace()
 
     # Calculate overdue index.
