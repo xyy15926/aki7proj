@@ -3,7 +3,7 @@
 #   Name: test_panels.py
 #   Author: xyy15926
 #   Created: 2024-04-09 20:02:08
-#   Updated: 2024-04-27 17:00:34
+#   Updated: 2024-04-27 21:04:29
 #   Description:
 # ---------------------------------------------------------
 
@@ -53,6 +53,7 @@ def test_addup_ob_records():
         # No ending tail.
         ("2023-05-11"   , 34    , 100   , 600),
     ], columns=["due_date", "ovd_days", "due_amt", "rem_amt"])
+
     df = addup_ob_records(recs)
     assert df.loc[0, "ever_ovdd"] == np.timedelta64(0, "D")
     assert df.loc[0, "ever_ovdp"] == 0
@@ -72,6 +73,41 @@ def test_addup_ob_records():
     assert np.all(dum_df.loc[10:, "ever_ovdp"] == DUM_OVDP)
 
     return df.join(recs)
+
+
+def test_addup_ob_records_sort():
+    recs = pd.DataFrame([
+        ("2022-05-11"   , 35    , 100   , 1800),
+        ("2021-12-11"   , None  , 0     , 2200),
+        ("2022-01-11"   , 0     , 0     , 2200),
+        # Repay date overpassing the observation date within the next duepay date.
+        ("2022-02-11"   , 23     , 100   , 2100),
+        # Repay date overpassing the next duepay date.
+        ("2022-03-11"   , 37    , 100   , 2000),
+        # 37 - 31 = 6 > 4: Invalid overdue days.
+        # Repay date within the observation date.
+        ("2022-04-11"   , 4     , 100   , 1900),
+        ("2022-06-11"   , 75    , 100   , 1700),
+        # Increasing overdue days over 4 periods.
+        ("2022-07-11"   , 98    , 100   , 1600),
+        ("2022-08-11"   , 75    , 100   , 1500),
+        ("2022-09-11"   , 46    , 100   , 1400),
+        # Repay date overpassing the observation date within the next duepay date.
+        ("2022-10-11"   , 20    , 100   , 1300),
+        ("2022-11-11"   , 0     , 100   , 1200),
+        ("2022-12-11"   , 17    , 100   , 1100),
+        ("2023-01-11"   , 17    , 100   , 1000),
+        ("2023-02-11"   , 28    , 100   , 900),
+        ("2023-03-11"   , 31    , 100   , 800),
+        ("2023-04-11"   , 0     , 100   , 700),
+        # No ending tail.
+        ("2023-05-11"   , 34    , 100   , 600),
+    ], columns=["due_date", "ovd_days", "due_amt", "rem_amt"])
+
+    sorted_df = addup_ob_records(recs)
+    df = test_addup_ob_records()
+    for col in sorted_df:
+        assert np.all(sorted_df[col] == df[col])
 
 
 # %%

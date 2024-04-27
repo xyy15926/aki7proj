@@ -90,6 +90,8 @@ def ovdd_from_duepay_records(
       That will be easy to get the day past due for each duepayment, but not
       convenient to get the overdue days at some specific time point, A.K.A.
       observation point.
+      Here, `due_date`, with other arrays, is assumed to be sorted in ascending
+      order.
 
     2. There are 2 kind of overdue days for a period of time:
 

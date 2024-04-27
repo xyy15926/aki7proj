@@ -3,7 +3,7 @@
 #   Name: finpan.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2024-04-27 16:55:52
+#   Updated: 2024-04-27 20:59:24
 #   Description:
 # ---------------------------------------------------------
 
@@ -76,6 +76,10 @@ def addup_ob_records(
       amounts.
     """
     due_date = np.asarray(records["due_date"], dtype="datetime64[D]")
+    sort_order = np.argsort(due_date)
+    records = records.iloc[sort_order]
+    due_date = due_date[sort_order]
+
     ovd_days = np.asarray(records["ovd_days"])
     due_amt = np.asarray(records["due_amt"]) if "due_amt" in records else None
     rem_amt = np.asarray(records["rem_amt"]) if "rem_amt" in records else None
