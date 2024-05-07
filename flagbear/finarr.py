@@ -3,7 +3,7 @@
 #   Name: finarr.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2024-04-25 12:15:59
+#   Updated: 2024-04-28 15:11:37
 #   Description:
 # ---------------------------------------------------------
 
@@ -355,7 +355,9 @@ def month_date(
     elif isinstance(rule , int) and 1 <= rule <= 28:
         ob_date = due_date.astype("M8[M]") + np.timedelta64(rule - 1, "D")
         if np.any(ob_date < due_date):
-            logger.warning("Result dates may precedes the given dates.")
+            invalid = due_date[ob_date < due_date]
+            logger.warning(
+                f"Result dates {invalid} may precedes the given dates.")
             if forced:
                 ob_date += np.timedelta64(30, "D")
     else:
