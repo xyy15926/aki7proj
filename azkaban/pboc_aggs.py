@@ -3,7 +3,7 @@
 #   Name: pboc_aggs.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-04-27 20:19:56
+#   Updated: 2024-05-06 18:35:44
 #   Description:
 # ---------------------------------------------------------
 
@@ -205,7 +205,15 @@ def pboc_vars(
         xlw = pd.ExcelWriter(write_vars)
         for parts, var_df in ret.items():
             if not var_df.empty:
-                var_df.to_excel(xlw, sheet_name=parts)
+                if var_df.shape[1] > 10000:
+                    var_df.iloc[:, :10000].to_excel(
+                        xlw,
+                        sheet_name=f"{parts}_C0")
+                    var_df.iloc[:, 10000:].to_excel(
+                        xlw,
+                        sheet_name=f"{parts}_C1")
+                else:
+                    var_df.to_excel(xlw, sheet_name=parts)
         xlw.close()
 
     return ret
@@ -216,6 +224,9 @@ if __name__ == "__main__":
     PBOC_JSON = os.path.join(ASSETS, "pboc_utf8.json")
     pboc = open(PBOC_JSON, "r").read()
     pboc2 = pboc.replace("2019101617463675115707", "2019101617463675115708")
+    report_date = extract_field(pboc, "PRH:PA01:PA01A:PA01AR01")
+    MAPPERS_["today"] = pd.Timestamp(report_date)
+
     src = pd.Series({"xfy": pboc, "xfy2": pboc2})
     dfs = pboc_fields(src, "pboc_fields.xlsx")
     ret = pboc_vars(dfs, "pboc_aggconf.xlsx", "pboc_vars.xlsx")

@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-04-27 20:09:28
+#   Updated: 2024-05-06 18:09:26
 #   Description:
 # ---------------------------------------------------------
 
@@ -90,6 +90,24 @@ def _ser_map(x: pd.Series, y: dict, z: Any = None):
         return x.map(y).fillna(z)
 
 
+def _argmaxs(x: pd.Series, y: pd.Series):
+    """Get all the corresponding values for the maximums.
+    """
+    if len(x) == 0:
+        return pd.Series(dtype=int)
+    max_ = np.nanmax(x)
+    return y[x == max_]
+
+
+def _argmins(x: pd.Series, y: pd.Series):
+    """Get all the corresponding values for the minimums.
+    """
+    if len(x) == 0:
+        return pd.Series(dtype=int)
+    min_ = np.nanmin(x)
+    return y[x == min_]
+
+
 EXGINE_ENV = {
     "today"     : pd.Timestamp.today(),
     "map"       : _ser_map,
@@ -108,6 +126,8 @@ EXGINE_ENV = {
     "flat1_max" : _flat1_max,
     "argmax"    : lambda x: None if len(x) == 0 else np.argmax(x),
     "argmin"    : lambda x: None if len(x) == 0 else np.argmin(x),
+    "argmaxs"   : _argmaxs,
+    "argmins"   : _argmins,
     "getn"      : _getn,
     "head"      : lambda x, y: x.iloc[:y],
     "tail"      : lambda x, y: x.iloc[-y:],
