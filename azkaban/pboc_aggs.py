@@ -3,7 +3,7 @@
 #   Name: pboc_aggs.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-05-06 18:35:44
+#   Updated: 2024-05-10 20:36:44
 #   Description:
 # ---------------------------------------------------------
 
@@ -27,6 +27,7 @@ if __name__ == "__main__":
 import os
 from IPython.core.debugger import set_trace
 from flagbear.fliper import extract_field
+from flagbear.exgine import agg_on_df
 from suitbear.fxgine import compress_hierarchy, flat_records, agg_from_dfs
 from suitbear.crosconf import agg_confs_from_dict, cross_aggs_from_lower
 from azkaban.pboc_conf import LV1_AGG_CONF, LV2_AGG_CONF, LV20_AGG_CONF
@@ -159,6 +160,7 @@ def pboc_fields(
 # %%
 def pboc_vars(
     dfs: dict[str, pd.DataFrame],
+    agg_key_mark: pd.Series | set | list = None,
     write_aggconf: bool = False,
     write_vars: bool = False,
 ) -> dict[str, pd.DataFrame]:
@@ -182,6 +184,9 @@ def pboc_vars(
                    .droplevel(1)
                    .reset_index()
                    .rename(columns={"index": "part"}))
+
+    if agg_key_mark is not None:
+        agg_confs = agg_confs[agg_confs["key"].isin(agg_key_mark)]
 
     # Read `PBOC_PARTS` for primary key of each part.
     pconfs = pd.read_csv(PBOC_PARTS)
@@ -227,6 +232,9 @@ if __name__ == "__main__":
     report_date = extract_field(pboc, "PRH:PA01:PA01A:PA01AR01")
     MAPPERS_["today"] = pd.Timestamp(report_date)
 
+    POBC_AGGCONF_MARK = os.path.join(ASSETS, "pboc_aggconf_mark.xlsx")
+    agg_key_mark = pd.read_excel(POBC_AGGCONF_MARK)["key"]
+
     src = pd.Series({"xfy": pboc, "xfy2": pboc2})
     dfs = pboc_fields(src, "pboc_fields.xlsx")
-    ret = pboc_vars(dfs, "pboc_aggconf.xlsx", "pboc_vars.xlsx")
+    ret = pboc_vars(dfs, agg_key_mark, "pboc_aggconf.xlsx", "pboc_vars.xlsx")

@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-05-06 18:09:26
+#   Updated: 2024-05-10 17:58:07
 #   Description:
 # ---------------------------------------------------------
 
@@ -135,6 +135,8 @@ EXGINE_ENV = {
     "ssub"      : lambda x, y: x - y,
     "smul"      : lambda x, y: x * y,
     "sdiv"      : lambda x, y: np.nan if isinstance(y, int) and y == 0 else x / y,
+    "hist"      : lambda x, y: np.histogram(x, y)[0],
+    "coef_var"  : lambda x: 0 if len(x) == 0 else np.std(x) / np.mean(x),
 }
 
 
@@ -358,4 +360,7 @@ def agg_on_df(
             cond_flag = envp.bind_env(df).parse(cond)
             ret[key] = envp.bind_env(df.loc[cond_flag]).parse(agg)
 
-    return pd.Series(ret)
+    if ret:
+        return pd.Series(ret)
+    else:
+        return pd.Series(dtype=object)
