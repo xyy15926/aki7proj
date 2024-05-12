@@ -234,6 +234,7 @@ if __name__ == "__main__":
 
     POBC_AGGCONF_MARK = os.path.join(ASSETS, "pboc_aggconf_mark.xlsx")
     agg_key_mark = pd.read_excel(POBC_AGGCONF_MARK)["key"]
+    agg_key_mark = None
 
     src = pd.Series({"xfy": pboc, "xfy2": pboc2})
     dfs = pboc_fields(src, "pboc_fields.xlsx")
