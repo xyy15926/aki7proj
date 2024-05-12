@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-05-10 17:58:07
+#   Updated: 2024-05-11 14:16:42
 #   Description:
 # ---------------------------------------------------------
 
@@ -200,8 +200,10 @@ def rebuild_rec2df(
         if isinstance(rec, str):
             try:
                 rec = json.loads(rec)
-            except json.JSONDecodeError as e:
-                logger.warning(e)
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid JSON string: {rec}.")
+                return pd.DataFrame()
+
         val_dict = rebuild_dict(rec, val_rules, envp)
 
     # In case that no valid values extracted.

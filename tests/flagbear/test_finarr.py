@@ -3,7 +3,7 @@
 #   Name: test_finarr.py
 #   Author: xyy15926
 #   Created: 2024-04-11 09:11:58
-#   Updated: 2024-04-25 12:18:12
+#   Updated: 2024-05-08 22:09:27
 #   Description:
 # ---------------------------------------------------------
 
@@ -174,6 +174,11 @@ def test_ovdd_from_duepay_records():
     # assert check(ob_date) == check(None)
     ob_date = month_date(due_date, "monthend")
     check(ob_date)
+
+    # ob-dates must be strictly later than due-dates.
+    with pytest.raises(AssertionError):
+        ob_date = month_date(due_date, 11)
+        check(ob_date)
 
     ob_date = np.array(["2099-12"] * len(recs), dtype="datetime64[M]")
     (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp,

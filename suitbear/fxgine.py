@@ -3,7 +3,7 @@
 #   Name: fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:52:59
-#   Updated: 2024-04-27 20:27:16
+#   Updated: 2024-05-12 09:55:07
 #   Description:
 # ---------------------------------------------------------
 
@@ -111,8 +111,23 @@ def compress_hierarchy(
                          envp=envp,
                          explode=True,
                          range_index=range_index)
-        # set_trace()
-        src = pd.concat(psrc.values, keys=src.index)[None]
+
+        # In case empty DataFrame or None that represents unsuccessful field
+        # extraction from records.
+        valid_values = []
+        valid_index = []
+        for key, val in psrc.items():
+            if val is None or val.empty:
+                continue
+            valid_values.append(val)
+            valid_index.append(key)
+        src = pd.concat(valid_values, keys=valid_index)[None]
+
+        # Recover the Index names.
+        ori_index_names = (psrc.index.names
+                           + src.index.names[len(psrc.index.names):])
+        src.index.set_names(ori_index_names, inplace=True)
+
         if dropna:
             src = src.dropna()
 

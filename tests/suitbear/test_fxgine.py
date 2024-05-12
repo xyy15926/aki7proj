@@ -3,7 +3,7 @@
 #   Name: test_fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:58:22
-#   Updated: 2024-04-27 20:39:56
+#   Updated: 2024-05-11 15:51:53
 #   Description:
 # ---------------------------------------------------------
 
@@ -13,7 +13,7 @@ import pytest
 if __name__ == "__main__":
     from importlib import reload
     from flagbear import fliper, exgine
-    from flagbear import fxgine
+    from suitbear import fxgine
     reload(fliper)
     reload(exgine)
     reload(fxgine)
@@ -28,6 +28,7 @@ from flagbear.exgine import rebuild_rec2df
 from suitbear.fxgine import compress_hierarchy, flat_records
 from suitbear.fxgine import agg_from_dfs
 
+# %%
 ASSETS = os.path.join(os.curdir, "assets")
 PBOC_JSON = os.path.join(ASSETS, "pboc_utf8.json")
 PBOC_PARTS = os.path.join(ASSETS, "pboc_parts.csv")
