@@ -3,12 +3,13 @@
 #   Name: patterns.py
 #   Author: xyy15926
 #   Created: 2023-12-03 21:05:51
-#   Updated: 2024-02-26 21:30:51
+#   Updated: 2024-05-12 14:02:52
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 from datetime import date, time
+import numpy as np
 
 # %%
 REGEXS = {
@@ -74,7 +75,7 @@ REGEXS = {
 # %%
 REGEX_TOKEN_SPECS = {
     "FLOAT"         : (REGEXS["sfloat"]                 , float),
-    "DATE"          : (REGEXS["date"]                   , lambda x: date.fromisoformat(x.replace("/", "-"))),
+    "DATE"          : (REGEXS["date"]                   , lambda x: np.datetime64(x.replace("/", "-"))),
     "TIME"          : (REGEXS["time"]                   , lambda x: time.fromisoformat(x)),
     "INT"           : (REGEXS["sint"]                   , int),
 }
