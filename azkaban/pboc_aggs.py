@@ -3,7 +3,7 @@
 #   Name: pboc_aggs.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-05-10 20:36:44
+#   Updated: 2024-05-12 12:44:20
 #   Description:
 # ---------------------------------------------------------
 
@@ -43,7 +43,10 @@ logger.info("Logging Start.")
 
 
 # %%
-ASSETS = os.path.join(os.curdir, "assets")
+if __name__ == "__main__":
+    ASSETS = os.path.join(os.curdir, "assets")
+else:
+    ASSETS = os.path.join(os.path.dirname(__file__), "../assets")
 PBOC_PARTS = os.path.join(ASSETS, "pboc_parts.csv")
 PBOC_FIELDS = os.path.join(ASSETS, "pboc_fields.csv")
 

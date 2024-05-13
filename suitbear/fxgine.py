@@ -3,7 +3,7 @@
 #   Name: fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:52:59
-#   Updated: 2024-05-12 09:55:07
+#   Updated: 2024-05-12 14:42:36
 #   Description:
 # ---------------------------------------------------------
 
@@ -105,27 +105,34 @@ def compress_hierarchy(
                 else:
                     index_rules.append((idname, idkey))
 
-        psrc = src.apply(rebuild_rec2df,
-                         val_rules=val_rules,
-                         index_rules=index_rules,
-                         envp=envp,
-                         explode=True,
-                         range_index=range_index)
+        # Never `pd.DF.apply`.
+        # psrc = src.apply(rebuild_rec2df,
+        #                  val_rules=val_rules,
+        #                  index_rules=index_rules,
+        #                  envp=envp,
+        #                  explode=True,
+        #                  range_index=range_index)
 
-        # In case empty DataFrame or None that represents unsuccessful field
-        # extraction from records.
         valid_values = []
         valid_index = []
-        for key, val in psrc.items():
-            if val is None or val.empty:
+        for idx, val in src.iteritems():
+            val_df = rebuild_rec2df(val, val_rules, index_rules,
+                                    envp=envp,
+                                    explode=True,
+                                    range_index=range_index)
+            # In case empty DataFrame or None that represents unsuccessful
+            # field extraction from records.
+            if val_df is None or val_df.empty:
                 continue
-            valid_values.append(val)
-            valid_index.append(key)
+            valid_values.append(val_df)
+            valid_index.append(idx)
+
+        # Save the original Index names before.
+        ori_index_names = src.index.names
         src = pd.concat(valid_values, keys=valid_index)[None]
 
         # Recover the Index names.
-        ori_index_names = (psrc.index.names
-                           + src.index.names[len(psrc.index.names):])
+        ori_index_names += src.index.names[len(ori_index_names):]
         src.index.set_names(ori_index_names, inplace=True)
 
         if dropna:

@@ -3,7 +3,7 @@
 #   Name: pboc_conf.py
 #   Author: xyy15926
 #   Created: 2022-11-10 21:44:59
-#   Updated: 2024-05-11 14:30:07
+#   Updated: 2024-05-13 15:59:46
 #   Description:
 # ----------------------------------------------------------
 
@@ -638,7 +638,7 @@ LV2_AGG_CONF = {
         "prikey": "rid,certno,accid",
         "key_fmt": "acc_repay_{cond}_{agg}",
         "cond": {
-            "mois": ([(f"last_{moi}m", f"acc_repay_moi >= -{moi}", f"近{moi}月")
+            "mois": ([(f"last_{moi}m", f"(acc_repay_moi >= -{moi}) & (acc_repay_moi <= 0)", f"近{moi}月")
                       for moi in [3, 6, 9, 12, 24, 36, 48]]
                      + [("all", None, "历史"), ]),
             "status": ([(f"eq{rs}", f"acc_repay_status == {rs}", f"还款状态为{rs}")
@@ -653,7 +653,7 @@ LV2_AGG_CONF = {
         "agg": {
             "cnt": ("cnt", "count(_)", "期数", ["max", "sum"]),
             "status_max": ("status_max", "max(acc_repay_status)", "最大还款状态", ["max",]),
-            "status_ovd_conl_max": ("status_ovd_conl_max", "flat1_max(acc_repay_status > 0)", "最长连续逾期期数", ["max"]),
+            "status_ovd_conl_max": ("status_ovd_conl_max", "flat1_max(sortby(acc_repay_status, PD01ER03, 1) > 0)", "最长连续逾期期数", ["max"]),
             "status_sum": ("status_sum", "sum(acc_repay_status)", "还款状态之和", ["max", "sum"]),
             "ovd_max": ("ovd_max", "max(PD01EJ01)", "最大逾期（透支）金额", ["max_amt"]),
             "ovd_sum": ("ovd_sum", "sum(PD01EJ01)", "逾期（透支）金额之和", ["sum_amt", "max_amt"]),
@@ -674,7 +674,7 @@ LV2_AGG_CONF = {
         "prikey": "rid,certno,accid",
         "key_fmt": "acc_special_trans_{cond}_{agg}",
         "cond": {
-            "mois": ([(f"last_{moi}m", f"acc_special_trans_moi >= -{moi}", f"近{moi}月")
+            "mois": ([(f"last_{moi}m", f"(acc_special_trans_moi >= -{moi}) & (acc_special_trans_moi <= 0)", f"近{moi}月")
                       for moi in [12, 24, 36, 48]]
                      + [("all", None, "历史"), ]),
             "trans": [("early", "acc_special_trans_type < 10", "提前还款"),
@@ -698,7 +698,7 @@ LV2_AGG_CONF = {
         "prikey": "rid,certno,accid",
         "key_fmt": "acc_special_accd_{cond}_{agg}",
         "cond": {
-            "mois": ([(f"last_{moi}m", f"acc_special_accd_moi >= -{moi}",
+            "mois": ([(f"last_{moi}m", f"(acc_special_accd_moi >= -{moi}) & (acc_special_accd_moi <= 0)",
                        f"近{moi}月")
                       for moi in [12, 24, 36, 48]]
                      + [("all", None, "历史"), ]),
@@ -720,7 +720,7 @@ LV2_AGG_CONF = {
         "key_fmt": "acc_special_insts_{cond}_{agg}",
         "cond": {
             "mois_start": ([(f"last_{moi}m",
-                             f"acc_special_insts_moi_start >= -{moi}",
+                             f"(acc_special_insts_moi_start >= -{moi}) & (acc_special_insts_moi_start <= 0)",
                              f"近{moi}月开始") for moi in [1, 2, 3, 6, 12, 24, 36, 48]]
                            + [("his", None, "历史"), ]),
             "mois_end": ([(f"folw_{moi}m",

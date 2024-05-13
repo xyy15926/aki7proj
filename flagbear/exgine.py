@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-05-11 14:16:42
+#   Updated: 2024-05-13 16:19:47
 #   Description:
 # ---------------------------------------------------------
 
@@ -34,6 +34,10 @@ logger.info("Logging Start.")
 
 
 # %%
+def _sortby(x: pd.Series, y: pd.Series, ascending: bool = 1):
+    return x[y.sort_values(ascending=ascending).index]
+
+
 def _flat1_max(x: pd.Series):
     """Count the length of max-continuous 1's in x.
     """
@@ -124,6 +128,7 @@ EXGINE_ENV = {
     "nnfilter"  : lambda x: [i for i in x if i is not None],
     "nncount"   : lambda x: len([i for i in x if i is not None]),
     "flat1_max" : _flat1_max,
+    "sortby"    : _sortby,
     "argmax"    : lambda x: None if len(x) == 0 else np.argmax(x),
     "argmin"    : lambda x: None if len(x) == 0 else np.argmin(x),
     "argmaxs"   : _argmaxs,
