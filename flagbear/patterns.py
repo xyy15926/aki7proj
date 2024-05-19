@@ -3,7 +3,7 @@
 #   Name: patterns.py
 #   Author: xyy15926
 #   Created: 2023-12-03 21:05:51
-#   Updated: 2024-05-12 14:02:52
+#   Updated: 2024-05-14 17:18:50
 #   Description:
 # ---------------------------------------------------------
 
@@ -74,10 +74,10 @@ REGEXS = {
 
 # %%
 REGEX_TOKEN_SPECS = {
-    "FLOAT"         : (REGEXS["sfloat"]                 , float),
-    "DATE"          : (REGEXS["date"]                   , lambda x: np.datetime64(x.replace("/", "-"))),
-    "TIME"          : (REGEXS["time"]                   , lambda x: time.fromisoformat(x)),
-    "INT"           : (REGEXS["sint"]                   , int),
+    "FLOAT"         : (REGEXS["sfloat"]                 , float         , np.nan),
+    "DATE"          : (REGEXS["date"]                   , lambda x: np.datetime64(x.replace("/", "-"))  , np.datetime64("NaT")),
+    "TIME"          : (REGEXS["time"]                   , lambda x: time.fromisoformat(x)               , np.datetime64("NaT")),
+    "INT"           : (REGEXS["sint"]                   , int           , np.nan),
 }
 
 # %%

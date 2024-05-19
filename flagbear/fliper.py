@@ -62,6 +62,7 @@ def regex_caster(
       Lexer inited with `REGEX_TOKEN_SPECS` will be used as default.
 
     Return:
+    ------------------
     token.val: Any
     token.type: str
     """
@@ -83,7 +84,8 @@ def extract_field(
     dtype: str = None,
     *,
     dforced: bool = False,
-    dfill: int | float | Mapping | Callable = None,
+    dfill: Any = None,
+    regex_specs: Mapping = REGEX_TOKEN_SPECS,
 ) -> Any:
     """Extract field from dict.
 
@@ -131,16 +133,17 @@ def extract_field(
       EvnParser with default arguments will be used as default.
     dtype: str | AUTO | None
       AUTO: Call `regex_caster` to cast string to any proper dtype.
-      str: Casting string to indicating dtype in `REGEX_TOKEN_SPECS`:
+      str: Casting string to indicating dtype in `REGEX_TOKEN_SPECS`(default)
         INT:
         FLOAT:
+        TIME:
         DATE:
-        DATETIME:
     dforced: If to rollback to used `dfill` if converters in
       `REGEX_TOKEN_SPECS` fails.
-    dfill: How to convert values after failure.
-      Mapping: Map invalid value.
-      Callable: Accept invalid value and return result after conversion.
+    dfill: The default value after dtype casting fails.
+      This will override the default values in `regex_specs` if not None.
+    regex_specs: Mapping[dtype, (regex, convert-function, default,...)]
+      Mapping storing the dtype name and the handler.
 
     Return:
     ----------------
@@ -167,7 +170,8 @@ def extract_field(
                 cur_obj = cur_obj.values()
             for obj_ in cur_obj:
                 ret = extract_field(obj_, steps[idx + 1:], envp, dtype,
-                                    dforced=dforced, dfill=dfill)
+                                    dforced=dforced, dfill=dfill,
+                                    regex_specs=regex_specs)
                 rets.append(ret)
             agg_expr = step[1:-1]
             if agg_expr:
@@ -191,28 +195,21 @@ def extract_field(
                 cur_obj = ret[0]
         else:
             # `REGEX_TOKEN_SPECS` stores dtype with capital letters.
-            if isinstance(dtype, str):
-                dtype = dtype.upper()
-            convers = REGEX_TOKEN_SPECS.get(dtype)
-            if convers is not None:
+            dtype = dtype.upper()
+            convers = regex_specs.get(dtype)
+            if convers is None:
+                if dforced:
+                    cur_obj = dfill
+            else:
                 try:
                     cur_obj = convers[1](cur_obj)
-                    # Reset `deforced` if `convers` succeeds.
-                    dforced = False
                 except ValueError as e:
                     logger.info(e)
-                # Rollback to default value determined by `dfill` if
-                # `deforced` is set.
-                # Attention: `dtype` in `REGEX_TOKEN_SPECS` is necessary.
-                #   Namely `dfill` should be used as some kind of hanlder
-                #   for any DIY dtype.
-                if dforced:
-                    if isinstance(dfill, Callable):
-                        cur_obj = dfill(cur_obj)
-                    elif isinstance(dfill, Mapping):
-                        cur_obj = dfill.get(cur_obj)
-                    else:
-                        cur_obj = dfill
+                    if dforced:
+                        if dfill is None:
+                            cur_obj = convers[2]
+                        else:
+                            cur_obj = dfill
 
     return cur_obj
 
@@ -222,6 +219,7 @@ def rebuild_dict(
     obj: dict | str,
     rules: list,
     envp: EnvParser | None = None,
+    regex_specs: Mapping = REGEX_TOKEN_SPECS,
 ) -> dict:
     """Rebuild dict after extracting fields.
 
@@ -286,6 +284,7 @@ def rebuild_dict(
 
         # Extract fields.
         rets[key] = extract_field(cur_obj, steps, envp, dtype,
-                                  dforced=dforced, dfill=dfill)
+                                  dforced=dforced, dfill=dfill,
+                                  regex_specs=regex_specs)
 
     return rets

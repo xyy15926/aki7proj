@@ -3,7 +3,7 @@
 #   Name: test_fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:58:22
-#   Updated: 2024-05-11 15:51:53
+#   Updated: 2024-05-17 21:11:20
 #   Description:
 # ---------------------------------------------------------
 
@@ -27,6 +27,8 @@ from flagbear.fliper import extract_field
 from flagbear.exgine import rebuild_rec2df
 from suitbear.fxgine import compress_hierarchy, flat_records
 from suitbear.fxgine import agg_from_dfs
+import logging
+logging.basicConfig(level=logging.WARNING, force=True)
 
 # %%
 ASSETS = os.path.join(os.curdir, "assets")

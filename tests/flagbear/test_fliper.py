@@ -3,7 +3,7 @@
 #   Name: test_fliper.py
 #   Author: xyy15926
 #   Created: 2023-12-18 19:42:15
-#   Updated: 2024-03-02 19:19:04
+#   Updated: 2024-05-14 18:04:55
 #   Description:
 # ---------------------------------------------------------
 
@@ -20,6 +20,7 @@ if __name__ == "__main__":
     reload(parser)
     reload(fliper)
 
+import numpy as np
 from datetime import date, time
 from flagbear.patterns import REGEX_TOKEN_SPECS, LEX_ENDFLAG
 from flagbear.lex import Lexer
@@ -159,12 +160,15 @@ def test_extract_field_with_forced_dtype():
     assert extract_field(env, "c:cb") == "2"
     assert extract_field(env, "c:cb", dtype="INT") == 2
     assert extract_field(env, "c:ca", dtype="INT") == "ca2"
-    assert extract_field(env, "c:ca", dtype="INT", dforced=True) is None
-    assert extract_field(env, "c:ca", dtype="INT", dforced=True, dfill=0) == 0
+    assert np.isnan(extract_field(env, "c:ca", dtype="INT", dforced=True))
+    assert extract_field(env, "c:ca", dtype="INT2", dforced=True) is None
     assert extract_field(env, "c:ca", dtype="INT", dforced=True,
-                         dfill={"ca2": 1}) == 1
+                         dfill=1234) == 1234
+
+    regex_specs = REGEX_TOKEN_SPECS.copy()
+    regex_specs["INT"] = regex_specs["INT"][:2] + (1234,)
     assert extract_field(env, "c:ca", dtype="INT", dforced=True,
-                         dfill={"ca22": 1}) is None
+                         regex_specs=regex_specs) == 1234
 
 
 # %%
