@@ -3,7 +3,7 @@
 #   Name: test_fliper.py
 #   Author: xyy15926
 #   Created: 2023-12-18 19:42:15
-#   Updated: 2024-05-14 18:04:55
+#   Updated: 2024-05-19 16:31:08
 #   Description:
 # ---------------------------------------------------------
 
@@ -27,6 +27,7 @@ from flagbear.lex import Lexer
 from flagbear.parser import EnvParser
 from flagbear.fliper import (regex_caster, extract_field, rebuild_dict,
                              rename_duplicated)
+from flagbear.fliper import str_caster
 
 
 # %%
@@ -63,6 +64,31 @@ def test_regex_caster():
     assert regex_caster("12:12:12", lexer) == (time.fromisoformat("12:12:12"), "TIME")
     assert regex_caster("T12:12:12") == (time.fromisoformat("12:12:12"), "TIME")
     assert regex_caster("12:12:12T") == (time.fromisoformat("12:12:12"), "TIME")
+
+
+# %%
+def test_str_caster():
+    assert str_caster("0", None) == 0
+    assert str_caster("2342") == 2342
+    assert str_caster("-2342") == -2342
+    assert str_caster("+2342") == 2342
+
+    assert str_caster("0", "AUTO") == 0
+    assert str_caster("2342", "AUTO") == 2342
+    assert str_caster("-2342", "AUTO") == -2342
+    assert str_caster("+2342", "AUTO") == 2342
+
+    assert str_caster("2342.23") == 2342.23
+    assert str_caster("-2342.23") == -2342.23
+    assert str_caster("+2342.23") == 2342.23
+    assert str_caster("2,342.2323") == 342.2323
+
+    with pytest.raises(ValueError):
+        assert str_caster("0", "INT2")
+
+    assert str_caster("ca2", "INT", dforced=False) == "ca2"
+    assert np.isnan(str_caster("ca2", "INT", dforced=True))
+    assert str_caster("ca2", "INT", dforced=True, dfill=0) == 0
 
 
 # %%
@@ -157,13 +183,15 @@ def test_extract_field_with_forced_dtype():
             },
         },
     }
+    envp = EnvParser()
+    assert extract_field(env, "c:cb", envp=envp) == "2"
     assert extract_field(env, "c:cb") == "2"
     assert extract_field(env, "c:cb", dtype="INT") == 2
     assert extract_field(env, "c:ca", dtype="INT") == "ca2"
     assert np.isnan(extract_field(env, "c:ca", dtype="INT", dforced=True))
-    assert extract_field(env, "c:ca", dtype="INT2", dforced=True) is None
     assert extract_field(env, "c:ca", dtype="INT", dforced=True,
                          dfill=1234) == 1234
+    assert extract_field(env, "c:ca", dtype="INT2", dforced=True) == "ca2"
 
     regex_specs = REGEX_TOKEN_SPECS.copy()
     regex_specs["INT"] = regex_specs["INT"][:2] + (1234,)

@@ -3,7 +3,7 @@
 #   Name: fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:52:59
-#   Updated: 2024-05-12 14:42:36
+#   Updated: 2024-05-20 15:11:42
 #   Description:
 # ---------------------------------------------------------
 
@@ -23,6 +23,7 @@ from flagbear.parser import EnvParser
 from flagbear.fliper import rebuild_dict, extract_field
 from flagbear.fliper import regex_caster
 from flagbear.exgine import rebuild_rec2df, trans_on_df, agg_on_df, EXGINE_ENV
+from flagbear.patterns import REGEX_TOKEN_SPECS
 
 # %%
 logging.basicConfig(
@@ -84,10 +85,10 @@ def compress_hierarchy(
             envp = EnvParser(ChainMap(env, EXGINE_ENV))
 
     cur_lv = 0
-    while f"steps_{cur_lv}" in conf:
-        val_steps = conf[f"steps_{cur_lv}"]
+    while f"steps_{cur_lv}" in conf or f"idkey_{cur_lv}" in conf:
+        val_steps = conf.get(f"steps_{cur_lv}", None)
         # Don't extract any fields.
-        if pd.isna(val_steps):
+        if val_steps is None or pd.isna(val_steps):
             val_rules = None
         else:
             val_rules = [(None, conf[f"steps_{cur_lv}"])]
@@ -150,6 +151,7 @@ def flat_records(
     env: Mapping = None,
     envp: EnvParser = None,
     drop_rid: bool = True,
+    regex_specs: Mapping = REGEX_TOKEN_SPECS,
 ) -> pd.DataFrame:
     """Flat Series of records into DataFrame.
 
@@ -159,6 +161,8 @@ def flat_records(
     2. As the `explode` is always set and no `index_rules` is provided, the
       result of `rebuild_rec2df` will always be a DataFrame with meaningless
       index, which will be dropped default.
+    3. If dtype is specified, the casting function and default value in
+      `REGEX_TOKEN_SPECS` will be used as default.
 
     Params:
     ------------------
@@ -202,13 +206,13 @@ def flat_records(
         confs["dtype"] = "VARCHAR(255)"
     confs["dtype"] = confs["dtype"].str.upper()
 
-    if "default" in confs and "use_default" in confs:
-        confs.loc[~confs["use_default"].astype(bool), "default"] = None
-
-    if "default" in confs:
-        rules = confs[["key", "from_", "steps", "dtype", "default"]].values
-    else:
-        rules = confs[["key", "from_", "steps", "dtype"]].values
+    rules = []
+    for rule in confs[["key", "from_", "steps", "dtype"]].values:
+        dtype = rule[-1]
+        if dtype in regex_specs:
+            rules.append(np.concatenate([rule, [regex_specs[dtype][2], 1]]))
+        else:
+            rules.append(rule)
 
     ret = src.apply(rebuild_rec2df,
                     val_rules=rules,

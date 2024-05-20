@@ -3,7 +3,7 @@
 #   Name: pboc_conf.py
 #   Author: xyy15926
 #   Created: 2022-11-10 21:44:59
-#   Updated: 2024-05-13 15:59:46
+#   Updated: 2024-05-16 12:11:13
 #   Description:
 # ----------------------------------------------------------
 
@@ -1490,12 +1490,15 @@ LV1_AGG_CONF = {
         },
         "agg": {
             "cnt": ("cnt", "count(_)", "查询数量"),
-            "coef_var": ("coef_var", "coef_var(hist(inq_rec_moi, [-24, -18, -12, -6, 0]))", "近24个月查询量变异系数"),
+            "last_6in24m_coef_var": ("coef_var", "coef_var(hist(inq_rec_moi, [-24, -18, -12, -6, 0]))", "近24个月查询量变异系数"),
         },
         "cros": [
-            [["cnt", "coef_var"]                , ["mois", "orgs", "inq_reason"]],
-            [["cnt", "coef_var"]                , ["mois", "orgs",]],
-            [["cnt", "coef_var"]                , ["mois", "inq_reason",]],
+            [["cnt",]                               , ["mois", "orgs", "inq_reason"]],
+            [["cnt",]                               , ["mois", "orgs",]],
+            [["cnt",]                               , ["mois", "inq_reason",]],
+            [["last_6in24m_coef_var",]              , ["orgs", "inq_reason"]],
+            [["last_6in24m_coef_var",]              , ["orgs",]],
+            [["last_6in24m_coef_var",]              , ["inq_reason",]],
         ],
     },
 }

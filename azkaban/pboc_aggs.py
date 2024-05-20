@@ -3,7 +3,7 @@
 #   Name: pboc_aggs.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-05-12 12:44:20
+#   Updated: 2024-05-20 14:49:50
 #   Description:
 # ---------------------------------------------------------
 
@@ -16,9 +16,10 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear import exgine
+    from flagbear import exgine, fliper
     from suitbear import fxgine, crosconf
     from azkaban import pboc_conf
+    reload(fliper)
     reload(exgine)
     reload(fxgine)
     reload(crosconf)
@@ -32,6 +33,7 @@ from suitbear.fxgine import compress_hierarchy, flat_records, agg_from_dfs
 from suitbear.crosconf import agg_confs_from_dict, cross_aggs_from_lower
 from azkaban.pboc_conf import LV1_AGG_CONF, LV2_AGG_CONF, LV20_AGG_CONF
 from azkaban.pboc_conf import MAPPERS, TRANS_CONF
+from flagbear.exgine import rebuild_rec2df
 
 # %%
 logging.basicConfig(
@@ -52,31 +54,6 @@ PBOC_FIELDS = os.path.join(ASSETS, "pboc_fields.csv")
 
 MAPPERS_ = {k: {kk: vv[0] for kk, vv in v.items()} for k, v in MAPPERS.items()}
 MAPPERS_["today"] = pd.Timestamp.today()
-
-
-def sdatetime(x):
-    try:
-        return pd.to_datetime(x)
-    except ValueError as e:
-        logger.warning(e)
-        return pd.NaT
-
-
-# Default value settings for extracting fields.
-DTYPE_DEFAULT = {
-    "INT": np.nan,
-    "FLO": np.nan,
-    "VAR": "",
-    "CHA": "",
-    "DAT": sdatetime,
-}
-DTYPE_USE_DEFAULT = {
-    "INT": 1,
-    "FLO": 1,
-    "VAR": 0,
-    "CHA": 0,
-    "DAT": 1,
-}
 
 
 # %%
@@ -138,8 +115,6 @@ def pboc_fields(
     # Read fields extraction config and addup some default settings.
     pconfs = pd.read_csv(PBOC_PARTS)
     fconfs = pd.read_csv(PBOC_FIELDS)
-    fconfs["default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_DEFAULT)
-    fconfs["use_default"] = fconfs["dtype"].str[:3].str.upper().map(DTYPE_USE_DEFAULT)
 
     # Extract fields.
     dfs = {}
@@ -203,7 +178,7 @@ def pboc_vars(
         pd.concat([pd.DataFrame(v).T for v in MAPPERS.values()],
                   axis=0,
                   keys=MAPPERS.keys()).to_excel(xlw,
-                                                sheet_name="pboc_vars_maps.csv")
+                                                sheet_name="pboc_vars_maps")
         xlw.close()
 
     # Apply aggregations.
@@ -233,7 +208,7 @@ if __name__ == "__main__":
     pboc = open(PBOC_JSON, "r").read()
     pboc2 = pboc.replace("2019101617463675115707", "2019101617463675115708")
     report_date = extract_field(pboc, "PRH:PA01:PA01A:PA01AR01")
-    MAPPERS_["today"] = pd.Timestamp(report_date)
+    MAPPERS_["today"] = np.datetime64(report_date)
 
     POBC_AGGCONF_MARK = os.path.join(ASSETS, "pboc_aggconf_mark.xlsx")
     agg_key_mark = pd.read_excel(POBC_AGGCONF_MARK)["key"]

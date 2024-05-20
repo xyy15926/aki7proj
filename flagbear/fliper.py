@@ -53,7 +53,7 @@ def regex_caster(
     lexer: Lexer | None = None,
     match_ratio: float = 0.8,
 ) -> tuple[Any, str]:
-    """Caster string into possible dtype with regex.
+    """Cast string into possible dtype with regex.
 
     Params:
     ------------------
@@ -74,6 +74,62 @@ def regex_caster(
         if token.len / words_len >= match_ratio:
             return token.val, token.type
     return None
+
+
+# %%
+def str_caster(
+    words: str,
+    dtype: str = None,
+    dforced: bool = False,
+    dfill: Any = None,
+    regex_specs: Mapping = REGEX_TOKEN_SPECS,
+) -> Any:
+    """Cast string into other dtype.
+
+    Params:
+    ---------------------
+    words: String to be casted to other dtype.
+    dtype: str | AUTO | None
+      AUTO: Call `regex_caster` to cast string to any proper dtype.
+      str: Casting string to indicating dtype in `REGEX_TOKEN_SPECS`(default)
+        INT:
+        FLOAT:
+        TIME:
+        DATE:
+    dforced: If to rollback to used `dfill` if converters in
+      `REGEX_TOKEN_SPECS` fails.
+    dfill: The default value after dtype casting fails.
+      This will override the default values in `regex_specs` if not None.
+    regex_specs: Mapping[dtype, (regex, convert-function, default,...)]
+      Mapping storing the dtype name and the handler.
+
+    Return:
+    ---------------------
+    Any
+    """
+    ret = words
+    if dtype is None or dtype == "AUTO":
+        ret = regex_caster(ret)
+        if ret is not None:
+            ret = ret[0]
+    else:
+        # `REGEX_TOKEN_SPECS` stores dtype with capital letters.
+        dtype = dtype.upper()
+        convers = regex_specs.get(dtype)
+        if convers is not None:
+            try:
+                ret = convers[1](ret)
+            except ValueError as e:
+                logger.info(e)
+                if dforced:
+                    if dfill is None:
+                        ret = convers[2]
+                    else:
+                        ret = dfill
+        else:
+            raise ValueError(f"Unrecognized dtype {dtype}.")
+
+    return ret
 
 
 # %%
@@ -188,28 +244,9 @@ def extract_field(
             cur_obj = cur_obj.get(dest, None) if isinstance(cur_obj, dict) else None
 
     # Try type casting iff `dtype` is provided to cast dtype from `str`.
-    if isinstance(cur_obj, str) and dtype is not None:
-        if dtype == "AUTO":
-            ret = regex_caster(cur_obj)
-            if ret is not None:
-                cur_obj = ret[0]
-        else:
-            # `REGEX_TOKEN_SPECS` stores dtype with capital letters.
-            dtype = dtype.upper()
-            convers = regex_specs.get(dtype)
-            if convers is None:
-                if dforced:
-                    cur_obj = dfill
-            else:
-                try:
-                    cur_obj = convers[1](cur_obj)
-                except ValueError as e:
-                    logger.info(e)
-                    if dforced:
-                        if dfill is None:
-                            cur_obj = convers[2]
-                        else:
-                            cur_obj = dfill
+    if isinstance(cur_obj, str) and (dtype == "AUTO" or dtype in regex_specs):
+        cur_obj = str_caster(cur_obj, dtype=dtype, dforced=dforced,
+                             dfill=dfill, regex_specs=regex_specs)
 
     return cur_obj
 
@@ -253,19 +290,21 @@ def rebuild_dict(
     rule_Q = deque(rules)
     for rule in rules:
         if len(rule) == 2:
-            dforced, dfill = False, None
-            from_, dtype = None, None
             key, steps = rule
+            from_, dtype = None, None
+            dforced, dfill = False, None
         elif len(rule) == 3:
-            dforced, dfill = False, None
-            from_ = None
             key, steps, dtype = rule
-        elif len(rule) == 4:
+            from_ = None
             dforced, dfill = False, None
+        elif len(rule) == 4:
             key, from_, steps, dtype = rule
+            dforced, dfill = False, None
         elif len(rule) == 5:
-            dforced = True
             key, from_, steps, dtype, dfill = rule
+            dforced = True
+        elif len(rule) == 6:
+            key, from_, steps, dtype, dfill, dforced = rule
         else:
             continue
 
