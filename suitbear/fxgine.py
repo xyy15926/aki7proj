@@ -3,7 +3,7 @@
 #   Name: fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:52:59
-#   Updated: 2024-05-20 15:11:42
+#   Updated: 2024-05-22 16:54:07
 #   Description:
 # ---------------------------------------------------------
 
@@ -17,6 +17,8 @@ from collections import ChainMap
 from itertools import product
 import numpy as np
 import pandas as pd
+import sqlalchemy as sa
+from tqdm import tqdm
 from IPython.core.debugger import set_trace
 
 from flagbear.parser import EnvParser
@@ -238,6 +240,9 @@ def agg_from_dfs(
     trans_confs: pd.DataFrame = None,
     env: Mapping = None,
     envp: EnvParser = None,
+    *,
+    engine: sa.engine.Engine = None,
+    table_prefix: str = None,
 ) -> dict[str, pd.DataFrame]:
     """Apply aggregations on DataFrames.
 
@@ -292,10 +297,10 @@ def agg_from_dfs(
             if trans_rules.size:
                 src[part_name] = trans_on_df(df, trans_rules, envp=envp)
 
-    agg_ret = {}
+    agg_rets = {}
     # Both the source DataFrames and results in process will be used as the
     # searching space.
-    df_space = ChainMap(agg_ret, src)
+    df_space = ChainMap(agg_rets, src)
     # 2. Aggregate in `level`-decending order, namely bottom-up.
     for idx, pconf in part_confs.sort_values(by="level",
                                              ascending=False).iterrows():
@@ -313,7 +318,7 @@ def agg_from_dfs(
         # 2.1 Prepare DataFrame for aggregation.
         joined_df = df_space[from_[0]]
         if joined_df.empty:
-            agg_ret[part_name] = pd.DataFrame()
+            agg_rets[part_name] = pd.DataFrame()
             continue
 
         # The group-key for aggregation must be the join-key of the result
@@ -332,11 +337,20 @@ def agg_from_dfs(
                                         left_on=left_jk,
                                         right_on=right_jk)
 
+        tqdm.pandas(desc=part_name)
         # 2.2 Aggregate.
         agg_rules = agg_confs.loc[agg_confs["part"] == part_name,
                                   ["key", "cond", "agg"]].values
-        agg_ret[part_name] = (joined_df.groupby(prikey)
-                              .apply(agg_on_df,
-                                     rules=agg_rules,
-                                     envp=envp))
-    return agg_ret
+        agg_ret = (joined_df.groupby(prikey).progress_apply(agg_on_df,
+                                                            rules=agg_rules,
+                                                            envp=envp))
+
+        if engine is not None:
+            today = np.datetime64("today").astype(str).replace("_","")
+            agg_ret.to_sql(name=f"{table_prefix}_{part_name}_{today}",
+                           con=engine,
+                           if_exists="fail")
+
+        agg_rets[part_name] = agg_ret
+
+    return agg_rets

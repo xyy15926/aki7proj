@@ -225,9 +225,9 @@ pboc_acc_info,PD01CR03,PD01C:PD01CR03,date,最近一次月度表现信息_最近
 pboc_acc_info,PD01CR04,PD01C:PD01CR04,date,最近一次月度表现信息_信息报告日期
 pboc_acc_info,PD01CS01,PD01C:PD01CS01,int,最近一次月度表现信息_剩余还款期数
 pboc_acc_info,PD01CS02,PD01C:PD01CS02,int,最近一次月度表现信息_当期逾期期数
-pboc_acc_info,PD01DRO1,PD01D:PD01DRO1,date,近24个月 - 起始年月
+pboc_acc_info,PD01DR01,PD01D:PD01DR01,date,近24个月 - 起始年月
 pboc_acc_info,PD01DR02,PD01D:PD01DR02,date,近24个月 - 截至年月
-pboc_acc_info,PD01ERO1,PD01E:PD01ERO1,date,近60个月 - 起始年月
+pboc_acc_info,PD01ER01,PD01E:PD01ER01,date,近60个月 - 起始年月
 pboc_acc_info,PD01ER02,PD01E:PD01ER02,date,近60个月 - 截至年月
 pboc_acc_info,PD01ES01,PD01E:PD01ES01,int,近60个月 - 记录数
 pboc_acc_info,PD01FS01,PD01F:PD01FS01,int,特殊交易记录数

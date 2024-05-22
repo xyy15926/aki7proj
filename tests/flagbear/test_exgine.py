@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-04-15 18:17:58
-#   Updated: 2024-04-27 18:09:25
+#   Updated: 2024-05-22 17:02:00
 #   Description:
 # ---------------------------------------------------------
 
@@ -53,6 +53,10 @@ def test_rebuild_rec2df_basic():
     ]
     nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=False)
     assert len(nrec) == 1
+    assert np.all(nrec.columns == [i[0] for i in val_rules])
+
+    nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
+    assert len(nrec) > 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
 
     val_rules = [
@@ -132,6 +136,28 @@ def test_rebuild_rec2df_null_fields():
     nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=False)
     assert len(nrec) == 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
+
+
+def test_rebuild_rec2df_check_dtype():
+    rec = {
+        "int": "",
+        "varchar": "a",
+        "date": "2024-05"
+    }
+    val_rules = [
+        ("int", "int", "INT"),
+        ("varchar", "varchar", "VARCHAR(255)"),
+        ("date", "date", "DATE"),
+    ]
+    nrec = rebuild_rec2df(rec, val_rules)
+
+    rec = {
+        "int": ["", ""],
+        "varchar": ["", ""],
+        "date": ["2024-05", "2024-06"]
+    }
+    nrec = rebuild_rec2df(rec, val_rules, explode=True)
+    assert len(nrec) == 2
 
 
 # %%

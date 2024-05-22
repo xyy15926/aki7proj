@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-05-13 16:19:47
+#   Updated: 2024-05-22 17:01:12
 #   Description:
 # ---------------------------------------------------------
 
@@ -218,7 +218,7 @@ def rebuild_rec2df(
     elif explode and isinstance(next(iter(val_dict.values())), list):
         vals = pd.DataFrame(val_dict)
     else:
-        vals = pd.Series(val_dict).to_frame().T
+        vals = pd.DataFrame.from_records([val_dict])
 
     index_arrays = []
     index_names = []

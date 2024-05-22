@@ -119,7 +119,7 @@ def str_caster(
         if convers is not None:
             try:
                 ret = convers[1](ret)
-            except ValueError as e:
+            except Exception as e:
                 logger.info(e)
                 if dforced:
                     if dfill is None:
