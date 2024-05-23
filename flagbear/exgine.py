@@ -112,12 +112,34 @@ def _argmins(x: pd.Series, y: pd.Series):
     return y[x == min_]
 
 
+def _cb_max(x: pd.Series | int, y: pd.Series | int):
+    if isinstance(x, pd.Series) and isinstance(y, pd.Series):
+        return pd.concat([x, y], axis=1).max(axis=1)
+    elif isinstance(x, pd.Series):
+        return x.apply(lambda ele: ele if ele > y else y)
+    elif isinstance(y, pd.Series):
+        return y.apply(lambda ele: ele if ele > x else x)
+    else:
+        return np.nanmax([x, y])
+
+
+def _cb_min(x: pd.Series | int, y: pd.Series | int):
+    if isinstance(x, pd.Series) and isinstance(y, pd.Series):
+        return pd.concat([x, y], axis=1).min(axis=1)
+    elif isinstance(x, pd.Series):
+        return x.apply(lambda ele: ele if ele < y else y)
+    elif isinstance(y, pd.Series):
+        return y.apply(lambda ele: ele if ele < x else x)
+    else:
+        return np.nanmin([x, y])
+
+
 EXGINE_ENV = {
     "today"     : pd.Timestamp.today(),
     "map"       : _ser_map,
     "cb_fst"    : pd.Series.combine_first,
-    "cb_max"    : lambda x, y: pd.concat([x, y], axis=1).max(axis=1),
-    "cb_min"    : lambda x, y: pd.concat([x, y], axis=1).min(axis=1),
+    "cb_max"    : _cb_max,
+    "cb_min"    : _cb_min,
     "mon_itvl"  : _mon_itvl,
     "day_itvl"  : lambda x, y: (pd.to_datetime(x) - pd.to_datetime(y)).dt.days,
     "count"     : len,

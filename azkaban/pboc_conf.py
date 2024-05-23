@@ -3,7 +3,7 @@
 #   Name: pboc_conf.py
 #   Author: xyy15926
 #   Created: 2022-11-10 21:44:59
-#   Updated: 2024-05-16 12:11:13
+#   Updated: 2024-05-23 19:52:49
 #   Description:
 # ----------------------------------------------------------
 
@@ -333,11 +333,11 @@ TRANS_CONF = {
         ["mixed_doi_report"             , "cb_min(cur_doi_report, monthly_doi_report)"          , None                  , "报告时间"],
         # 按月应还 - 包含已结清
         ["alle_mon"                     , "PD01AS01"                                            , "acc_repay_freq == 3" , "全部还款期数（月）"],
-        ["alle_mon"                     , "mon_itvl(cb_fst(PD01AR02, PD01BR01), PD01AR01)"      , "acc_repay_freq != 3" , "全部还款期数（月）"],
+        ["alle_mon"                     , "cb_max(mon_itvl(cb_fst(PD01AR02, PD01BR01), PD01AR01), 1)"   , "acc_repay_freq != 3" , "全部还款期数（月）"],
         ["mixed_alle_monthly_repay"     , "sdiv(PD01AJ01, alle_mon)"                            , "acc_cat <= 2"        , "D1R4全周期按月应还款"],
         # 按月应还
         ["folw_mon"                     , "PD01CS01"                                            , "acc_repay_freq == 3" , "剩余还款期数（月）"],
-        ["folw_mon"                     , "mon_itvl(PD01AR02, PD01CR01)"                        , "acc_repay_freq != 3" , "剩余还款期数（月）"],
+        ["folw_mon"                     , "cb_max(mon_itvl(PD01AR02, PD01CR01), 1)"             , "acc_repay_freq != 3" , "剩余还款期数（月）"],
         # D1R41 月负债：按月还款账户直接取 `PD01CJ04-本月应还款`，否则直接按月直接除
         ["mixed_folw_monthly_repay_"    , "cb_max(PD01CJ04, sdiv(PD01CJ01, folw_mon))"          , "acc_cat <= 3"        , "D1R41按月应还款"],
         ["mixed_folw_monthly_repay"     , "cb_fst(mixed_folw_monthly_repay_, mixed_alle_monthly_repay)" , "acc_cat <= 3", "D1R41按月应还款"],

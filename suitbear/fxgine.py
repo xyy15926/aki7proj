@@ -3,7 +3,7 @@
 #   Name: fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:52:59
-#   Updated: 2024-05-22 16:54:07
+#   Updated: 2024-05-23 21:10:52
 #   Description:
 # ---------------------------------------------------------
 
@@ -241,8 +241,9 @@ def agg_from_dfs(
     env: Mapping = None,
     envp: EnvParser = None,
     *,
+    agg_rets: dict[str, pd.DataFrame] = None,
     engine: sa.engine.Engine = None,
-    table_prefix: str = None,
+    table_prefix: str = "",
 ) -> dict[str, pd.DataFrame]:
     """Apply aggregations on DataFrames.
 
@@ -260,7 +261,7 @@ def agg_from_dfs(
       from_: Part names seperated by `,`.
       level: The level of the partition, namely the granularity that the
         partition represents, which determines the order of precess.
-      join_key: Primary keys seperated by `,` while joining and grouping.
+      prikey: Primary keys seperated by `,` while joining and grouping.
     agg_conf: DataFrame with C[part, key, cond, agg].
       part: Part name of the key.
       key: Field name.
@@ -297,7 +298,7 @@ def agg_from_dfs(
             if trans_rules.size:
                 src[part_name] = trans_on_df(df, trans_rules, envp=envp)
 
-    agg_rets = {}
+    agg_rets = {} if agg_rets is None else agg_rets
     # Both the source DataFrames and results in process will be used as the
     # searching space.
     df_space = ChainMap(agg_rets, src)
@@ -305,6 +306,10 @@ def agg_from_dfs(
     for idx, pconf in part_confs.sort_values(by="level",
                                              ascending=False).iterrows():
         part_name = pconf["part"]
+        # Skip if the result already exists.
+        if part_name in agg_rets:
+            continue
+
         from_ = pconf["from_"]
         prikey = [i.strip() for i in pconf["prikey"].split(",")]
         # Empty `from_` indicates invalid aggregation config.
@@ -346,10 +351,20 @@ def agg_from_dfs(
                                                             envp=envp))
 
         if engine is not None:
-            today = np.datetime64("today").astype(str).replace("_","")
-            agg_ret.to_sql(name=f"{table_prefix}_{part_name}_{today}",
-                           con=engine,
-                           if_exists="fail")
+            today = np.datetime64("today").astype(str).replace("-","")
+            try:
+                # 1. Unique index, namely Index.unique is True, will be set as
+                #   key automatically, which is not compatiable with `TEXT`
+                #   dtype, which is the default dtype for object.
+                # 2. Value in DataFrame may not be compatiable with MYSQL's
+                #   dtype.
+                agg_ret.reset_index().to_sql(
+                    name=f"{table_prefix}_{part_name}_{today}",
+                    con=engine,
+                    index=False,
+                    if_exists="fail")
+            except Exception as e:
+                logger.warning(e)
 
         agg_rets[part_name] = agg_ret
 
