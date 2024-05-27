@@ -3,7 +3,7 @@
 #   Name: test_lex.py
 #   Author: xyy15926
 #   Created: 2023-12-12 12:35:39
-#   Updated: 2023-12-18 20:07:49
+#   Updated: 2024-05-27 12:19:11
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,10 +11,10 @@
 import pytest
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear import lex
     from flagbear import patterns
-    reload(lex)
+    from flagbear import lex
     reload(patterns)
+    reload(lex)
 
 from flagbear.lex import Token, Lexer, LEX_ENDFLAG
 
@@ -36,3 +36,22 @@ def test_lexer():
     assert tokens[0] == Token("ID", "var1", 2, 4)
     assert tokens[7] == Token("STRING", "233xs熊", 3, 8)
     assert tokens[8] == Token("IF", "if", 4, 2)
+
+
+# %%
+def test_lexer_compile():
+    lexer = Lexer()
+    assert lexer.parse("2 + 3") == 5
+
+    env = {
+        "a": 2,
+        "b": 3,
+        "d": "adf",
+        "e": [2, 3],
+        "f": [4, 5],
+    }
+    assert lexer.bind_env(env).parse("a + 4") == 6
+    assert lexer.bind_env(env).parse("d + \"a\"") == "adfa"
+    assert len(lexer.parse("e")) == len(env["e"])
+    assert lexer.parse("a @ e")
+    assert not lexer.parse("a @ f")

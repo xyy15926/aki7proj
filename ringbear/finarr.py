@@ -3,7 +3,7 @@
 #   Name: finarr.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2024-04-28 15:11:37
+#   Updated: 2024-05-24 18:22:25
 #   Description:
 # ---------------------------------------------------------
 
@@ -33,43 +33,6 @@ logger.info("Logging Start.")
 
 DUM_OVDD = 181
 DUM_OVDP = 7
-
-
-# %%
-def pivot_tags(tags: pd.Series, sep: str = ",") -> pd.DataFrame:
-    """Pivot Series with joined tags into DataFrame.
-
-    Split values in `tags` with `seps`, and then count tag frequncies for each
-    tag in each record.
-
-    Params:
-    tags: Series with values of tags seperated by `sep`.
-    sep: Seperator.
-
-    Return:
-    DataFrame with tags as columns and counts of tags as value.
-                tag1    tag2    ...
-        idx1    1       0       ...
-        idx2    0       2       ...
-        ...
-    """
-    tags = tags.fillna("").astype(str).str.strip(sep).str.split(sep, expand=False)
-    tag_counts = (
-        pd.DataFrame(
-            {
-                "id": tags.index.repeat(tags.apply(len)),
-                "tags": np.concatenate(tags.values),
-                "ones": np.ones(np.add.reduce(tags.apply(len)), dtype=np.int_),
-            }
-        )
-        .replace("", "NULL")
-        .groupby(["id", "tags"])["ones"]
-        .agg(sum)
-        .unstack()
-        .fillna(0)
-        .astype(np.int_)
-    )
-    return tag_counts
 
 
 # %%

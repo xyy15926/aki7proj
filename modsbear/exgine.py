@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-05-22 17:01:12
+#   Updated: 2024-05-24 17:19:48
 #   Description:
 # ---------------------------------------------------------
 
@@ -164,6 +164,7 @@ EXGINE_ENV = {
     "sdiv"      : lambda x, y: np.nan if isinstance(y, int) and y == 0 else x / y,
     "hist"      : lambda x, y: np.histogram(x, y)[0],
     "coef_var"  : lambda x: 0 if len(x) == 0 else np.std(x) / np.mean(x),
+    "contains"  : lambda x, y: y in x,
 }
 
 

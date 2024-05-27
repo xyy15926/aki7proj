@@ -12,7 +12,8 @@ import pytest
 
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear import fliper, exgine
+    from flagbear import fliper
+    from modsbear import exgine
     from suitbear import fxgine
     reload(fliper)
     reload(exgine)
@@ -24,7 +25,7 @@ import pandas as pd
 import os
 import json
 from flagbear.fliper import extract_field
-from flagbear.exgine import rebuild_rec2df
+from modsbear.exgine import rebuild_rec2df
 from suitbear.fxgine import compress_hierarchy, flat_records
 from suitbear.fxgine import agg_from_dfs
 import logging

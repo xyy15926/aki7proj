@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # ---------------------------------------------------------
-#   Name: test_tree.py
+#   Name: test_skltree.py
 #   Author: xyy15926
 #   Created: 2023-12-08 17:36:14
-#   Updated: 2023-12-15 16:15:20
+#   Updated: 2024-05-26 19:11:16
 #   Description:
 # ---------------------------------------------------------
 
@@ -12,17 +12,17 @@ from pytest import mark
 
 if __name__ == "__main__":
     from importlib import reload
-    from modsbear import skl_tree
+    from modsbear import skltree
     from ringbear import freqs
-    reload(skl_tree)
+    reload(skltree)
     reload(freqs)
 
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 
-from modsbear.skl_tree import (tree_node_metric, extract_paths_from_tree,
-                               build_parent_from_children,
-                               biclf_select_nodes)
+from modsbear.skltree import (tree_node_metric, extract_paths_from_tree,
+                              build_parent_from_children,
+                              biclf_select_nodes)
 
 
 # %%

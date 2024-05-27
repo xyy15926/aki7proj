@@ -3,7 +3,7 @@
 #   Name: finpan.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2024-04-27 20:59:24
+#   Updated: 2024-05-27 17:08:05
 #   Description:
 # ---------------------------------------------------------
 
@@ -20,7 +20,7 @@ from IPython.core.debugger import set_trace
 
 import numpy as np
 import pandas as pd
-from flagbear.finarr import ovdd_from_duepay_records, month_date
+from ringbear.finarr import ovdd_from_duepay_records, month_date
 
 # %%
 logging.basicConfig(
@@ -33,6 +33,87 @@ logger.info("Logging Start.")
 
 DUM_OVDD = 181
 DUM_OVDP = 7
+
+
+# %%
+def pivot_tags(
+    tags: pd.Series,
+    sep: str = ",",
+) -> pd.DataFrame:
+    """Pivot Series with joined tags into DataFrame.
+
+    Split values in `tags` with `seps`, and then count tag frequncies for each
+    tag in each record.
+
+    Params:
+    -----------------------
+    tags: Series with values of tags seperated by `sep`.
+    sep: Seperator.
+
+    Return:
+    -----------------------
+    DataFrame with tags as columns and counts of tags as value.
+                tag1    tag2    ...     NULL
+        idx1    1       0       ...
+        idx2    0       2       ...
+        ...
+    """
+    # Split tags.
+    tags = tags.fillna("").astype(str).str.strip(sep).str.split(sep, expand=False)
+    tag_counts = (
+        pd.DataFrame(
+            {
+                "id": tags.index.repeat(tags.apply(len)),
+                "tags": np.concatenate(tags.values),
+                "ones": np.ones(np.add.reduce(tags.apply(len)), dtype=np.int_),
+            }
+        )
+        .replace("", "NULL")
+        .groupby(["id", "tags"])["ones"]
+        .agg(sum)
+        .unstack()
+        .fillna(0)
+        .astype(np.int_)
+    )
+
+    return tag_counts
+
+
+# %%
+def sequeeze_named_columns(
+    df: pd.DataFrame,
+    how: str | Callable = "exists",
+) -> pd.DataFrame:
+    """Sequeeze columns with the same name.
+
+    Params:
+    ---------------------------
+    df: DataFrame with Columns of the same 
+    how: How to sequeeze the columns, which will be passed to `groupby.agg`.
+      str: Try to search inner mapping first.
+      callble:
+
+    Return:
+    ---------------------------
+    DataFrame with Columns of the same name sequeezed.
+    """
+    import string
+    # Pandas will rename duplicated column by adding suffix `.<N>`.
+    uni_cols = [col.strip(string.digits + ".")
+                if isinstance(col, str) else col
+                for col in df.columns]
+    uni_cols_ = [f"MARK{i}" for i in uni_cols]
+    col_map = {k: v for k,v in zip(uni_cols_, uni_cols)}
+
+    HOW_MAPPER = {
+        "sum": lambda x: x.sum(axis=1),
+        "exists": lambda x: (x.sum(axis=1) > 0).astype(int),
+    }
+    how = HOW_MAPPER.get(how, how)
+    sequeezed = df.groupby(uni_cols_, axis=1).agg(how)
+    sequeezed.rename(col_map, axis=1, inplace=True)
+
+    return sequeezed
 
 
 # %%

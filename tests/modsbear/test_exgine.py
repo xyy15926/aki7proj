@@ -12,7 +12,8 @@ import pytest
 
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear import fliper, exgine
+    from flagbear import fliper
+    from modsbear import exgine
     reload(fliper)
     reload(exgine)
 
@@ -21,7 +22,7 @@ import pandas as pd
 import os
 import json
 from flagbear.fliper import extract_field, rebuild_dict
-from flagbear.exgine import rebuild_rec2df, agg_on_df, trans_on_df
+from modsbear.exgine import rebuild_rec2df, agg_on_df, trans_on_df
 
 ASSETS = os.path.join(os.curdir, "assets")
 PBOC_JSON = os.path.join(ASSETS, "pboc_utf8.json")

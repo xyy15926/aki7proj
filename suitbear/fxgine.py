@@ -24,7 +24,7 @@ from IPython.core.debugger import set_trace
 from flagbear.parser import EnvParser
 from flagbear.fliper import rebuild_dict, extract_field
 from flagbear.fliper import regex_caster
-from flagbear.exgine import rebuild_rec2df, trans_on_df, agg_on_df, EXGINE_ENV
+from modsbear.exgine import rebuild_rec2df, trans_on_df, agg_on_df, EXGINE_ENV
 from flagbear.patterns import REGEX_TOKEN_SPECS
 
 # %%
@@ -359,7 +359,7 @@ def agg_from_dfs(
                 # 2. Value in DataFrame may not be compatiable with MYSQL's
                 #   dtype.
                 agg_ret.reset_index().to_sql(
-                    name=f"{table_prefix}_{part_name}_{today}",
+                    name=f"{table_prefix}{part_name}_{today}",
                     con=engine,
                     index=False,
                     if_exists="fail")

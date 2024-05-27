@@ -3,7 +3,7 @@
 #   Name: test_finarr.py
 #   Author: xyy15926
 #   Created: 2024-04-11 09:11:58
-#   Updated: 2024-05-08 22:09:27
+#   Updated: 2024-05-26 17:44:01
 #   Description:
 # ---------------------------------------------------------
 
@@ -14,32 +14,10 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear import finarr
+    from ringbear import finarr
     reload(finarr)
 
-from flagbear.finarr import pivot_tags
-from flagbear.finarr import ovdd_from_duepay_records, month_date
-
-
-# %%
-def test_pivot_tags():
-    def count_n(seq: list, sep=","):
-        cm = {}
-        for ele in seq:
-            for i in ele.split(sep):
-                cm.setdefault(i, 0)
-                cm[i] += 1
-        return cm
-
-    ser = pd.Series(["a,b,c", "a,b", "a,c", "c"])
-    pt = pivot_tags(ser)
-    cn = count_n(ser)
-    assert np.all(pt.sum() == pd.Series(cn))
-
-    ser = pd.Series(["a,b,c", "a,b", "a,c", "c,c"])
-    pt = pivot_tags(ser)
-    cn = count_n(ser)
-    assert np.all(pt.sum() == pd.Series(cn))
+from ringbear.finarr import ovdd_from_duepay_records, month_date
 
 
 # %%

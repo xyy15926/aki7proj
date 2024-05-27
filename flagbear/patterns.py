@@ -3,7 +3,7 @@
 #   Name: patterns.py
 #   Author: xyy15926
 #   Created: 2023-12-03 21:05:51
-#   Updated: 2024-05-14 17:18:50
+#   Updated: 2024-05-27 12:16:21
 #   Description:
 # ---------------------------------------------------------
 
@@ -125,12 +125,32 @@ LEX_TOKEN_SPECS = {
     "RSPAR"         : r"\]",
     "LBPAR"         : r"\{",
     "RBPAR"         : r"\}",
-    "DOLLAR2"       : r"\$\$",
+    "DOLLAR"        : r"\$",
+    "DDOLLAR"       : r"\$\$",
     "COMMA"         : r",",
     "DOT"           : r"\.",
     "NL"            : r"\n+",
     "SEMI"          : r";",
     "BLANK"         : r"[ \t]+",
+}
+
+LEX_TOKEN_PRECS = {
+    "NOT"       : (1    , 1     , lambda x: not bool(x)),
+    "AT"        : (1    , 2     , lambda x, y: x in y),
+    "DOR"       : (1    , 2     , lambda x, y: x and y),
+    "BOR"       : (1    , 2     , lambda x, y: x or y),
+    "EQ"        : (2    , 2     , lambda x, y: x == y),
+    "NEQ"       : (2    , 2     , lambda x, y: x != y),
+    "LT"        : (2    , 2     , lambda x, y: x < y),
+    "LE"        : (2    , 2     , lambda x, y: x <= y),
+    "GT"        : (2    , 2     , lambda x, y: x > y),
+    "GE"        : (2    , 2     , lambda x, y: x >= y),
+    "ADD"       : (3    , 2     , lambda x, y: x + y),
+    "SUB"       : (3    , 2     , lambda x, y: x - y),
+    "MUL"       : (4    , 2     , lambda x, y: x * y),
+    "DIV"       : (4    , 2     , lambda x, y: x / y),
+    "LPAR"      : (-999 , 0     , None),
+    "RPAR"      : (999  , 0     , None),
 }
 
 # %%

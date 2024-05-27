@@ -22,7 +22,7 @@ from IPython.core.debugger import set_trace
 from flagbear.parser import EnvParser
 from flagbear.fliper import rebuild_dict, extract_field
 from flagbear.fliper import regex_caster
-from flagbear.exgine import rebuild_rec2df, trans_on_df, agg_on_df, EXGINE_ENV
+from modsbear.exgine import rebuild_rec2df, trans_on_df, agg_on_df, EXGINE_ENV
 
 # %%
 logging.basicConfig(

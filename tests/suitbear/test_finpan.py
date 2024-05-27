@@ -3,7 +3,7 @@
 #   Name: test_panels.py
 #   Author: xyy15926
 #   Created: 2024-04-09 20:02:08
-#   Updated: 2024-04-27 21:04:29
+#   Updated: 2024-05-27 17:07:58
 #   Description:
 # ---------------------------------------------------------
 
@@ -14,14 +14,45 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear import finarr
+    from ringbear import finarr
     from suitbear import finpan
     reload(finarr)
     reload(finpan)
 
-from flagbear.finarr import month_date
+from ringbear.finarr import month_date
+from suitbear.finpan import pivot_tags, sequeeze_named_columns
 from suitbear.finpan import addup_ob_records, DUM_OVDD, DUM_OVDP
 from suitbear.finpan import roll_from_ob_records, pivot_ob_records
+
+
+# %%
+def test_pivot_tags():
+    def count_n(seq: list, sep=","):
+        cm = {}
+        for ele in seq:
+            for i in ele.split(sep):
+                cm.setdefault(i, 0)
+                cm[i] += 1
+        return cm
+
+    ser = pd.Series(["a,b,c", "a,b", "a,c", "c"])
+    pt = pivot_tags(ser)
+    cn = count_n(ser)
+    assert np.all(pt.sum() == pd.Series(cn))
+
+    ser = pd.Series(["a,b,c", "a,b", "a,c", "c,c"])
+    pt = pivot_tags(ser)
+    cn = count_n(ser)
+    assert np.all(pt.sum() == pd.Series(cn))
+
+
+# %%
+def test_sequeeze_named_columns():
+    ser = pd.Series(["a,b,c", "a,b", "a,c", "c", None, ""])
+    pt = pivot_tags(ser)
+    pt["c.1"] = (1 - pt["c"]).astype(int)
+    sequeezed = sequeeze_named_columns(pt)
+    assert np.all(sequeezed["c"] == 1)
 
 
 # %%

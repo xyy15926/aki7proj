@@ -3,7 +3,7 @@
 #   Name: pboc_aggs.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-05-20 14:49:50
+#   Updated: 2024-05-26 19:08:37
 #   Description:
 # ---------------------------------------------------------
 
@@ -16,7 +16,8 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear import exgine, fliper
+    from flagbear import fliper
+    from modsbear import exgine
     from suitbear import fxgine, crosconf
     from azkaban import pboc_conf
     reload(fliper)
@@ -28,12 +29,11 @@ if __name__ == "__main__":
 import os
 from IPython.core.debugger import set_trace
 from flagbear.fliper import extract_field
-from flagbear.exgine import agg_on_df
+from modsbear.exgine import rebuild_rec2df, agg_on_df
 from suitbear.fxgine import compress_hierarchy, flat_records, agg_from_dfs
 from suitbear.crosconf import agg_confs_from_dict, cross_aggs_from_lower
 from azkaban.pboc_conf import LV1_AGG_CONF, LV2_AGG_CONF, LV20_AGG_CONF
 from azkaban.pboc_conf import MAPPERS, TRANS_CONF
-from flagbear.exgine import rebuild_rec2df
 
 # %%
 logging.basicConfig(
