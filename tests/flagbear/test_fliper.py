@@ -3,7 +3,7 @@
 #   Name: test_fliper.py
 #   Author: xyy15926
 #   Created: 2023-12-18 19:42:15
-#   Updated: 2024-05-19 16:31:08
+#   Updated: 2024-06-04 19:27:50
 #   Description:
 # ---------------------------------------------------------
 
@@ -25,15 +25,24 @@ from datetime import date, time
 from flagbear.patterns import REGEX_TOKEN_SPECS, LEX_ENDFLAG
 from flagbear.lex import Lexer
 from flagbear.parser import EnvParser
-from flagbear.fliper import (regex_caster, extract_field, rebuild_dict,
-                             rename_duplicated)
+from flagbear.fliper import regex_caster, extract_field, rebuild_dict
+from flagbear.fliper import rename_duplicated, rename_overlaped
 from flagbear.fliper import str_caster
 
 
 # %%
-# TODO
 def test_rename_duplicated():
-    pass
+    ll = [1, 2, 3, 3, 2, 4, 5]
+    nodup = rename_duplicated(ll)
+    assert np.all([x == y if isinstance(y, int) else 1
+                   for x, y in zip(ll, nodup)])
+
+    unil = [1, 2, 3, 4, 5]
+    nodup = rename_overlaped([unil, unil])
+    assert np.all([f"{x}_2" == y for x, y in zip(*nodup)])
+
+    nodup = rename_overlaped([unil, unil], ["a", "b"])
+    assert np.all([f"{x}_b" == f"{y}" for x, y in zip(*nodup)])
 
 
 # %%

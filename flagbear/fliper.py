@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import json
 from typing import Any, TypeVar
-from collections.abc import Iterator, Callable, Mapping
+from collections.abc import Iterable, Callable, Mapping
 from collections import deque
 from IPython.core.debugger import set_trace
 
@@ -28,15 +28,22 @@ logger.info("Logging Start.")
 
 
 # %%
-def rename_duplicated(ori: list):
-    """Rename duplicated elements inorder."""
-    duped = False
+def rename_duplicated(ori: list[str | int | float]) -> list:
+    """Rename duplicated elements inorder.
+
+    Params:
+    ---------------------------
+    ori: List that may containing duplicated elements.
+
+    Return:
+    ---------------------------
+    List with duplicated values renamed with `_<N>`.
+    """
     cnts = {}
     new = []
 
     for ele in ori:
         if ele in cnts:
-            duped = False
             cnts[ele] += 1
             times = cnts[ele]
             new.append(f"{ele}_{times}")
@@ -44,7 +51,40 @@ def rename_duplicated(ori: list):
             cnts[ele] = 1
             new.append(ele)
 
-    return new if duped else None
+    return new
+
+
+def rename_overlaped(
+    ori: list[Iterable],
+    suffixs: Iterable = None,
+) -> list[list]:
+    """Rename overlaped elements inorder.
+
+    1. Elements of list in `ori` must be unique.
+    2. The elements of first list in `ori` won't be changed all the time.
+
+    Params:
+    ----------------------
+    ori: Lists that may containes overlaped elements.
+
+    Return:
+    ----------------------
+    Lists with overlaped elements renamed with `_<N>`.
+    """
+    rets = []
+    cnts = set()
+    suffixs = range(1, len(ori) + 1) if suffixs is None else suffixs
+    for idx, ll in zip(suffixs, ori):
+        ret = []
+        for ele in ll:
+            if ele in cnts:
+                ret.append(f"{ele}_{idx}")
+            else:
+                ret.append(ele)
+                cnts.add(ele)
+        rets.append(ret)
+
+    return rets
 
 
 # %%
