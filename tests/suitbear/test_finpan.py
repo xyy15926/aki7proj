@@ -14,12 +14,12 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from ringbear import finarr
+    from ringbear import tsarr
     from suitbear import finpan
-    reload(finarr)
+    reload(tsarr)
     reload(finpan)
 
-from ringbear.finarr import month_date
+from ringbear.tsarr import month_date
 from suitbear.finpan import pivot_tags, sequeeze_named_columns
 from suitbear.finpan import addup_ob_records, DUM_OVDD, DUM_OVDP
 from suitbear.finpan import roll_from_ob_records, pivot_ob_records

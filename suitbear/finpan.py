@@ -20,7 +20,7 @@ from IPython.core.debugger import set_trace
 
 import numpy as np
 import pandas as pd
-from ringbear.finarr import ovdd_from_duepay_records, month_date
+from ringbear.tsarr import ovdd_from_duepay_records, month_date
 
 # %%
 logging.basicConfig(
