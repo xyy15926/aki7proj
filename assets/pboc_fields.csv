@@ -31,6 +31,7 @@ pboc_address,PB030Q01,PB030Q01,varchar(1022),居住地址
 pboc_address,PB030Q02,PB030Q02,varchar(1022),住宅电话
 pboc_address,PB030D01,PB030D01,varchar(31),居住状况
 pboc_address,PB030R01,PB030R01,date,信息更新日期
+pboc_company,PB040D01,PB040D01,varchar(31),就业状况
 pboc_company,PB040D02,PB040D02,varchar(31),单位性质
 pboc_company,PB040D04,PB040D04,varchar(31),职业
 pboc_company,PB040D03,PB040D03,varchar(31),行业

@@ -3,7 +3,7 @@
 #   Name: pboc_conf.py
 #   Author: xyy15926
 #   Created: 2022-11-10 21:44:59
-#   Updated: 2024-05-23 19:52:49
+#   Updated: 2024-06-21 16:29:53
 #   Description:
 # ----------------------------------------------------------
 
@@ -200,6 +200,16 @@ MAPPERS = {
         "6": (6         , "违约"),
         "9": (1         , "未分类"),
     },
+    "credit_lmt_cat": {
+        "10": (10       , "循环贷款额度"),
+        "20": (20       , "非循环贷款额度"),
+        "30": (30       , "信用卡共享额度"),
+        "31": (31       , "信用卡独立额度"),
+    },
+    "credit_protocal_status": {
+        "1": (1         , "有效"),
+        "2": (2         , "到期/失效"),
+    },
     "postfee_acc_cat_M": {
         "TE": (1        , "电信缴费账户"),
         "UE": (2        , "公用事业缴费账户"),
@@ -242,7 +252,129 @@ MAPPERS = {
         "13": (13       , "双周"),
         "14": (14       , "双月"),
         "99": (99       , "其他"),
-    }
+    },
+    "edu_record": {
+        "10": (10       , "研究生"),
+        "20": (20       , "本科"),
+        "30": (30       , "大专"),
+        "40": (40       , "中专、职高、技校"),
+        "60": (60       , "高中"),
+        "90": (90       , "其他"),
+        "91": (91       , "初中及以下"),
+        "99": (99       , "未知"),
+    },
+    "edu_degree": {
+        "1": (1         , "名誉博士"),
+        "2": (2         , "博士"),
+        "3": (3         , "硕士"),
+        "4": (4         , "学士"),
+        "5": (5         , "无"),
+        "9": (9         , "未知"),
+        "0": (0         , "其他"),
+    },
+    "emp_status": {
+        "11": (11       , "国家公务员"),
+        "13": (13       , "专业技术人员"),
+        "17": (17       , "职员"),
+        "21": (21       , "企业管理人员"),
+        "24": (24       , "工人"),
+        "27": (27       , "农民"),
+        "31": (31       , "学生"),
+        "37": (37       , "现役军人"),
+        "51": (51       , "自有职业者"),
+        "54": (54       , "个体经营者"),
+        "70": (70       , "无业人员"),
+        "80": (80       , "退（离）休人员"),
+        "90": (90       , "其他"),
+        "91": (91       , "在职"),
+        "99": (99       , "未知"),
+    },
+    "marital_status": {
+        "10": (10       , "未婚"),
+        "20": (20       , "已婚"),
+        "30": (30       , "丧偶"),
+        "40": (40       , "离婚"),
+        "91": (91       , "单身"),
+        "99": (99       , "未知"),
+    },
+    "res_status": {
+        "1": (11        , "自置"),
+        "2": (12        , "按揭"),
+        "3": (21        , "亲属楼宇"),
+        "4": (22        , "集体宿舍"),
+        "5": (31        , "租房"),
+        "6": (14        , "共有住宅"),
+        "7": (98        , "其他"),
+        "11": (13       , "自有"),
+        "12": (23       , "借住"),
+        "9": (99        , "未知"),
+    },
+    # 单位性质
+    "comp_character": {
+        "10": (10       , "机关、事业单位"),
+        "20": (20       , "国有企业"),
+        "30": (30       , "外资企业"),
+        "40": (40       , "个体、私营企业"),
+        "50": (50       , "其他（三资企业、民营企业、民间团体）"),
+        "99": (99       , "未知"),
+    },
+    # 单位行业
+    "comp_industry": {
+        "A": (11        , "农、林、牧、渔业"),
+        "B": (21        , "采矿业"),
+        "C": (22        , "制造业"),
+        "D": (23        , "电力、热力、燃气及水生产和供应业"),
+        "E": (24        , "建筑业"),
+        "F": (31        , "批发和零售业"),
+        "G": (32        , "交通运输、仓储和邮储业"),
+        "H": (33        , "住宿和餐饮业"),
+        "1": (34        , "信息传输、软件和信息技术服务业"),
+        "J": (35        , "金融业"),
+        "K": (36        , "房地产业"),
+        "L": (37        , "租赁和商务服务业"),
+        "M": (38        , "科学研究和技术服务业"),
+        "N": (39        , "水利、环境和公共设施管理业"),
+        "O": (40        , "居民服务、修理和其他服务业"),
+        "P": (41        , "教育"),
+        "Q": (42        , "卫生和社会工作"),
+        "R": (43        , "文化、体育和娱乐业"),
+        "S": (44        , "公共管理、社会保障和社会组织"),
+        "T": (45        , "国际组织"),
+        "9": (99        , "未知"),
+    },
+    # 职业
+    "comp_profession": {
+        "0": (11        , "国家机关、党群组织、企业、事业单位负责人"),
+        "1": (31        , "专业技术人员"),
+        "3": (41        , "办事人员和有关人员"),
+        "4": (42        , "商业、服务业人员"),
+        "5": (21        , "农、林、牧、渔、水利业生产人员"),
+        "6": (32        , "生产、运输设备操作人员及有关人员"),
+        "X": (12        , "军人"),
+        "Y": (98        , "不便分类的其他从业人员"),
+        "Z": (99        , "未知"),
+    },
+    # 职务
+    "comp_position": {
+        "1": (1         , "高级领导"),
+        "2": (2         , "中级领导"),
+        "3": (3         , "一般员工"),
+        "4": (98        , "其他"),
+        "9": (99        , "未知"),
+    },
+    # 职称
+    "comp_prof_title": {
+        "0": (98        , "无"),
+        "1": (1         , "高级"),
+        "2": (2         , "中级"),
+        "3": (3         , "初级"),
+        "9": (99        , "未知"),
+    },
+    "housing_fund_status": {
+        "1": (1         , "缴交"),
+        "2": (2         , "封存"),
+        "3": (3         , "销户"),
+    },
 }
 
 
@@ -366,6 +498,12 @@ TRANS_CONF = {
     ],
     "pboc_credit_info": [
         ["credit_org_cat"               , "map(PD02AD01, org_cat)"              , None  , "授信账户管理机构类型"],
+        ["credit_cat"                   , "map(PD02AD02, credit_lmt_cat)"       , None  , "授信额度类型"],
+        ["credit_exchange_rate"         , "map(PD02AD03, exchange_rate)"        , None  , "授信协议币种"],
+        ["credit_status"                , "map(PD02AD04, credit_protocal_status)"   , None  , "授信协议状态"],
+        ["credit_lmt"                   , "smul(PD02AJ01, credit_exchange_rate)"    , None  , "授信额度"],
+        ["credit_tmp_lmt"               , "smul(PD02AJ03, credit_exchange_rate)"    , None  , "授信限额"],
+        ["credit_ots"                   , "smul(PD02AJ04, credit_exchange_rate)"    , None  , "已用额度"],
         ["credit_moi_start"             , "mon_itvl(PD02AR01, today)"           , None  , "授信起始距今月"],
         ["credit_moi_end"               , "mon_itvl(PD02AR02, today)"           , None  , "授信截至距今月"],
     ],
@@ -385,6 +523,26 @@ TRANS_CONF = {
         ["inq_rec_org_cat"              , "map(PH010D01, org_cat)"              , None  , "查询机构类型"],
         ["inq_rec_reason_cat"           , "map(PH010Q03, inq_reason_cat)"       , None  , "查询原因类型"],
         ["inq_rec_moi"                  , "mon_itvl(PH010R01, today)"           , None  , "查询距今月"],
+    ],
+    "pboc_basic_info": [
+        ["pi_edu_record"                , "map(PB01AD02, edu_record)"           , None  , "学历"],
+        ["pi_edu_degree"                , "map(PB01AD03, edu_degree)"           , None  , "学位"],
+        ["pi_emp_job"                   , "map(PB01AD04, emp_status)"           , None  , "就业状况"],
+    ],
+    "pboc_address": [
+        ["pi_res_status"                , "map(PB030D01, res_status)"           , None  , "居住状况"],
+    ],
+    "pboc_company": [
+        ["pi_comp_job"                  , "map(PB040D01, emp_status)"           , None  , "就业状况"],
+        ["pi_comp_char"                 , "map(PB040D02, comp_character)"       , None  , "单位性质"],
+        ["pi_comp_indust"               , "map(PB040D03, comp_industry)"        , None  , "行业"],
+        ["pi_comp_prof"                 , "map(PB040D04, comp_profession)"      , None  , "职业"],
+        ["pi_comp_pos"                  , "map(PB040D05, comp_position)"        , None  , "职务"],
+        ["pi_comp_prof_title"           , "map(PB040D06, comp_prof_title)"      , None  , "职称"],
+    ],
+    # 人行征信不在更新公积金信息
+    "pboc_housing_fund":[
+        ["hf_status"                    , "map(PF05AD01, housing_fund_status)"  , None  , "缴交状态"],
     ],
 }
 
@@ -781,12 +939,20 @@ LV1_AGG_CONF = {
             "mois": ([(f"last_{moi}m", f"mon_itvl(PB030R01, today) >= -{moi}",
                        f"近{moi}月") for moi in [6, 12, 24, 36, 48]]
                      + [("all", None, "历史"), ]),
+            "res_status": [
+                ("owned", "pi_res_status < 20", "自有、按揭、共有"),
+                ("owned_all", "(pi_res_status > 10) & (pi_res_status <= 13)", "自置、按揭"),
+                ("rented", "(pi_res_status > 20) & (pi_res_status < 40)", "租住、借住"),
+                ("other", "pi_res_status > 90", "其他"),
+            ],
         },
         "agg": {
             "cnt": ("cnt", "count(_)", "居住地数量"),
         },
         "cros": [
             (["cnt", ]                          , ["mois", ]),
+            (["cnt", ]                          , ["res_status", ]),
+
         ]
     },
     "pinfo_comp": {
@@ -799,12 +965,55 @@ LV1_AGG_CONF = {
             "mois": ([(f"last_{moi}m", f"mon_itvl(PB040R01, today) >= -{moi}",
                        f"近{moi}月") for moi in [6, 12, 24, 36, 48]]
                      + [("all", None, "历史"), ]),
+            "comp_char": [
+                ("char_gov", "pi_comp_char == 10", "机关、事业单位"),
+                ("char_gov_cap", "pi_comp_char == 20", "国有企业"),
+                ("char_fogn_cap", "pi_comp_char == 30", "外资企业"),
+                ("char_priv_cap", "pi_comp_char == 40", "个体、私营企业"),
+                ("char_other_cap", "pi_comp_char == 50", "其他（三资、民营、团体）"),
+                ("char_other", "pi_comp_char == 99", "未知"),
+            ],
+            "comp_indust": [
+                ("1indust", "pi_comp_indust < 20", "第一产业"),
+                ("2indust", "(pi_comp_indust > 20) & (pi_comp_indust < 30)", "第二产业"),
+                ("3indust", "(pi_comp_indust > 30) & (pi_comp_indust < 90)", "第三产业"),
+                ("other_ind", "pi_comp_indust == 99", "其他"),
+            ],
+            "comp_prof": [
+                ("prof_head", "pi_comp_prof == 11", "国家机关、党群组织、企业、事业单位负责人"),
+                ("prof_soldier", "pi_comp_prof == 12", "军人"),
+                ("prof_prod", "pi_comp_prof == 21", "生产人员"),
+                ("prof_prof", "(pi_comp_prof > 30) & (pi_comp_prof < 40)", "技术人员"),
+                ("prof_serv", "(pi_comp_prof > 40) & (pi_comp_prof < 50)", "服务人员"),
+                ("prof_other", "pi_comp_prof > 90", "其他职业"),
+            ],
+            "comp_pos": [
+                ("pos_sup", "pi_comp_pos == 1", "高级领导"),
+                ("pos_mid", "pi_comp_pos == 2", "中级领导"),
+                ("pos_inf", "pi_comp_pos == 3", "一般员工"),
+                ("pos_other", "pi_comp_pos > 90", "其他职务"),
+            ],
+            "comp_prof_title": [
+                ("pos_title_sup", "pi_comp_prof_title == 1", "高级职称"),
+                ("pos_title_mid", "pi_comp_prof_title == 2", "中级职称"),
+                ("pos_title_low", "pi_comp_prof_title == 3", "初级职称"),
+                ("pos_title_none", "pi_comp_prof_title > 90", "无职称"),
+            ],
+            "comp_job": [
+                ("pi_comp_job", "pi_comp_job == 91", "在职"),
+                ("pi_comp_job", "pi_comp_job != 91", "非在职"),
+            ],
         },
         "agg": {
             "cnt": ("cnt", "count(_)", "工作单位数量"),
         },
         "cros": [
-            (["cnt", ]                          , ["mois", ]),
+            (["cnt", ]                          , ["mois", "comp_job"]),
+            (["cnt", ]                          , ["comp_char", "comp_job"]),
+            (["cnt", ]                          , ["comp_indust", "comp_job"]),
+            (["cnt", ]                          , ["comp_prof", "comp_job"]),
+            (["cnt", ]                          , ["comp_pos", "comp_job"]),
+            (["cnt", ]                          , ["comp_prof_title", "comp_job"]),
         ]
     },
     "acc_no_cat_info": {
@@ -815,6 +1024,7 @@ LV1_AGG_CONF = {
         "key_fmt": "acc_{cond}_{agg}",
         "cond": {
             "orgs": [
+                ("org_bank", "acc_org_cat == 11", "商业银行"),
                 ("org_bank", "acc_org_cat < 20", "银行账户"),
                 ("org_nbank", "(acc_org_cat > 20) & (acc_org_cat < 60)", "非银机构账户"),
                 ("org_other", "acc_org_cat > 90", "其他机构账户")
@@ -883,6 +1093,7 @@ LV1_AGG_CONF = {
                 "r4": ("r4"             , "acc_cat == 2"                                , "r4"),
                 "r1": ("r1"             , "acc_cat == 3"                                , "r1"),
                 "r2": ("r2"             , "acc_cat == 4"                                , "r2"),
+                "r2cny": ("r2cny"       , "(acc_cat == 4) & (PD01AD04 == \"CNY\")"      , "r2cny"),
                 "r3": ("r3"             , "acc_cat == 5"                                , "r3"),
                 "d1r4": ("d1r4"         , "acc_cat <= 2"                                , "d1r4"),
                 "d1r41": ("d1r41"       , "acc_cat <= 3"                                , "d1r41"),
@@ -940,11 +1151,11 @@ LV1_AGG_CONF = {
               "last_prd_max",
               "mixed_ots_sum", "mixed_ots_max",
               "last_repay_mcnt", "last_repay_amt"],
-             [("acc_cat", "c1", "d1r41", "r23", "d1", "r4", "r1", "r2", "r3", "r281", "r282", "r2spec"),
+             [("acc_cat", "c1", "d1r41", "r23", "d1", "r4", "r1", "r2", "r2cny", "r3", "r281", "r282", "r2spec"),
               "mixed_acc_status", "mois_start"]),
             # Repayment
             (["mixed_folw_monthly_repay_sum", "mixed_folw_monthly_repay_max"],
-             [("acc_cat", "d1r41", "r23", "d1", "r4", "r1", "r2", "r3", "r281", "r282", "r2spec"),
+             [("acc_cat", "d1r41", "r23", "d1", "r4", "r1", "r2", "r2cny", "r3", "r281", "r282", "r2spec"),
               "mixed_acc_status", "mois_start"]),
             # C1
             (["cnt", "lmt_sum", "lmt_max", "lmt_min", "last_prd_max"],
@@ -964,6 +1175,7 @@ LV1_AGG_CONF = {
                 "r4": ("r4"             , "acc_cat == 2"                                , "r4"),
                 "r1": ("r1"             , "acc_cat == 3"                                , "r1"),
                 "r2": ("r2"             , "acc_cat == 4"                                , "r2"),
+                "r2cny": ("r2cny"       , "(acc_cat == 4) & (PD01AD04 == \"CNY\")"      , "r2cny"),
                 "r3": ("r3"             , "acc_cat == 5"                                , "r3"),
                 "d1r4": ("d1r4"         , "acc_cat <= 2"                                , "d1r4"),
                 "d1r41": ("d1r41"       , "acc_cat <= 3"                                , "d1r41"),
@@ -1039,10 +1251,10 @@ LV1_AGG_CONF = {
               "mixed_acc_status", "mois_start"]),
             # D1R412
             (["ovd_sum", "ovd_max"],
-             [("acc_cat", "d1r41", "r2", "r281", "r282", "r2spec"),
+             [("acc_cat", "d1r41", "r2", "r2cny", "r281", "r282", "r2spec"),
               "mois_start"]),
             (["monthly_folw_prd_max", "monthly_ovd_prd_sum", "monthly_ovd_prd_max"],
-             [("acc_cat", "d1r41", "r2", "r281", "r282", "r2spec"),
+             [("acc_cat", "d1r41", "r2", "r2cny", "r281", "r282", "r2spec"),
               "mixed_acc_status", "mois_start"]),
          ],
     },
@@ -1059,6 +1271,7 @@ LV1_AGG_CONF = {
                 "r4": ("r4"             , "acc_cat == 2"                                , "r4"),
                 "r1": ("r1"             , "acc_cat == 3"                                , "r1"),
                 "r2": ("r2"             , "acc_cat == 4"                                , "r2"),
+                "r2cny": ("r2cny"       , "(acc_cat == 4) & (PD01AD04 == \"CNY\")"      , "r2cny"),
                 "r3": ("r3"             , "acc_cat == 5"                                , "r3"),
                 "d1r4": ("d1r4"         , "acc_cat <= 2"                                , "d1r4"),
                 "d1r41": ("d1r41"       , "acc_cat <= 3"                                , "d1r41"),
@@ -1112,7 +1325,7 @@ LV1_AGG_CONF = {
             # R2
             (["monthly_usd_sum", "monthly_usd_max",
               "monthly_special_insts_sum", "monthly_special_insts_max"],
-             [("acc_cat", "r2", "r281", "r282", "r2spec"),
+             [("acc_cat", "r2", "r2cny", "r281", "r282", "r2spec"),
               "mixed_acc_status", "mois_start"]),
             # R3
             (["m7p_ovd_sum", "m7p_ovd_max"],
@@ -1120,7 +1333,7 @@ LV1_AGG_CONF = {
               "mixed_acc_status", "mois_start"]),
             # R23
             (["last_6m_avg_usd_sum", "last_6m_avg_usd_max", "last_6m_max_usd_max"],
-             [("acc_cat", "r23", "r2", "r281", "r282", "r2spec"),
+             [("acc_cat", "r23", "r2", "r2cny", "r281", "r282", "r2spec"),
               "mixed_acc_status", "mois_start"]),
         ],
     },
@@ -1143,24 +1356,31 @@ LV1_AGG_CONF = {
                           for moi in [6, 12, 24, 36, 48]]
                          + [("closed", "credit_moi_end <= 0", "已结束"),
                             ("open", "credit_moi_end > 0", "存续")]),
+            "credit_cat": [
+                ("rev", "credit_cat == 10", "循环贷授信额度"),
+                ("norev", "credit_cat == 20", "非循环贷授信额度"),
+                ("card", "credit_cat >= 30", "信用卡独立、共享授信额度"),
+            ],
         },
         "agg": {
             "cnt": ("cnt", "count(_)", "授信数量"),
-            "lmt_sum": ("lmt_sum", "sum(PD02AJ01)", "授信额度之和"),
-            "lmt_max": ("lmt_max", "max(PD02AJ01)", "授信额度最大值"),
-            "lmt_min": ("lmt_min", "max(PD02AJ01)", "授信额度最大值"),
-            "lmt2_sum": ("lmt2_sum", "sum(PD02AJ03)", "授信限额之和"),
-            "lmt2_max": ("lmt2_max", "max(PD02AJ03)", "授信限额最大值"),
-            "usd_sum": ("usd_sum", "sum(PD02AJ04)", "已用额度之和"),
-            "usd_max": ("usd_max", "max(PD02AJ04)", "已用额度最大值"),
+            "lmt_sum": ("lmt_sum", "sum(smul(PD02AJ01, credit_exchange_rate))", "授信额度之和"),
+            "lmt_max": ("lmt_max", "max(smul(PD02AJ01, credit_exchange_rate))", "授信额度最大值"),
+            "lmt_min": ("lmt_min", "max(smul(PD02AJ01, credit_exchange_rate))", "授信额度最小值"),
+            "lmt2_sum": ("lmt2_sum", "sum(smul(PD02AJ03, credit_exchange_rate))", "授信限额之和"),
+            "lmt2_max": ("lmt2_max", "max(smul(PD02AJ03, credit_exchange_rate))", "授信限额最大值"),
+            "usd_sum": ("usd_sum", "sum(smul(PD02AJ04, credit_exchange_rate))", "已用额度之和"),
+            "usd_max": ("usd_max", "max(smul(PD02AJ04, credit_exchange_rate))", "已用额度最大值"),
         },
         "cros": [
-            [["cnt", "lmt_sum", "lmt_max", "lmt_min", "lmt2_sum", "lmt2_max",
-              "usd_sum", "usd_max"],
+            [["cnt", "lmt_sum", "lmt_max", "lmt_min", "lmt2_sum", "lmt2_max", "usd_sum", "usd_max"],
              ["mois_start", "orgs"]],
-            [["cnt", "lmt_sum", "lmt_max", "lmt_min", "lmt2_sum", "lmt2_max",
-              "usd_sum", "usd_max"],
+            [["cnt", "lmt_sum", "lmt_max", "lmt_min", "lmt2_sum", "lmt2_max", "usd_sum", "usd_max"],
              ["mois_end", "orgs"]],
+            [["cnt", "lmt_sum", "lmt_max", "lmt_min", "lmt2_sum", "lmt2_max", "usd_sum", "usd_max"],
+             ["mois_start", "credit_cat"]],
+            [["cnt", "lmt_sum", "lmt_max", "lmt_min", "lmt2_sum", "lmt2_max", "usd_sum", "usd_max"],
+             ["mois_end", "credit_cat"]],
         ]
     },
     "rel_info": {
@@ -1207,16 +1427,16 @@ LV1_AGG_CONF = {
         },
         "agg": {
             "cnt": ("cnt", "count(_)", "相关还款责任数"),
-            "respon_sum": ("resp_sum", "sum(PD03AJ01)", "责任金额之和"),
-            "respon_max": ("resp_max", "max(PD03AJ01)", "责任金额最大值"),
-            "acc_sum": ("acc_sum", "sum(PD03AJ02)", "账户金额之和"),
-            "acc_max": ("acc_max", "max(PD03AJ02)", "账户金额最大值"),
-            "repay_status_max": ("repay_status_max", "max(rel_repay_status)", "逾期月数最大值"),
-            "repay_status_sum": ("repay_status_sum", "sum(rel_repay_status)", "逾期月数之和"),
-            "ovd_month_max": ("ovd_month_max", "max(PD03AS01)", "逾期月数最大值"),
-            "ovd_month_sum": ("ovd_month_sum", "sum(PD03AS01)", "逾期月数之和"),
-            "folw_prd_max": ("folw_prd_max", "max(rel_moi_end)", "剩余最长期限"),
-            "last_prd_max": ("last_prd_max", "max(-rel_moi_start)", "首个账户距今"),
+            "respon_sum": ("resp_sum", "sum(PD03AJ01)", "相关责任金额之和"),
+            "respon_max": ("resp_max", "max(PD03AJ01)", "相关责任金额最大值"),
+            "acc_sum": ("acc_sum", "sum(PD03AJ02)", "相关责任账户金额之和"),
+            "acc_max": ("acc_max", "max(PD03AJ02)", "相关责任账户金额最大值"),
+            "repay_status_max": ("repay_status_max", "max(rel_repay_status)", "相关责任逾期月数最大值"),
+            "repay_status_sum": ("repay_status_sum", "sum(rel_repay_status)", "相关责任逾期月数之和"),
+            "ovd_month_max": ("ovd_month_max", "max(PD03AS01)", "相关责任逾期月数最大值"),
+            "ovd_month_sum": ("ovd_month_sum", "sum(PD03AS01)", "相关责任逾期月数之和"),
+            "folw_prd_max": ("folw_prd_max", "max(rel_moi_end)", "相关责任剩余最长期限"),
+            "last_prd_max": ("last_prd_max", "max(-rel_moi_start)", "相关责任首个账户距今"),
         },
         "cros": [
             (["cnt", "respon_sum", "respon_max", "acc_sum", "acc_max"],
@@ -1371,31 +1591,37 @@ LV1_AGG_CONF = {
         "key_fmt": "housing_fund_{cond}_{agg}",
         "cond": {
             "mois_start": ([(f"last_{moi}m", f"mon_itvl(PF05AR02, today) >= -{moi}",
-                             f"近{moi}月") for moi in [6, 12, 24, 36, 48]]
+                             f"近{moi}月") for moi in [3, 6, 12, 24, 36, 48]]
                            + [("his", None, "历史"), ]),
             "mois_end": ([(f"last_{moi}m",
                            f"(mon_itvl(PF05AR03, today) <= {moi}) & (mon_itvl(PF05AR03, today) > 0)",
                            f"未来{moi}月存续") for moi in [6, 12, 24, 36, 48]]
                          + [("closed", "mon_itvl(PF05AR03, today) <= 0", "已结束"),
                             ("open", "mon_itvl(PF05AR03, today) > 0", "存续")]),
-            "None": [("all", None, "所有记录中"), ]
+            "hf_status": [
+                ("active", "hf_status == 1", "缴交"),
+                ("frozen", "hf_status == 2", "封存"),
+                ("closed", "hf_status == 3", "销户"),
+            ],
         },
         "agg": {
             "cnt": ("cnt", "count(_)", "住房公积金账户数量"),
             "sum": ("sum", "sum(PF05AJ01)", "住房公积金月缴存额之和"),
             "max": ("max", "max(PF05AJ01)", "住房公积金月缴存额最大值"),
-            "fstpay_prd_max": ("fstpay_prd_max", "max(mon_itvl(today, PF05AR02))", "最早初缴距今"),
-            "fstpay_prd_min": ("fstpay_prd_min", "min(mon_itvl(today, PF05AR02))", "最晚初缴距今"),
-            "lastpay_prd_max": ("prd_max", "max(mon_itvl(today, PF05AR03))", "最早缴至距今"),
-            "lastpay_prd_min": ("prd_min", "min(mon_itvl(today, PF05AR03))", "最晚缴至距今"),
+            "start_prd_max": ("start_prd_max", "max(mon_itvl(today, PF05AR02))", "最早初缴距今"),
+            "start_prd_min": ("start_prd_min", "min(mon_itvl(today, PF05AR02))", "最晚初缴距今"),
+            "end_prd_max": ("end_prd_max", "max(mon_itvl(today, PF05AR03))", "最晚缴至距今"),
+            "end_prd_min": ("end_prd_min", "min(mon_itvl(today, PF05AR03))", "最早缴至距今"),
+            "latest_prd_min": ("latest_prd_min", "min(mon_itvl(today, PF05AR04))", "最近缴交距今"),
         },
         "cros": [
-            (["cnt", "sum", "max"]                , ["None"]),
-            # (["cnt", "sum", "max"]              , ["mois_start"]),
-            # (["cnt", "sum", "max"]              , ["mois_end"]),
-            # (["fstpay_prd_max", "fstpay_prd_min",
-            #   "fstpay_prd_max", "fstpay_prd_min"],
-            #  ["None"])
+            (["cnt", "sum", "max"]                  , ["mois_start", "hf_status"]),
+            (["cnt", "sum", "max"]                  , ["mois_end", "hf_status"]),
+            (["cnt", "sum", "max"]                  , ["mois_end"]),
+            (["start_prd_max", "start_prd_min",
+              "end_prd_max", "end_prd_min",
+              "latest_prd_min"],
+             ["hf_status"])
         ],
     },
     "allowance": {
@@ -1463,7 +1689,9 @@ LV1_AGG_CONF = {
         "cond": {
             "mois": ([(f"last_{moi}m", f"mon_itvl(PH010R01, today) >= -{moi}",
                        f"近{moi}月") for moi in [1, 2, 3, 6, 9, 12, 18, 24, 36, 48]]
-                     + [("his", None, "历史"), ]),
+                     + [("his", None, "历史"), ]
+                     + [(f"last_{doi}d", f"day_itvl(PH010R01, today) >= -{doi}",
+                         f"近{doi}日") for doi in [0, 1, 2, 3, 5, 10, 30]]),
             "orgs": [
                 ("org_bank", "inq_rec_org_cat < 20", "银行账户"),
                 ("org_nbank", "(inq_rec_org_cat > 20) & (inq_rec_org_cat < 60)", "非银机构账户"),
@@ -1482,6 +1710,9 @@ LV1_AGG_CONF = {
             "inq_reason": [
                 ("for_loan", "inq_rec_reason_cat == 11", "贷前审批_贷款"),
                 ("for_card", "inq_rec_reason_cat == 12", "贷前审批_信用卡"),
+                ("for_guar", "inq_rec_reason_cat == 13", "贷前审批_担保资格审查"),
+                ("for_leasing", "inq_rec_reason_cat == 17", "贷前审批_融资审批"),
+                ("for_lmt", "inq_rec_reason_cat == 18", "贷前审批_额度审批"),
                 ("for_pre", "inq_rec_reason_cat < 20", "贷前审批"),
                 ("for_after", "(inq_rec_reason_cat > 20) & (inq_rec_reason_cat < 30)", "贷后管理"),
                 ("for_rel", "(inq_rec_reason_cat > 30) & (inq_rec_reason_cat < 40)", "关联审查"),
