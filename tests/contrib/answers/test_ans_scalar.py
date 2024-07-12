@@ -3,7 +3,7 @@
 #   Name: test_ans_scalar.py
 #   Author: xyy15926
 #   Created: 2024-01-12 14:42:57
-#   Updated: 2024-01-14 20:32:15
+#   Updated: 2024-07-12 21:54:32
 #   Description:
 # ---------------------------------------------------------
 
@@ -12,11 +12,11 @@ import pytest
 
 if __name__ == "__main__":
     from importlib import reload
-    from answers import ans_scalar
+    from contrib.answers import ans_scalar
     reload(ans_scalar)
 
-from answers.ans_scalar import (qpower, euclid_gcd, euclid_lcm,
-                                russian_mul, poly_eval)
+from contrib.answers.ans_scalar import (qpower, euclid_gcd, euclid_lcm,
+                                        russian_mul, poly_eval)
 
 
 # %%

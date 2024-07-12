@@ -3,7 +3,7 @@
 #   Name: deepfm.py
 #   Author: xyy15926
 #   Created: 2024-06-27 11:17:08
-#   Updated: 2024-07-10 10:40:30
+#   Updated: 2024-07-11 22:32:28
 #   Description:
 # ---------------------------------------------------------
 
@@ -121,9 +121,9 @@ class DeepFM(nn.Module):
             layer_seqs.append(nn.Dropout(deep_dropout_probs[0]))
         for in_sz, out_sz, prob in zip(dnn_sizes[:-1], dnn_sizes[1:],
                                        deep_dropout_probs[1:]):
+            layer_seqs.append(nn.Linear(in_sz, out_sz))
             if deep_bn:
                 layer_seqs.append(nn.BatchNorm1d(in_sz))
-            layer_seqs.append(nn.Linear(in_sz, out_sz))
             layer_seqs.append(nn.ReLU())
             if prob is not None:
                 layer_seqs.append(nn.Dropout(prob))

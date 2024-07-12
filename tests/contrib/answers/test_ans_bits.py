@@ -3,7 +3,7 @@
 #   Name: test_ans_bits.py
 #   Author: xyy15926
 #   Created: 2024-01-14 16:40:31
-#   Updated: 2024-01-15 11:33:14
+#   Updated: 2024-07-12 21:54:51
 #   Description:
 # ---------------------------------------------------------
 
@@ -12,23 +12,23 @@ import pytest
 
 if __name__ == "__main__":
     from importlib import reload
-    from answers import ans_bits
+    from contrib.answers import ans_bits
     reload(ans_bits)
 
 import math
 
-from answers.ans_bits import (count_one, count_one_iter1,
-                              count_one_table, count_one_division,
-                              count_one_division_v2)
-from answers.ans_bits import (count_one_odd,
-                              count_one_odd_division,
-                              count_one_odd_division_tbl)
-from answers.ans_bits import (even_u8, odd_u8,
-                              even_u8_mod, odd_u8_mod)
-from answers.ans_bits import (reverse_bits, reverse_bits_mod)
-from answers.ans_bits import (count_prepending_zeros,
-                              count_prepending_zeros_mod)
-from answers.ans_bits import (div3, sqrt)
+from contrib.answers.ans_bits import (count_one, count_one_iter1,
+                                      count_one_table, count_one_division,
+                                      count_one_division_v2)
+from contrib.answers.ans_bits import (count_one_odd,
+                                      count_one_odd_division,
+                                      count_one_odd_division_tbl)
+from contrib.answers.ans_bits import (even_u8, odd_u8,
+                                      even_u8_mod, odd_u8_mod)
+from contrib.answers.ans_bits import (reverse_bits, reverse_bits_mod)
+from contrib.answers.ans_bits import (count_prepending_zeros,
+                                      count_prepending_zeros_mod)
+from contrib.answers.ans_bits import (div3, sqrt)
 
 
 # %%

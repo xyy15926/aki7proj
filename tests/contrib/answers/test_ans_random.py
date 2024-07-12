@@ -13,10 +13,10 @@ import numpy as np
 
 if __name__ == "__main__":
     from importlib import reload
-    from answers import ans_random
+    from contrib.answers import ans_random
     reload(ans_random)
 
-from answers.ans_random import mcmc
+from contrib.answers.ans_random import mcmc
 
 
 # %%
