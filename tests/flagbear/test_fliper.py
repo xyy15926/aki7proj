@@ -3,7 +3,7 @@
 #   Name: test_fliper.py
 #   Author: xyy15926
 #   Created: 2023-12-18 19:42:15
-#   Updated: 2024-06-04 19:27:50
+#   Updated: 2024-07-28 20:00:52
 #   Description:
 # ---------------------------------------------------------
 
@@ -302,11 +302,39 @@ def test_rebuild_dict_with_forced_dtype():
         },
     }
     rules = [
-        ("a"            , None      , "a"                           , "INT"),
-        ("ca"           , None      , "c:ca"                        , "INT"),
-        ("caf"          , None      , "c:ca"                        , "INT"     , 0),
+        ("a"    , None  , "a"       , "INT"),
+        ("ca"   , None  , "c:ca"    , "INT"),
+        ("ca_2" , None  , "c:ca"    , "INT" , np.nan, 1),
+        ("caf"  , None  , "c:ca"    , "INT" , 0),
     ]
     rets = rebuild_dict(env, rules)
-    assert rets == {"a": 1, "ca": "ca2", "caf": 0}
+    assert rets["a"] == 1
+    assert rets["ca"] == "ca2"
+    assert np.isnan(rets["ca_2"])
+    assert rets["caf"] == 0
 
 
+# %%
+def test_rebuild_dict_with_forced_dtype_element_wise():
+    rec = {
+        "int": ["", ""],
+        "varchar": ["", ""],
+        "date": ["2024-05", "2024-06"]
+    }
+    rules = [
+        ("int", None, "int", "INT", np.nan),
+        ("varchar", "varchar", "VARCHAR(255)"),
+        ("date", None, "date", "DATE", np.datetime64("NaT")),
+    ]
+    rets = rebuild_dict(rec, rules)
+
+    rules_element_wise = [
+        ("int", None, "int:[_]", "INT", np.nan),
+        ("varchar", "varchar:[_]", "VARCHAR(255)"),
+        ("date", None, "date:[_]", "DATE", np.datetime64("NaT")),
+    ]
+    element_wise = rebuild_dict(rec, rules_element_wise)
+
+    assert rets["int"] != element_wise["int"]
+    assert rets["varchar"] == element_wise["varchar"]
+    assert rets["date"] != element_wise["date"]

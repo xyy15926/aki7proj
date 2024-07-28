@@ -248,7 +248,11 @@ def extract_field(
     envp = EnvParser() if envp is None else envp
     steps = steps.split(":") if isinstance(steps, str) else steps
     if isinstance(obj, str):
-        cur_obj = json.loads(obj)
+        try:
+            cur_obj = json.loads(obj)
+        # In case the `obj` is merely a string with no JSON structure.
+        except json.JSONDecodeError:
+            cur_obj = obj
     else:
         cur_obj = obj
 
@@ -257,7 +261,7 @@ def extract_field(
         # `[]` or `{}` shouldn't stop early to keep behavior consistent while
         #   aggregating.
         if cur_obj is None:
-            return None
+            break
 
         if step[0] in "[{" and step[-1] in "]}":
             rets = []
@@ -281,12 +285,21 @@ def extract_field(
             dest, *conds = step.split("&&")
             if conds and not envp.bind_env(cur_obj).parse(conds[0]):
                 return None
-            cur_obj = cur_obj.get(dest, None) if isinstance(cur_obj, dict) else None
+            cur_obj = (cur_obj.get(dest, None) if isinstance(cur_obj, dict)
+                       else None)
 
     # Try type casting iff `dtype` is provided to cast dtype from `str`.
-    if isinstance(cur_obj, str) and (dtype == "AUTO" or dtype in regex_specs):
-        cur_obj = str_caster(cur_obj, dtype=dtype, dforced=dforced,
-                             dfill=dfill, regex_specs=regex_specs)
+    if isinstance(cur_obj, str) and dtype:
+        try:
+            cur_obj = str_caster(cur_obj,
+                                 dtype=dtype,
+                                 dforced=dforced,
+                                 dfill=dfill,
+                                 regex_specs=regex_specs)
+        except ValueError:
+            logger.warning(f"Can't cast to target dtype {dtype}.")
+    elif cur_obj is None and dforced:
+        cur_obj = dfill
 
     return cur_obj
 
@@ -309,6 +322,7 @@ def rebuild_dict(
       str: JSON string, from which dict will loaded.
     rules: [(key, from_, steps, dtype), ...]
       2-Tuple: [key, steps]
+      3-Tuple: [key, steps, dtype]
       4-Tuple: [key, from_, steps, dtype]
       5-Tuple: [key, from_, steps, dtype, default]
         key: Key in the new dict.
@@ -319,6 +333,8 @@ def rebuild_dict(
         default: Default value passed to `extract_field` as `dfill`.
     envp: EvnParser to execute the conditions and the aggragation.
       EvnParser with default arguments will be used as default.
+    regex_specs: Mapping[dtype, (regex, convert-function, default,...)]
+      Mapping storing the dtype name and the handler.
 
     Return:
     ----------------

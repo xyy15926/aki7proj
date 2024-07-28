@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-05-24 17:19:48
+#   Updated: 2024-07-28 21:05:03
 #   Description:
 # ---------------------------------------------------------
 
@@ -22,6 +22,7 @@ from IPython.core.debugger import set_trace
 from flagbear.parser import EnvParser
 from flagbear.fliper import rebuild_dict, extract_field
 from flagbear.fliper import regex_caster
+from flagbear.patterns import REGEX_TOKEN_SPECS
 
 
 # %%
@@ -177,8 +178,17 @@ def rebuild_rec2df(
     envp: EnvParser = None,
     explode: bool = False,
     range_index: str = None,
+    regex_specs: Mapping = REGEX_TOKEN_SPECS,
 ) -> pd.DataFrame:
     """Parse fields from record to construct DataFrame.
+
+    1. Values and Index are extracted seperately with `rebuild_dict`.
+    2. The column names of returned DF must be specified explicitly along with
+      the extraction rules in `val_rules`.
+    3. `explode` only takes effect in value extraction, namely even both
+      `val_rules` and `index_rules` brings list of the same lengths, error
+      will be raised insteado of flattening the index list.
+      So don't extract list in `index_rules` if `explode` is set.
 
     Params:
     -------------------------
@@ -200,6 +210,7 @@ def rebuild_rec2df(
       Each of the extractions could be a scalar or a list with the same length
       as the value extractions. So the whole extractions could be broadcasted
       to be used as the index of the returned DataFrame.
+      Note: RangeIndex will be used if None or empty list passed.
     env: Mapping to provide extra searching space for EnvParser.
     envp: EnvParser to execute string.
       ATTENTION: `env` will be ignored is `envp` is passed.
@@ -209,6 +220,8 @@ def rebuild_rec2df(
       set.
     range_index: True value represents to add RangeIndex named with
       `range_index`.
+    regex_specs: Mapping[dtype, (regex, convert-function, default,...)]
+      Mapping storing the dtype name and the handler.
 
     Return:
     -------------------------
@@ -222,8 +235,12 @@ def rebuild_rec2df(
             envp = EnvParser(ChainMap(env, EXGINE_ENV))
 
     # Extract some fields as index while keeping the record untouched.
-    if val_rules is None:
-        val_dict = {None: rec}
+    if val_rules is None or len(val_rules) == 0:
+        val_dict = {0: rec}
+        if index_rules is None or len(index_rules) == 0:
+            logger.warning("Neither value-rules nor index-rules are specified, "
+                           "empty DataFrame will be returned.")
+            return pd.DataFrame()
     else:
         if isinstance(rec, str):
             try:
@@ -232,13 +249,14 @@ def rebuild_rec2df(
                 logger.warning(f"Invalid JSON string: {rec}.")
                 return pd.DataFrame()
 
-        val_dict = rebuild_dict(rec, val_rules, envp)
+        val_dict = rebuild_dict(rec, val_rules, envp, regex_specs)
 
     # In case that no valid values extracted.
     if not val_dict:
         vals = pd.DataFrame(columns=[i[0] for i in val_rules])
     # Convert extracted values to DataFrame.
     elif explode and isinstance(next(iter(val_dict.values())), list):
+        # Annotation: All values in `val_dict` must be list.
         vals = pd.DataFrame(val_dict)
     else:
         vals = pd.DataFrame.from_records([val_dict])
@@ -246,7 +264,7 @@ def rebuild_rec2df(
     index_arrays = []
     index_names = []
     if index_rules:
-        index_dict = rebuild_dict(rec, index_rules, envp)
+        index_dict = rebuild_dict(rec, index_rules, envp, regex_specs)
         index_names = list(index_dict.keys())
         # Convert `index_dict` into MultiIndex.
         for ival in index_dict.values():

@@ -3,7 +3,7 @@
 #   Name: fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:52:59
-#   Updated: 2024-05-23 21:10:52
+#   Updated: 2024-07-28 21:03:47
 #   Description:
 # ---------------------------------------------------------
 
@@ -86,6 +86,7 @@ def compress_hierarchy(
         else:
             envp = EnvParser(ChainMap(env, EXGINE_ENV))
 
+    REC2DF_COL = None
     cur_lv = 0
     while f"steps_{cur_lv}" in conf or f"idkey_{cur_lv}" in conf:
         val_steps = conf.get(f"steps_{cur_lv}", None)
@@ -93,11 +94,16 @@ def compress_hierarchy(
         if val_steps is None or pd.isna(val_steps):
             val_rules = None
         else:
-            val_rules = [(None, conf[f"steps_{cur_lv}"])]
+            # Use `REC2DF_COL` as the key for extracted values which is will be
+            # the column name returned by `rebuild_rec2df`.
+            val_rules = [(REC2DF_COL, conf[f"steps_{cur_lv}"])]
+
+        # Prepare extraction rules for index.
         index_rules = []
         range_index = False
-
         if f"idkey_{cur_lv}" in conf:
+            # `idname` and `idkey` must be specified at the same time to
+            # take effect.
             for idname, idkey in zip(conf[f"idname_{cur_lv}"].split(","),
                                      conf[f"idkey_{cur_lv}"].split(",")):
                 idname = idname.strip()
@@ -116,9 +122,13 @@ def compress_hierarchy(
         #                  explode=True,
         #                  range_index=range_index)
 
+        # Extract values and index for each item in src.
+        # `pd.Series.apply` may be really slow for duplicated index in
+        # concatenation steps.
         valid_values = []
         valid_index = []
-        for idx, val in src.iteritems():
+        for idx, val in src.items():
+            # `explode` is set to flatten the values extractions.
             val_df = rebuild_rec2df(val, val_rules, index_rules,
                                     envp=envp,
                                     explode=True,
@@ -127,16 +137,21 @@ def compress_hierarchy(
             # field extraction from records.
             if val_df is None or val_df.empty:
                 continue
-            valid_values.append(val_df)
+            valid_values.append(val_df.iloc[:, 0])
             valid_index.append(idx)
 
-        # Save the original Index names before.
+        # Save the original Index names before as the `pd.concat` may reset
+        # the Index names.
         ori_index_names = src.index.names
-        src = pd.concat(valid_values, keys=valid_index)[None]
-
-        # Recover the Index names.
-        ori_index_names += src.index.names[len(ori_index_names):]
-        src.index.set_names(ori_index_names, inplace=True)
+        if len(valid_values):
+            src = pd.concat(valid_values, keys=valid_index)
+            # Update the index names with the result of `rebuild_rec2df`.
+            ori_index_names += src.index.names[len(ori_index_names):]
+            # Recover the Index names.
+            src.index.set_names(ori_index_names, inplace=True)
+        else:
+            src = pd.Series(dtype=object)
+            return src
 
         if dropna:
             src = src.dropna()
@@ -188,6 +203,8 @@ def flat_records(
       ATTENTION: `env` will be ignored if `envp` is passed.
     drop_rid: If to drop the meaningless last level of index created by
       `rebuild_rec2df` with `explode`.
+    regex_specs: Mapping[dtype, (regex, convert-function, default,...)]
+      Mapping storing the dtype name and the handler.
 
     Return:
     ------------------
@@ -210,16 +227,18 @@ def flat_records(
 
     rules = []
     for rule in confs[["key", "from_", "steps", "dtype"]].values:
-        dtype = rule[-1]
+        key, from_, steps, dtype = rule
+        # Append default values and deforced flag.
         if dtype in regex_specs:
             rules.append(np.concatenate([rule, [regex_specs[dtype][2], 1]]))
         else:
-            rules.append(rule)
+            rules.append([key, from_, steps, None])
 
     ret = src.apply(rebuild_rec2df,
                     val_rules=rules,
                     envp=envp,
-                    explode=True)
+                    explode=True,
+                    regex_specs=regex_specs)
 
     # In case empty result that doesn't support `pd.concat`.
     if ret.empty:
@@ -295,7 +314,7 @@ def agg_from_dfs(
         for part_name, df in src.items():
             trans_rules = trans_confs.loc[trans_confs["part"] == part_name,
                                           ["key", "cond", "trans"]].values
-            if trans_rules.size:
+            if (not df.empty) and trans_rules.size:
                 src[part_name] = trans_on_df(df, trans_rules, envp=envp)
 
     agg_rets = {} if agg_rets is None else agg_rets

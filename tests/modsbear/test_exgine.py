@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-04-15 18:17:58
-#   Updated: 2024-05-22 17:02:00
+#   Updated: 2024-07-28 21:10:02
 #   Description:
 # ---------------------------------------------------------
 
@@ -52,6 +52,7 @@ def test_rebuild_rec2df_basic():
         ["rid", "PRH:PA01:PA01A:PA01AI01"],
         ["certno", "PRH:PA01:PA01B:PA01BI01"],
     ]
+    # Test `explode` flag.
     nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=False)
     assert len(nrec) == 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
@@ -64,15 +65,32 @@ def test_rebuild_rec2df_basic():
         ["pboc_basic_info_A", "PRH:PA01"],
         ["pboc_basic_info_B", "PIM:PB01"],
     ]
+    index_rules = [
+        ["rid", "PRH:PA01:PA01A:PA01AI01"],
+        ["certno", "PRH:PA01:PA01B:PA01BI01"],
+    ]
+    # Test multiple value extraction rules.
     nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
     assert len(nrec) == 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
 
+    # Test no index extaction rules passed.
     nrec = rebuild_rec2df(rec, val_rules, [], explode=True)
     assert np.all(nrec.columns == [i[0] for i in val_rules])
 
+    # Test no value extaction rules passed.
     nrec = rebuild_rec2df(rec, None, index_rules, explode=True)
     assert np.all(nrec.index.names == [i[0] for i in index_rules])
+
+    # Test neither value rules nor index rules passed.
+    nrec = rebuild_rec2df(rec, [], [], explode=False)
+    assert nrec.empty
+    nrec = rebuild_rec2df(rec, None, [], explode=False)
+    assert nrec.empty
+    nrec = rebuild_rec2df(rec, [], None, explode=False)
+    assert nrec.empty
+    nrec = rebuild_rec2df(rec, None, None, explode=False)
+    assert nrec.empty
 
 
 def test_rebuild_rec2df_range_index():
@@ -98,6 +116,7 @@ def test_rebuild_rec2df_range_index():
     assert np.all(nrec.index.names == [i[0] for i in index_rules] + ["ridx"])
 
 
+# %%
 def test_rebuild_rec2df_explode():
     src = pboc_src()
     rec = src.iloc[0]
@@ -121,6 +140,7 @@ def test_rebuild_rec2df_explode():
         nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=True)
 
 
+# %%
 def test_rebuild_rec2df_null_fields():
     src = pboc_src()
     rec = src.iloc[0]
@@ -139,26 +159,33 @@ def test_rebuild_rec2df_null_fields():
     assert np.all(nrec.columns == [i[0] for i in val_rules])
 
 
+# %%
 def test_rebuild_rec2df_check_dtype():
-    rec = {
-        "int": "",
-        "varchar": "a",
-        "date": "2024-05"
-    }
-    val_rules = [
-        ("int", "int", "INT"),
-        ("varchar", "varchar", "VARCHAR(255)"),
-        ("date", "date", "DATE"),
-    ]
-    nrec = rebuild_rec2df(rec, val_rules)
-
     rec = {
         "int": ["", ""],
         "varchar": ["", ""],
-        "date": ["2024-05", "2024-06"]
+        "date": ["2024-05", "abc"]
     }
+    val_rules = [
+        ("int", None, "int", "INT", np.nan),
+        ("varchar", "varchar", "VARCHAR(255)"),
+        ("date", None, "date", "DATE", np.datetime64("NaT")),
+        ("null_date", None, "null_date", "DATE", np.datetime64("NaT")),
+    ]
     nrec = rebuild_rec2df(rec, val_rules, explode=True)
     assert len(nrec) == 2
+
+    val_rules_element_wise = [
+        ("int", None, "int:[_]", "INT", np.nan),
+        ("varchar", "varchar:[_]", "VARCHAR(255)"),
+        ("date", None, "date:[_]", "DATE", np.datetime64("NaT")),
+        ("null_date", None, "null_date:[_]", "DATE", np.datetime64("NaT")),
+    ]
+    element_wise_nrec = rebuild_rec2df(rec, val_rules_element_wise,
+                                       explode=True)
+
+    assert np.any(nrec.dtypes == element_wise_nrec.dtypes)
+    assert np.any(nrec.dtypes != element_wise_nrec.dtypes)
 
 
 # %%

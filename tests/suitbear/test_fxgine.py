@@ -3,7 +3,7 @@
 #   Name: test_fxgine.py
 #   Author: xyy15926
 #   Created: 2024-04-19 14:58:22
-#   Updated: 2024-05-17 21:11:20
+#   Updated: 2024-07-28 20:21:52
 #   Description:
 # ---------------------------------------------------------
 
@@ -97,7 +97,8 @@ def test_compress_hierarchy():
         "desc": "账户信息",
         "level": 1,
         "steps_0": "PDA:PD01:[_]:PD01A",
-        "idkey_0": "PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,PDA:PD01:[_]:PD01A:PD01AI01",
+        "idkey_0": "PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,"
+                   "PDA:PD01:[_]:PD01A:PD01AI01",
         "idname_0": "rid,certno,accid",
     }
     acc_info_psrc = compress_hierarchy(src, acc_info_part)
@@ -109,7 +110,8 @@ def test_compress_hierarchy():
         "desc": "近60个月还款",
         "level": 1,
         "steps_0": "PDA:PD01:[_]:PD01E",
-        "idkey_0": "PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,PDA:PD01:[_]:PD01A:PD01AI01",
+        "idkey_0": "PRH:PA01:PA01A:PA01AI01,PRH:PA01:PA01B:PA01BI01,"
+                   "PDA:PD01:[_]:PD01A:PD01AI01",
         "idname_0": "rid,certno,accid",
         "steps_1": "PD01EH:[_]",
     }
@@ -131,8 +133,10 @@ def test_compress_hierarchy():
     return acc_info_psrc, repay_60m_psrc
 
 
+# %%
 def test_compress_hierarchy_range_idx():
     src = pboc_src()
+    # `RANGEINDEX` in `idkey_0` represents used the RangeIndex as the index.
     repay_60m_part = {
         "part": "acc_info",
         "desc": "近60个月还款",
@@ -146,6 +150,7 @@ def test_compress_hierarchy_range_idx():
     assert repay_60m_psrc.index.nlevels == src.index.nlevels + 3 + 1
 
 
+# %%
 def test_compress_hierarchy_null_vals():
     src = pboc_src()
     repay_60m_part = {
@@ -161,6 +166,17 @@ def test_compress_hierarchy_null_vals():
     assert repay_60m_psrc.empty
 
 
+def test_compress_hierarchy_empty_list():
+    src = pd.Series({"a": []})
+    conf = {
+        "steps_0": "a",
+        "steps_1": "d",
+        "steps_2": "e",
+    }
+    nrec = compress_hierarchy(src, conf)
+    assert nrec.empty
+
+
 # %%
 def test_flat_record():
     acc_info_psrc, repay_60m_psrc = test_compress_hierarchy()
@@ -171,6 +187,8 @@ def test_flat_record():
         ["PD01AD03", "PD01AD03", "varchar(31)", "基本信息_业务种类"],
         ["PD01AD04", "PD01AD04", "varchar(31)", "基本信息_币种"],
         ["PD01AI01", "PD01AI01", "varchar(255)", "基本信息_账户编号"],
+        ["PD01CR03", "PD01CR03", "DATE", "最近一次月度表现信息_最近一次还款日期"],
+        ["PD01CR04", "PD01CR04", "DATE", "最近一次月度表现信息_信息报告日期"],
     ], columns=["key", "steps", "dtype", "desc"])
     acc_info_vals = flat_records(acc_info_psrc, acc_info_fields)
     assert np.all(acc_info_vals.index.names == acc_info_psrc.index.names)
