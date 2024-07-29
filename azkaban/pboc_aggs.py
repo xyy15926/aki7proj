@@ -3,12 +3,13 @@
 #   Name: pboc_aggs.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-05-26 19:08:37
+#   Updated: 2024-07-29 09:40:48
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 from __future__ import annotations
+from typing import List, Tuple
 import logging
 
 import numpy as np
@@ -34,6 +35,7 @@ from suitbear.fxgine import compress_hierarchy, flat_records, agg_from_dfs
 from suitbear.crosconf import agg_confs_from_dict, cross_aggs_from_lower
 from azkaban.pboc_conf import LV1_AGG_CONF, LV2_AGG_CONF, LV20_AGG_CONF
 from azkaban.pboc_conf import MAPPERS, TRANS_CONF
+from suitbear.finer import get_assets_path, get_tmp_path
 
 # %%
 logging.basicConfig(
@@ -45,19 +47,15 @@ logger.info("Logging Start.")
 
 
 # %%
-if __name__ == "__main__":
-    ASSETS = os.path.join(os.curdir, "assets")
-else:
-    ASSETS = os.path.join(os.path.dirname(__file__), "../assets")
-PBOC_PARTS = os.path.join(ASSETS, "pboc_parts.csv")
-PBOC_FIELDS = os.path.join(ASSETS, "pboc_fields.csv")
+PBOC_PARTS = get_assets_path() / "pboc_parts.csv"
+PBOC_FIELDS = get_assets_path() / "pboc_fields.csv"
 
 MAPPERS_ = {k: {kk: vv[0] for kk, vv in v.items()} for k, v in MAPPERS.items()}
 MAPPERS_["today"] = pd.Timestamp.today()
 
 
 # %%
-def concat_confs():
+def concat_confs() -> Tuple[pd.DataFrame]:
     """Concatnate PBOC aggregations configs.
     """
     # Generate Level-2-1 and Level-1-0 PBOC aggregations configs.
@@ -76,6 +74,7 @@ def concat_confs():
             "level": pconf["level"],
         })
         lv2_aconfs_ = lv2_aconfs[lv2_aconfs["part"] == pconf["lower_from"]]
+        # Cross to get the aggregation configs of the `lv2_aconfs`.
         lv20_aconfs_ = lv2_aconfs_.apply(cross_aggs_from_lower,
                                          axis=1,
                                          cros_D=pconf["cros"],
@@ -186,34 +185,72 @@ def pboc_vars(
 
     if write_vars:
         xlw = pd.ExcelWriter(write_vars)
-        for parts, var_df in ret.items():
+        for part, var_df in ret.items():
             if not var_df.empty:
-                if var_df.shape[1] > 10000:
-                    var_df.iloc[:, :10000].to_excel(
-                        xlw,
-                        sheet_name=f"{parts}_C0")
-                    var_df.iloc[:, 10000:].to_excel(
-                        xlw,
-                        sheet_name=f"{parts}_C1")
-                else:
-                    var_df.to_excel(xlw, sheet_name=parts)
+                stop = 0
+                while stop * 10000 < var_df.shape[1]:
+                    var_df.iloc[:, stop * 10000: (stop + 1) * 10000].to_excel(
+                        xlw, sheet_name=f"{part}_part{stop}")
+                    stop += 1
         xlw.close()
 
     return ret
 
 
 # %%
+def from_files(
+    files: List,
+    today: str = "report",
+    fields_file: str = "pboc_fields.xlsx",
+    aggconf_file: str = "pboc_aggconf.xlsx",
+    vars_file: str = "pboc_vars.xlsx",
+    agg_keys: str = None,
+) -> pd.DataFrame:
+    """Extract fields from files and apply aggregations.
+    """
+    # files = (get_tmp_path() / "pboc_20240708").iterdir()
+    # today = "report"
+    # fields_file = "pboc_fields.xlsx"
+    # aggconf_file = "pboc_aggconf.xlsx"
+    # vars_file = "pboc_vars.xlsx"
+    # agg_keys = None
+
+    report_recs = {}
+    for file in files:
+        report = open(file, "r").read()
+        report_id = extract_field(report, "PRH:PA01:PA01A:PA01AI01")
+        report_recs[report_id] = report
+
+    dfs = pboc_fields(pd.Series(report_recs), fields_file)
+
+    if today == "report":
+        basic_info = dfs["pboc_basic_info"]
+        report_dates = basic_info.set_index("PA01AI01")["PA01AR01"].rename("today")
+        for part_name, df in dfs.items():
+            if part_name == "pboc_basic_info" or df.empty:
+                continue
+            df = pd.merge(df, report_dates, how="left",
+                          left_on="rid", right_index=True)
+            dfs[part_name] = df
+
+    if isinstance(agg_keys, (str, os.PathLike)) and os.path.isfile(agg_keys):
+        agg_keys = pd.read_excel(agg_keys)["key"]
+
+    ret = pboc_vars(dfs, agg_keys, aggconf_file, vars_file)
+
+    return dfs, ret
+
+
+# %%
 if __name__ == "__main__":
-    PBOC_JSON = os.path.join(ASSETS, "pboc_utf8.json")
-    pboc = open(PBOC_JSON, "r").read()
-    pboc2 = pboc.replace("2019101617463675115707", "2019101617463675115708")
-    report_date = extract_field(pboc, "PRH:PA01:PA01A:PA01AR01")
-    MAPPERS_["today"] = np.datetime64(report_date)
-
-    POBC_AGGCONF_MARK = os.path.join(ASSETS, "pboc_aggconf_mark.xlsx")
-    agg_key_mark = pd.read_excel(POBC_AGGCONF_MARK)["key"]
-    agg_key_mark = None
-
-    src = pd.Series({"xfy": pboc, "xfy2": pboc2})
-    dfs = pboc_fields(src, "pboc_fields.xlsx")
-    ret = pboc_vars(dfs, agg_key_mark, "pboc_aggconf.xlsx", "pboc_vars.xlsx")
+    # PBOC_JSON = os.path.join(ASSETS, "pboc_utf8.json")
+    files = (get_assets_path() / "pboc_reports").iterdir()
+    today = "report"
+    fields_file = "pboc_fields.xlsx"
+    aggconf_file = "pboc_aggconf.xlsx"
+    vars_file = "pboc_vars.xlsx"
+    agg_keys_file = get_assets_path() / "pboc_aggconf_mark.xlsx"
+    fields, aggs = from_files(files, today,
+                              fields_file,
+                              aggconf_file,
+                              vars_file)

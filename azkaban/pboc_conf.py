@@ -3,7 +3,7 @@
 #   Name: pboc_conf.py
 #   Author: xyy15926
 #   Created: 2022-11-10 21:44:59
-#   Updated: 2024-06-26 10:15:59
+#   Updated: 2024-07-24 18:33:29
 #   Description:
 # ----------------------------------------------------------
 
@@ -185,7 +185,7 @@ MAPPERS = {
         "1": (11        , "正常"),
         "2": (35        , "冻结"),
         "3": (34        , "止付"),
-        "31":(33        , "银行止付"),
+        "31": (33        , "银行止付"),
         "4": (0         , "销户"),
         "5": (99        , "呆账"),
         "6": (1         , "未激活"),
@@ -396,7 +396,7 @@ TRANS_CONF = {
     "pboc_acc_special_insts": [
         ["acc_special_insts_moi_start"  , "mon_itvl(PD01HR01, today)"           , None  , "大额分期起始距今月"],
         ["acc_special_insts_moi_end"    , "mon_itvl(PD01HR02, today)"           , None  , "大额分期结束距今月"],
-        ["acc_special_insts_monthly_repay"    , "PD01HJ02 / mon_itvl(PD01HR02, PD01HR01)"     , None  , "大额分期月均还款"],
+        ["acc_special_insts_monthly_repay"    , "sdiv(PD01HJ02, cb_max(mon_itvl(PD01HR02, PD01HR01), 1))"     , None  , "大额分期月均还款"],
     ],
     "pboc_acc_info": [
         # 账户信息
@@ -469,7 +469,7 @@ TRANS_CONF = {
         ["mixed_alle_monthly_repay"     , "sdiv(PD01AJ01, alle_mon)"                            , "acc_cat <= 2"        , "D1R4全周期按月应还款"],
         # 按月应还
         ["folw_mon"                     , "PD01CS01"                                            , "acc_repay_freq == 3" , "剩余还款期数（月）"],
-        ["folw_mon"                     , "cb_max(mon_itvl(PD01AR02, PD01CR01), 1)"             , "acc_repay_freq != 3" , "剩余还款期数（月）"],
+        ["folw_mon"                     , "cb_max(mon_itvl(PD01AR02, cb_max(PD01CR01, PD01CR04)), 1)"   , "acc_repay_freq != 3" , "剩余还款期数（月）"],
         # D1R41 月负债：按月还款账户直接取 `PD01CJ04-本月应还款`，否则直接按月直接除
         ["mixed_folw_monthly_repay_"    , "cb_max(PD01CJ04, sdiv(PD01CJ01, folw_mon))"          , "acc_cat <= 3"        , "D1R41按月应还款"],
         ["mixed_folw_monthly_repay"     , "cb_fst(mixed_folw_monthly_repay_, mixed_alle_monthly_repay)" , "acc_cat <= 3", "D1R41按月应还款"],
@@ -540,7 +540,7 @@ TRANS_CONF = {
         ["pi_comp_pos"                  , "map(PB040D05, comp_position)"        , None  , "职务"],
         ["pi_comp_prof_title"           , "map(PB040D06, comp_prof_title)"      , None  , "职称"],
     ],
-    # 人行征信不在更新公积金信息
+    # 人行征信不再更新公积金信息
     "pboc_housing_fund":[
         ["hf_status"                    , "map(PF05AD01, housing_fund_status)"  , None  , "缴交状态"],
     ],
@@ -644,7 +644,7 @@ TRANS_EXTRACT_CONF = {
         ["abst_r3acc_usd_sum"                   , "PC02IJ04"                        , None  , "R3已用额度"],
         ["abst_r3acc_usd_sum_avg_last_6m"       , "PC02IJ05"                        , None  , "R3最近6个月平均使用额度"],
     ],
-    "pboc_postfee_abst":[
+    "pboc_postfee_abst": [
         ["abst_telacc_ovd_cnt"                  , "PC030S02_1"                      , None  , "电信业务欠费账户数"],
         ["abst_telacc_ovd_sum"                  , "PC030J01_1"                      , None  , "电信业务欠费金额"],
         ["abst_pubfair_ovd_cnt"                 , "PC030S02_2"                      , None  , "水电费等公共事业欠费账户数"],
@@ -660,7 +660,7 @@ TRANS_EXTRACT_CONF = {
         ["abst_gov_punishment_cnt"              , "PC040S02_4"                      , None  , "行政处罚信息记录数"],
         ["abst_gov_punishment_sum"              , "PC040J01_4"                      , None  , "行政处罚信息涉及金额"],
     ],
-    "pboc_inq_abst":[
+    "pboc_inq_abst": [
         ["abst_loan_auth_inq_org_cnt_last_1m"   , "PC05BS01"                        , None  , "最近1个月内的查询机构数(贷款审批)"],
         ["abst_card_auth_inq_org_cnt_last_1m"   , "PC05BS02"                        , None  , "最近1个月内的查询机构数(信用卡审批)"],
         ["abst_loan_auth_inq_cnt_last_1m"       , "PC05BS03"                        , None  , "最近1个月内的查询次数(贷款审批)"],
@@ -778,6 +778,9 @@ LV20_AGG_CONF = {
                 "r2spec": ("r2spec"     , "((acc_cat == 4) & (acc_biz_cat == 231)) | ((acc_biz_cat == 221) & (PD01AJ02 == 0))"        , "r2spec"),
             }
         },
+        # 基础记录为初步聚集结果，字段名按逻辑自动生成，不适合显示写出
+        # 故，在初步聚集结果聚集项配置中指定可后续聚集条目，即此处键 `agg`
+        # "cros": Dict[agg, [cond, ...]]
         "cros": {
             "sum": ["acc_cat", ],
             "max": ["acc_cat", ],
@@ -802,12 +805,15 @@ LV2_AGG_CONF = {
             "status": ([(f"eq{rs}", f"acc_repay_status == {rs}", f"还款状态为{rs}")
                        for rs in [1, 2, 3, 4, 5, 6, 7]]
                        + [("le1", "acc_repay_status >= 1", "还款状态大于等于1")]),
+            "ovd_status": [("le1", "acc_repay_status >= 1", "还款状态大于等于1")],
             "status_spec": [
                 ("gpaid"        , "acc_repay_status_spec == 31"             , "担保人代还"),
                 ("asset"        , "acc_repay_status_spec == 32"             , "以资抵债"),
                 ("dum"          , "acc_repay_status_spec == 81"             , "呆账"),
             ],
         },
+        # "agg": Dict[agg_key, Tuple[name, agg_func, desc, List[upper_agg,...]]]
+        # `upper_agg` 指定再上层可聚集操作，具体聚集操作由再上层配置决定
         "agg": {
             "cnt": ("cnt", "count(_)", "期数", ["max", "sum"]),
             "status_max": ("status_max", "max(acc_repay_status)", "最大还款状态", ["max",]),
@@ -815,7 +821,11 @@ LV2_AGG_CONF = {
             "status_sum": ("status_sum", "sum(acc_repay_status)", "还款状态之和", ["max", "sum"]),
             "ovd_max": ("ovd_max", "max(PD01EJ01)", "最大逾期（透支）金额", ["max_amt"]),
             "ovd_sum": ("ovd_sum", "sum(PD01EJ01)", "逾期（透支）金额之和", ["sum_amt", "max_amt"]),
+            "last_ovd_prd_max": ("last_ovd_prd_max", "max(-acc_repay_moi)", "最早逾期距今（月）", ["max"]),
         },
+        # "cros": Tuple[[agg, ...], [cond,...]]
+        # 各 `agg` 项分别与全部 `cond` 的笛卡尔积作笛卡尔积
+        # 即：agg * product(cond1, cond2, ...)
         "cros": [
             (["cnt",]                           , ["mois", "status"]),
             (["cnt",]                           , ["mois", "status_spec"]),
@@ -823,6 +833,7 @@ LV2_AGG_CONF = {
              ["mois", ]),
             (["ovd_max", "ovd_sum"]             , ["mois", "status"]),
             (["ovd_max", "ovd_sum"]             , ["mois", ]),
+            (["last_ovd_prd_max", ]             , ["ovd_status", ]),
         ],
     },
     "acc_special_trans": {
@@ -879,7 +890,7 @@ LV2_AGG_CONF = {
         "cond": {
             "mois_start": ([(f"last_{moi}m",
                              f"(acc_special_insts_moi_start >= -{moi}) & (acc_special_insts_moi_start <= 0)",
-                             f"近{moi}月开始") for moi in [1, 2, 3, 6, 12, 24, 36, 48]]
+                             f"近{moi}月") for moi in [1, 2, 3, 6, 12, 24, 36, 48]]
                            + [("his", None, "历史"), ]),
             "mois_end": ([(f"folw_{moi}m",
                            f"acc_special_insts_moi_end <= {moi} & acc_special_insts_moi_end > 0",
@@ -1001,19 +1012,19 @@ LV1_AGG_CONF = {
             ],
             "comp_job": [
                 ("pi_comp_job", "pi_comp_job == 91", "在职"),
-                ("pi_comp_job", "pi_comp_job != 91", "非在职"),
+                ("pi_comp_no_job", "pi_comp_job != 91", "非在职"),
             ],
         },
         "agg": {
             "cnt": ("cnt", "count(_)", "工作单位数量"),
         },
         "cros": [
-            (["cnt", ]                          , ["mois", "comp_job"]),
-            (["cnt", ]                          , ["comp_char", "comp_job"]),
-            (["cnt", ]                          , ["comp_indust", "comp_job"]),
-            (["cnt", ]                          , ["comp_prof", "comp_job"]),
-            (["cnt", ]                          , ["comp_pos", "comp_job"]),
-            (["cnt", ]                          , ["comp_prof_title", "comp_job"]),
+            (["cnt", ]                          , ["mois", ]),
+            (["cnt", ]                          , ["comp_char", ]),
+            (["cnt", ]                          , ["comp_indust", ]),
+            (["cnt", ]                          , ["comp_prof", ]),
+            (["cnt", ]                          , ["comp_pos", ]),
+            (["cnt", ]                          , ["comp_prof_title", ]),
         ]
     },
     "acc_no_cat_info": {
@@ -1024,10 +1035,20 @@ LV1_AGG_CONF = {
         "key_fmt": "acc_{cond}_{agg}",
         "cond": {
             "orgs": [
-                ("org_bank", "acc_org_cat == 11", "商业银行"),
-                ("org_bank", "acc_org_cat < 20", "银行账户"),
+                ("org_bank", "acc_org_cat == 11", "商业银行账户"),
+                ("org_allbank", "acc_org_cat < 20", "银行机构账户"),
                 ("org_nbank", "(acc_org_cat > 20) & (acc_org_cat < 60)", "非银机构账户"),
-                ("org_other", "acc_org_cat > 90", "其他机构账户")
+                ("org_other", "acc_org_cat > 90", "其他机构账户"),
+                ("dorg_combank", "acc_org_cat == 11", "商业银行"),
+                ("dorg_conbank", "acc_org_cat == 12", "村镇银行"),
+                ("dorg_leasing", "acc_org_cat == 22", "融资租赁"),
+                ("dorg_autofin", "acc_org_cat == 23", "汽金公司"),
+                ("dorg_comsufin", "acc_org_cat == 24", "消金公司"),
+                ("dorg_loan", "acc_org_cat == 25", "贷款公司"),
+                ("dorg_security", "acc_org_cat == 31", "证券公司"),
+                ("dorg_insur", "acc_org_cat == 41", "保险"),
+                ("dorg_sloan", "acc_org_cat == 51", "小额贷款公司"),
+                ("dorg_guar", "acc_org_cat == 53", "融担公司"),
             ],
             "biz_cat": [
                 ("biz_cat_loan"         , "acc_biz_cat < 200"                           , "贷款业务"),
@@ -1043,17 +1064,17 @@ LV1_AGG_CONF = {
             ],
             "mois_start": ([(f"last_{moi}m", f"acc_moi_start >= -{moi}", f"近{moi}月开立")
                             for moi in [1, 2, 3, 6, 12, 24, 36, 48]]
-                           + [("his", None, "历史"), ]),
+                           + [("his", None, "历史开立"), ]),
             "mois_end": ([(f"folw_{moi}m", f"(acc_moi_end <= {moi}) & (acc_moi_end > 0)", f"预期未来{moi}月存续")
                           for moi in [6, 12, 24, 36, 48]]
                          + [("closed", "acc_moi_end <= 0", "预期关闭"),
                             ("open", "acc_moi_end > 0", "预期存续")]),
             "mixed_acc_status": [
-                ("inact"        , "mixed_acc_status < 10"                               , "关闭、未激活、转出"),
-                ("nor"          , "mixed_acc_status == 11"                              , "正常"),
-                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "逾期"),
-                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "异常"),
-                ("dum"          , "mixed_acc_status == 99"                              , "呆账"),
+                ("inact"        , "mixed_acc_status < 10"                               , "当前关闭、未激活、转出"),
+                ("nor"          , "mixed_acc_status == 11"                              , "当前正常"),
+                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "当前逾期"),
+                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "当前异常"),
+                ("dum"          , "mixed_acc_status == 99"                              , "当前呆账"),
             ],
         },
         "agg": {
@@ -1105,19 +1126,19 @@ LV1_AGG_CONF = {
             },
             "mois_start": ([(f"last_{moi}m", f"acc_moi_start >= -{moi}", f"近{moi}月开立")
                             for moi in [1, 2, 3, 6, 9, 12, 18, 24, 36, 48]]
-                           + [(None, None, "历史"), ]),
+                           + [(None, None, "历史开立"), ]),
             "mois_end": ([(f"folw_{moi}m", f"(acc_moi_end <= {moi}) & (acc_moi_end > 0)", f"预期未来{moi}月存续")
                           for moi in [6, 12, 24, 36, 48]]
                          + [("closed", "acc_moi_end <= 0", "预期关闭"),
                             ("open", "acc_moi_end > 0", "预期存续")]),
             "mixed_acc_status": [
-                ("inact"        , "mixed_acc_status < 10"                               , "关闭、未激活、转出"),
-                ("active"       , "mixed_acc_status > 10"                               , "活跃"),
-                ("nocls"        , "mixed_acc_status > 0"                                , "未结清"),
-                ("nor"          , "mixed_acc_status == 11"                              , "正常"),
-                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "逾期"),
-                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "异常"),
-                ("dum"          , "mixed_acc_status == 99"                              , "呆账"),
+                ("inact"        , "mixed_acc_status < 10"                               , "当前关闭、未激活、转出"),
+                ("active"       , "mixed_acc_status > 10"                               , "当前活跃"),
+                ("nocls"        , "mixed_acc_status > 0"                                , "当前未结清"),
+                ("nor"          , "mixed_acc_status == 11"                              , "当前正常"),
+                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "当前逾期"),
+                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "当前异常"),
+                ("dum"          , "mixed_acc_status == 99"                              , "当前呆账"),
                 (None           , None                                                  , None),
             ],
             "mixed_lvl5_status": [
@@ -1187,19 +1208,19 @@ LV1_AGG_CONF = {
             },
             "mois_start": ([(f"last_{moi}m", f"acc_moi_start >= -{moi}", f"近{moi}月开立")
                             for moi in [1, 2, 3, 6, 9, 12, 18, 24, 36, 48]]
-                           + [(None, None, "历史"), ]),
+                           + [(None, None, "历史开立"), ]),
             "mois_end": ([(f"folw_{moi}m", f"(acc_moi_end <= {moi}) & (acc_moi_end > 0)", f"预期未来{moi}月存续")
                           for moi in [6, 12, 24, 36, 48]]
                          + [("closed", "acc_moi_end <= 0", "预期关闭"),
                             ("open", "acc_moi_end > 0", "预期存续")]),
             "mixed_acc_status": [
-                ("inact"        , "mixed_acc_status < 10"                               , "关闭、未激活、转出"),
-                ("active"       , "mixed_acc_status > 10"                               , "活跃"),
-                ("nocls"        , "mixed_acc_status > 0"                                , "未结清"),
-                ("nor"          , "mixed_acc_status == 11"                              , "正常"),
-                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "逾期"),
-                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "异常"),
-                ("dum"          , "mixed_acc_status == 99"                              , "呆账"),
+                ("inact"        , "mixed_acc_status < 10"                               , "当前关闭、未激活、转出"),
+                ("active"       , "mixed_acc_status > 10"                               , "当前活跃"),
+                ("nocls"        , "mixed_acc_status > 0"                                , "当前未结清"),
+                ("nor"          , "mixed_acc_status == 11"                              , "当前正常"),
+                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "当前逾期"),
+                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "当前异常"),
+                ("dum"          , "mixed_acc_status == 99"                              , "当前呆账"),
                 (None           , None                                                  , None),
             ],
             "mixed_lvl5_status": [
@@ -1283,7 +1304,7 @@ LV1_AGG_CONF = {
             },
             "mois_start": ([(f"last_{moi}m", f"acc_moi_start >= -{moi}", f"近{moi}月开立")
                             for moi in [1, 2, 3, 6, 9, 12, 18, 24, 36, 48]]
-                           + [(None, None, "历史"), ]),
+                           + [(None, None, "历史开立"), ]),
             "mois_end": ([(f"folw_{moi}m", f"(acc_moi_end <= {moi}) & (acc_moi_end > 0)", f"预期未来{moi}月存续")
                           for moi in [6, 12, 24, 36, 48]]
                          + [("closed", "acc_moi_end <= 0", "预期关闭"),
@@ -1351,7 +1372,7 @@ LV1_AGG_CONF = {
             ],
             "mois_start": ([(f"last_{moi}m", f"credit_moi_start >= -{moi}", f"近{moi}月开始")
                             for moi in [1, 2, 3, 6, 12, 24, 36, 48]]
-                           + [("his", None, "历史"), ]),
+                           + [("his", None, "历史开立"), ]),
             "mois_end": ([(f"folw_{moi}m", f"(credit_moi_end <= {moi}) & (credit_moi_end > 0)", f"未来{moi}月存续")
                           for moi in [6, 12, 24, 36, 48]]
                          + [("closed", "credit_moi_end <= 0", "已结束"),
@@ -1413,9 +1434,9 @@ LV1_AGG_CONF = {
             ],
             "repay_status": [(f"eq{rs}", f"rel_repay_status == {rs}", f"最近月度为{rs}")
                              for rs in [1, 2, 3, 4, 5, 6, 7]],
-            "mois_start": ([(f"last_{moi}m", f"rel_moi_start >= -{moi}", f"近{moi}月开始")
+            "mois_start": ([(f"last_{moi}m", f"rel_moi_start >= -{moi}", f"近{moi}月开立")
                             for moi in [1, 2, 3, 6, 12, 18, 24, 36, 48]]
-                           + [("his", None, "历史"), ]),
+                           + [("his", None, "历史开立"), ]),
             "mois_end": ([(f"folw_{moi}m", f"(rel_moi_end <= {moi}) & (rel_moi_end > 0)",
                            f"未来{moi}月存续")
                           for moi in [6, 12, 24, 36, 48]]
@@ -1593,7 +1614,7 @@ LV1_AGG_CONF = {
             "mois_start": ([(f"last_{moi}m", f"mon_itvl(PF05AR02, today) >= -{moi}",
                              f"近{moi}月") for moi in [3, 6, 12, 24, 36, 48]]
                            + [("his", None, "历史"), ]),
-            "mois_end": ([(f"last_{moi}m",
+            "mois_end": ([(f"folw_{moi}m",
                            f"(mon_itvl(PF05AR03, today) <= {moi}) & (mon_itvl(PF05AR03, today) > 0)",
                            f"未来{moi}月存续") for moi in [6, 12, 24, 36, 48]]
                          + [("closed", "mon_itvl(PF05AR03, today) <= 0", "已结束"),
@@ -1693,9 +1714,9 @@ LV1_AGG_CONF = {
                      + [(f"last_{doi}d", f"day_itvl(PH010R01, today) >= -{doi}",
                          f"近{doi}日") for doi in [0, 1, 2, 3, 5, 10, 30]]),
             "orgs": [
-                ("org_bank", "inq_rec_org_cat < 20", "银行账户"),
-                ("org_nbank", "(inq_rec_org_cat > 20) & (inq_rec_org_cat < 60)", "非银机构账户"),
-                ("org_other", "inq_rec_org_cat > 90", "其他机构账户"),
+                ("org_bank", "inq_rec_org_cat < 20", "银行机构"),
+                ("org_nbank", "(inq_rec_org_cat > 20) & (inq_rec_org_cat < 60)", "非银机构"),
+                ("org_other", "inq_rec_org_cat > 90", "其他机构"),
                 ("dorg_combank", "inq_rec_org_cat == 11", "商业银行"),
                 ("dorg_conbank", "inq_rec_org_cat == 12", "村镇银行"),
                 ("dorg_leasing", "inq_rec_org_cat == 22", "融资租赁"),
