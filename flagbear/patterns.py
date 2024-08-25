@@ -3,7 +3,7 @@
 #   Name: patterns.py
 #   Author: xyy15926
 #   Created: 2023-12-03 21:05:51
-#   Updated: 2024-05-27 12:16:21
+#   Updated: 2024-08-25 16:50:54
 #   Description:
 # ---------------------------------------------------------
 
@@ -72,10 +72,19 @@ REGEXS = {
                       r"\}",
 }
 
+
 # %%
+def _datetime64(x: str):
+    if "/" in x:
+        x = x.replace("/", "-")
+    if len(x) == 10 + 8:
+        x = x[:10] + " " + x[10:]
+    return np.datetime64(x)
+
+
 REGEX_TOKEN_SPECS = {
     "FLOAT"         : (REGEXS["sfloat"]                 , float         , np.nan),
-    "DATE"          : (REGEXS["date"]                   , lambda x: np.datetime64(x.replace("/", "-"))  , np.datetime64("NaT")),
+    "DATE"          : (REGEXS["date"]                   , lambda x: _datetime64(x)                      ,np.datetime64("NaT")),
     "TIME"          : (REGEXS["time"]                   , lambda x: time.fromisoformat(x)               , np.datetime64("NaT")),
     "INT"           : (REGEXS["sint"]                   , int           , np.nan),
 }
@@ -137,7 +146,7 @@ LEX_TOKEN_SPECS = {
 LEX_TOKEN_PRECS = {
     "NOT"       : (1    , 1     , lambda x: not bool(x)),
     "AT"        : (1    , 2     , lambda x, y: x in y),
-    "DOR"       : (1    , 2     , lambda x, y: x and y),
+    "BAND"      : (1    , 2     , lambda x, y: x and y),
     "BOR"       : (1    , 2     , lambda x, y: x or y),
     "EQ"        : (2    , 2     , lambda x, y: x == y),
     "NEQ"       : (2    , 2     , lambda x, y: x != y),

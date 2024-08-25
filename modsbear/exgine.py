@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-07-28 21:05:03
+#   Updated: 2024-08-09 16:20:14
 #   Description:
 # ---------------------------------------------------------
 
@@ -148,6 +148,7 @@ EXGINE_ENV = {
     "sum"       : lambda x: x.sum(),
     "max"       : lambda x: x.max(),
     "min"       : lambda x: x.min(),
+    "avg"       : lambda x: x.mean(),
     "nnfilter"  : lambda x: [i for i in x if i is not None],
     "nncount"   : lambda x: len([i for i in x if i is not None]),
     "flat1_max" : _flat1_max,
