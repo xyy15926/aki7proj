@@ -3,7 +3,7 @@
 #   Name: pboc_conf.py
 #   Author: xyy15926
 #   Created: 2022-11-10 21:44:59
-#   Updated: 2024-07-24 18:33:29
+#   Updated: 2024-08-27 11:05:38
 #   Description:
 # ----------------------------------------------------------
 
@@ -70,6 +70,13 @@ MAPPERS = {
         "16": (13       , "落实金融纾困等政策银行主动延期"),
         "17": (24       , "强制平仓"),
     },
+    "special_accd_type": {
+        # R2 账户
+        "11":(11        , "信用卡因调整账单日本月不出单"),
+        "12":(12        , "已注销信用卡账户重启"),
+        # D1 账户，“产品说明” 中缺失此编码，但是有说 “特殊事件” 段对 D1 账户段存在
+        "21":(21        , "转出（指受托管理的贷款，因委托人变更，原受托人无法继续报送数据）"),
+    },
     "biz_cat": {
         # 贷款类业务
         "11": (111      , "个人住房商业贷款"),
@@ -132,7 +139,6 @@ MAPPERS = {
         # 其他机构
         "52": (98       , "公积金管理中心"),
         "99": (99       , "其他机构"),
-
     },
     "trans_status": {
         "0": (0         , "债务人即将违约时自动垫款"),
@@ -239,6 +245,23 @@ MAPPERS = {
         "25": (34       , "资信审查"),
         "26": (18       , "额度审批"),
     },
+    "repay_type": {
+        "11": (11       , "分期等额本息"),
+        "12": (12       , "分期等额本金"),
+        "13": (13       , "到期还本分期结息"),
+        "14": (14       , "等比累进分期还款"),
+        "15": (15       , "等额累进分期还款"),
+        "19": (19       , "其他类型分期还款"),
+        "21": (21       , "到期一次还本付息"),
+        "22": (22       , "预先付息到期还本"),
+        "23": (23       , "随时还"),
+        "29": (29       , "其他"),
+        "31": (31       , "按期结息，到期还本"),
+        "32": (32       , "按期结息，自由还本"),
+        "33": (33       , "按期计算还本付息"),
+        "39": (39       , "循环贷款下其他还款方式"),
+        "90": (90       , "不区分还款方式"),
+    },
     "repay_freq": {
         "01": (1        , "日"),
         "02": (2        , "周"),
@@ -253,12 +276,23 @@ MAPPERS = {
         "14": (14       , "双月"),
         "99": (99       , "其他"),
     },
+    "rel_resp_type": {
+        "1": (1         , "共同借款人"),
+        "2": (2         , "保证人"),
+        "3": (3         , "票据承兑人"),
+        "4": (4         , "应收账款债务人"),
+        "5": (5         , "供应链中核心企业"),
+        "9": (9         , "其他"),
+    },
+    # 报送、查询码表不完全相同
     "edu_record": {
         "10": (10       , "研究生"),
         "20": (20       , "本科"),
         "30": (30       , "大专"),
         "40": (40       , "中专、职高、技校"),
         "60": (60       , "高中"),
+        "70": (70       , "初中"),  # 仅采集码表
+        "80": (80       , "小学"),  # 仅采集码表
         "90": (90       , "其他"),
         "91": (91       , "初中及以下"),
         "99": (99       , "未知"),
@@ -464,15 +498,15 @@ TRANS_CONF = {
         ["mixed_doi_last_repay"         , "cb_min(cur_doi_last_repay, monthly_doi_last_repay)"  , None                  , "最近还款距今日"],
         ["mixed_doi_report"             , "cb_min(cur_doi_report, monthly_doi_report)"          , None                  , "报告时间"],
         # 按月应还 - 包含已结清
-        ["alle_mon"                     , "PD01AS01"                                            , "acc_repay_freq == 3" , "全部还款期数（月）"],
+        ["alle_mon"                     , "PD01AS01"                                                    , "acc_repay_freq == 3" , "全部还款期数（月）"],
         ["alle_mon"                     , "cb_max(mon_itvl(cb_fst(PD01AR02, PD01BR01), PD01AR01), 1)"   , "acc_repay_freq != 3" , "全部还款期数（月）"],
-        ["mixed_alle_monthly_repay"     , "sdiv(PD01AJ01, alle_mon)"                            , "acc_cat <= 2"        , "D1R4全周期按月应还款"],
+        ["mixed_alle_monthly_repay"     , "sdiv(PD01AJ01, alle_mon)"                                    , "acc_cat <= 2"        , "D1R4全周期按月应还款"],
         # 按月应还
-        ["folw_mon"                     , "PD01CS01"                                            , "acc_repay_freq == 3" , "剩余还款期数（月）"],
+        ["folw_mon"                     , "PD01CS01"                                                    , "acc_repay_freq == 3" , "剩余还款期数（月）"],
         ["folw_mon"                     , "cb_max(mon_itvl(PD01AR02, cb_max(PD01CR01, PD01CR04)), 1)"   , "acc_repay_freq != 3" , "剩余还款期数（月）"],
         # D1R41 月负债：按月还款账户直接取 `PD01CJ04-本月应还款`，否则直接按月直接除
-        ["mixed_folw_monthly_repay_"    , "cb_max(PD01CJ04, sdiv(PD01CJ01, folw_mon))"          , "acc_cat <= 3"        , "D1R41按月应还款"],
-        ["mixed_folw_monthly_repay"     , "cb_fst(mixed_folw_monthly_repay_, mixed_alle_monthly_repay)" , "acc_cat <= 3", "D1R41按月应还款"],
+        ["mixed_folw_monthly_repay_"    , "cb_max(PD01CJ04, sdiv(PD01CJ01, folw_mon))"                  , "acc_cat <= 3"        , "D1R41按月应还款"],
+        ["mixed_folw_monthly_repay"     , "cb_fst(mixed_folw_monthly_repay_, mixed_alle_monthly_repay)" , "acc_cat <= 3"        , "D1R41按月应还款"],
         # R2 信用卡月负债情况较为复杂：
         # 1. `82-大额专项分期卡` 类似R4账户，可直接用 `PD01CJ04-本月应还款` 计算
         # 2. `81-贷记卡` 可按比例（最低还款比例，5% - 10%）调整 `PD01CJ12-近6个月平均使用额度`
@@ -494,18 +528,18 @@ TRANS_CONF = {
         # 在另注，银行、支付宝流水计算收入：
         # 1. 银行流水：max(月均工资, 2000, (近12个月转账收入 - 疑似刷单金额) * 0.2 / 12)
         # 2. 微信：max(12月二维码收入*0.2/12, 12个月支出流水*0.05/12, 2000)
-        ["mixed_folw_monthly_repay"     , "cb_max(PD01CJ04, smul(PD01CJ12, 0.1))"                   , "acc_cat == 4"        , "R2按月应还款"],
+        ["mixed_folw_monthly_repay"     , "cb_max(PD01CJ04, smul(PD01CJ12, 0.1))"                       , "acc_cat == 4"        , "R2按月应还款"],
     ],
     "pboc_credit_info": [
-        ["credit_org_cat"               , "map(PD02AD01, org_cat)"              , None  , "授信账户管理机构类型"],
-        ["credit_cat"                   , "map(PD02AD02, credit_lmt_cat)"       , None  , "授信额度类型"],
-        ["credit_exchange_rate"         , "map(PD02AD03, exchange_rate)"        , None  , "授信协议币种"],
+        ["credit_org_cat"               , "map(PD02AD01, org_cat)"                  , None  , "授信账户管理机构类型"],
+        ["credit_cat"                   , "map(PD02AD02, credit_lmt_cat)"           , None  , "授信额度类型"],
+        ["credit_exchange_rate"         , "map(PD02AD03, exchange_rate)"            , None  , "授信协议币种"],
         ["credit_status"                , "map(PD02AD04, credit_protocal_status)"   , None  , "授信协议状态"],
         ["credit_lmt"                   , "smul(PD02AJ01, credit_exchange_rate)"    , None  , "授信额度"],
         ["credit_tmp_lmt"               , "smul(PD02AJ03, credit_exchange_rate)"    , None  , "授信限额"],
         ["credit_ots"                   , "smul(PD02AJ04, credit_exchange_rate)"    , None  , "已用额度"],
-        ["credit_moi_start"             , "mon_itvl(PD02AR01, today)"           , None  , "授信起始距今月"],
-        ["credit_moi_end"               , "mon_itvl(PD02AR02, today)"           , None  , "授信截至距今月"],
+        ["credit_moi_start"             , "mon_itvl(PD02AR01, today)"               , None  , "授信起始距今月"],
+        ["credit_moi_end"               , "mon_itvl(PD02AR02, today)"               , None  , "授信截至距今月"],
     ],
     "pboc_rel_info": [
         ["rel_org_cat"                  , "map(PD03AD01, org_cat)"              , None  , "相关还款责任管理机构类型"],
@@ -800,7 +834,7 @@ LV2_AGG_CONF = {
         "key_fmt": "acc_repay_{cond}_{agg}",
         "cond": {
             "mois": ([(f"last_{moi}m", f"(acc_repay_moi >= -{moi}) & (acc_repay_moi <= 0)", f"近{moi}月")
-                      for moi in [3, 6, 9, 12, 24, 36, 48]]
+                      for moi in [3, 6, 9, 12, 18, 24, 36, 48]]
                      + [("all", None, "历史"), ]),
             "status": ([(f"eq{rs}", f"acc_repay_status == {rs}", f"还款状态为{rs}")
                        for rs in [1, 2, 3, 4, 5, 6, 7]]

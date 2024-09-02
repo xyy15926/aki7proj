@@ -187,7 +187,7 @@ pboc_acc_info,PD01AD10,PD01A:PD01AD10,varchar(31),基本信息_债权转移时�
 pboc_acc_info,PD01AI01,PD01A:PD01AI01,varchar(255),基本信息_账户编号
 pboc_acc_info,PD01AI02,PD01A:PD01AI02,varchar(255),基本信息_业务管理机构代码
 pboc_acc_info,PD01AI03,PD01A:PD01AI03,varchar(255),基本信息_账户标识
-pboc_acc_info,PD01AI04,PD01A:PD01AI04,varchar(255),基本信息_授信协议编号
+pboc_acc_info,PD01AI04,PD01A:PD01AI04,varchar(255),基本信息_授信协议编号（PD02AI03）
 pboc_acc_info,PD01AJ01,PD01A:PD01AJ01,int,基本信息_借款金额
 pboc_acc_info,PD01AJ02,PD01A:PD01AJ02,int,基本信息_账户授信额度
 pboc_acc_info,PD01AJ03,PD01A:PD01AJ03,int,基本信息_共享授信额度
@@ -255,10 +255,10 @@ pboc_acc_special_insts,PD01HR02,PD01HR02,date,分期额度到期日期
 pboc_credit_info,PD02AD01,PD02A:PD02AD01,varchar(31),授信协议-业务管理机构类型
 pboc_credit_info,PD02AD02,PD02A:PD02AD02,varchar(31),授信额度用途
 pboc_credit_info,PD02AD03,PD02A:PD02AD03,varchar(31),币种
-pboc_credit_info,PD02AD04,PD02A:PD02AD04,varchar(31),授信协议状态
+pboc_credit_info,PD02AD04,PD02A:PD02AD04,varchar(31),授信协议状态（全空）
 pboc_credit_info,PD02AI01,PD02A:PD02AI01,varchar(255),授信协议编号
 pboc_credit_info,PD02AI02,PD02A:PD02AI02,varchar(255),业务管理机构
-pboc_credit_info,PD02AI03,PD02A:PD02AI03,varchar(255),授信协议标识
+pboc_credit_info,PD02AI03,PD02A:PD02AI03,varchar(255),授信协议标识（PD01AI04）
 pboc_credit_info,PD02AI04,PD02A:PD02AI04,varchar(255),授信限额编号
 pboc_credit_info,PD02AJ01,PD02A:PD02AJ01,int,授信额度
 pboc_credit_info,PD02AJ03,PD02A:PD02AJ03,int,授信限额
