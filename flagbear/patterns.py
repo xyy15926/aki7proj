@@ -186,7 +186,7 @@ SYN_EXPR_PRODS = [
     ("expr"     , ("FLOAT", )                   , lambda x: x[0]                    , 0     , "R"),
     ("expr"     , ("INT", )                     , lambda x: x[0]                    , 0     , "R"),
     ("expr"     , ("STRING", )                  , lambda x: x[0]                    , 0     , "R"),
-    ("expr"     , ("SUB", "expr")               , lambda x: -x[1]                   , 9     , "R"),
+    ("expr"     , ("SUB", "expr")               , lambda x: -x[1]                   , 8     , "R"),
     ("expr"     , ("expr", "ADD", "expr")       , lambda x: x[0] + x[2]             , 3     , "L"),
     ("expr"     , ("expr", "SUB", "expr")       , lambda x: x[0] - x[2]             , 3     , "L"),
     ("expr"     , ("expr", "MUL", "expr")       , lambda x: x[0] * x[2]             , 4     , "L"),

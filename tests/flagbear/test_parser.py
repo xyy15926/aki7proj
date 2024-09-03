@@ -12,10 +12,10 @@ import pytest
 if __name__ == "__main__":
     from importlib import reload
     from flagbear import lex, syntax, parser, patterns, graph, tree
+    reload(patterns)
     reload(lex)
     reload(syntax)
     reload(parser)
-    reload(patterns)
     reload(graph)
     reload(tree)
 
@@ -55,3 +55,5 @@ def test_EnvParser():
     assert envp.parse("sum([a, a, b])") == 4
     assert envp.parse("a==1")
     assert envp.parse("sum([a, b])") == 3
+    assert envp.parse("sum([a, b])") == 3
+    assert envp.parse("-sum([a, b])") == -3
