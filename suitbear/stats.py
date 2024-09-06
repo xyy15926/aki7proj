@@ -3,7 +3,7 @@
 #   Name: stats.py
 #   Author: xyy15926
 #   Created: 2024-09-03 21:55:38
-#   Updated: 2024-09-04 15:45:12
+#   Updated: 2024-09-06 12:17:07
 #   Description:
 #   Ref: <http://staff.ustc.edu.cn/~rui/ppt/modeling/modeling_8.html>
 # ---------------------------------------------------------
@@ -85,19 +85,21 @@ def AHP_solve(
             eig_val, eig_vec = eig_vals[max_idx], eig_vecs[:, max_idx]
             # Normalize the eigen vector.
             eig_vec = eig_vec / eig_vec.sum()
+            # Calculate the number of dominal elements.
+            domi = fea_n - np.all(mat == 0, axis=1).sum()
 
             logger.debug(f"Eigen value: {eig_val}.")
             logger.debug(f"Eigen vector: {eig_vec}.")
 
             # Rnadom Consistency Index Test.
             CI = (eig_val - fea_n) / (fea_n - 1)
-            if CI / AHP_get_RCI()[fea_n - 1] > 0.1:
+            if CI / AHP_get_RCI()[domi - 1] > 0.1:
                 logger.warning(f"AHP Random Consistency Index Test failed "
                                f"for {mat}.")
 
             comp_ws.append(eig_vec)
             CIs.append(CI)
-            domi_n.append(fea_n - np.all(mat == 0, axis=1).sum())
+            domi_n.append(domi)
 
         weight = np.vstack(comp_ws)
         if final_w is None:
@@ -112,7 +114,7 @@ def AHP_solve(
                                f"level-{lv}.")
             final_w = np.dot(final_w, weight)
 
-    return final_w
+    return final_w.squeeze()
 
 
 # %%
