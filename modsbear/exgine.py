@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-08-09 16:20:14
+#   Updated: 2024-09-03 14:50:16
 #   Description:
 # ---------------------------------------------------------
 
@@ -135,6 +135,12 @@ def _cb_min(x: pd.Series | int, y: pd.Series | int):
         return np.nanmin([x, y])
 
 
+def _drop_duplicates(x: pd.Series | list):
+    if isinstance(x, list):
+        x = pd.concat(x, axis=1)
+    return x.drop_duplicates()
+
+
 EXGINE_ENV = {
     "today"     : pd.Timestamp.today(),
     "map"       : _ser_map,
@@ -143,6 +149,8 @@ EXGINE_ENV = {
     "cb_min"    : _cb_min,
     "mon_itvl"  : _mon_itvl,
     "day_itvl"  : lambda x, y: (pd.to_datetime(x) - pd.to_datetime(y)).dt.days,
+    "drop_duplicates": _drop_duplicates,
+    "isin"      : lambda x, y: x.isin(y),
     "count"     : len,
     "unique"    : np.unique,
     "sum"       : lambda x: x.sum(),

@@ -3,7 +3,7 @@
 #   Name: pboc_aggs.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-07-29 09:40:48
+#   Updated: 2024-09-05 10:47:05
 #   Description:
 # ---------------------------------------------------------
 
@@ -91,6 +91,9 @@ def concat_confs() -> Tuple[pd.DataFrame]:
     # Concatenate configs.
     pconfs = pd.concat([lv2_pconfs, lv1_pconfs, lv20_pconfs])
     aconfs = pd.concat([lv2_aconfs, lv1_aconfs, lv20_aconfs])
+
+    if np.any(aconfs["key"].duplicated()):
+        logger.error("Duplicated key in aggregation config.")
 
     return pconfs, aconfs
 
