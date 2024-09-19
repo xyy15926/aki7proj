@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-09-03 14:50:16
+#   Updated: 2024-09-18 23:33:15
 #   Description:
 # ---------------------------------------------------------
 
@@ -175,6 +175,8 @@ EXGINE_ENV = {
     "hist"      : lambda x, y: np.histogram(x, y)[0],
     "coef_var"  : lambda x: 0 if len(x) == 0 else np.std(x) / np.mean(x),
     "contains"  : lambda x, y: y in x,
+    "isnull"    : pd.isna,
+    "notnull"   : pd.notna,
 }
 
 
@@ -198,6 +200,8 @@ def rebuild_rec2df(
       `val_rules` and `index_rules` brings list of the same lengths, error
       will be raised insteado of flattening the index list.
       So don't extract list in `index_rules` if `explode` is set.
+    4. Make sure to set default value if possible, or the dtype of the
+      DataFrame return will be Object, which will be hard to handle.
 
     Params:
     -------------------------
@@ -295,6 +299,180 @@ def rebuild_rec2df(
         vals.index = index_
 
     return vals
+
+
+# %%
+def compress_hierarchy(
+    src: pd.Series[str, dict] | dict,
+    confs: list,
+    env: Mapping = None,
+    envp: EnvParser = None,
+    dropna: bool = True,
+) -> pd.Series:
+    """Compress the hierarchy of the records in Series.
+
+    Extract part of the records to construct brand new Series with index
+    updated step by step to compress the hierarchy of the record.
+    1. Both values and index are specified step by step in `conf`, namely
+      the part should be extracted step by step, which helps when the part
+      of the record is nested with multi-levels and hard to extracted into
+      DataFrame.
+    2. So only one part should be specified step by step. Refer to
+      `flat_records` for extracting multiple part once upon a time.
+    3. Within one step, the index could be scalar of list with the same length
+      of the values. And if no index is specified, the index for the level will
+      the RangeIndex by default.
+
+    Params:
+    --------------------
+    src: Series[INDEX, JSON-STRING | dict]
+      Each item represents a record.
+    confs: List of 2-Tuple[KEY, STEPS] of rules for value extraction.
+      KEY: Key in the new dict.
+      STEPS: [{content: CONTENT-STEP, key: [(KEY, KEY-STEP)]}, ]
+        CONTENT-STEP: The extraction step for the values.
+        KEY-STEP: The extraction step for the index.
+        KEY: The index name.
+    env: Mapping to provide extra searching space for EnvParser.
+    envp: EnvParser to execute string.
+      ATTENTION: `env` will be ignored if `envp` is passed.
+    dropna: If to drop the NA in result.
+
+    Return:
+    --------------------
+    Series[(idx[, idkey_1, idkey_2, ...]), partitions]
+    """
+    # Init EnvParser.
+    if envp is None:
+        if env is None:
+            envp = EnvParser(EXGINE_ENV)
+        else:
+            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+
+    REC2DF_COL = None
+    range_index = False
+    for step in confs:
+        # Value rule.
+        content_step = step.get("content")
+        if content_step is not None:
+            val_rules = [(REC2DF_COL, content_step)]
+        else:
+            val_rules = None
+        # Key rule.
+        index_rules = []
+        for kname, kstep in step.get("key", []):
+            if kstep == "RANGEINDEX":
+                range_index = kname
+            else:
+                index_rules.append((kname, kstep))
+
+        # Extract values.
+        valid_values = []
+        valid_index = []
+        for idx, val in src.items():
+            # `explode` is set to flatten the values extractions.
+            val_df = rebuild_rec2df(val, val_rules, index_rules,
+                                    envp=envp,
+                                    explode=True,
+                                    range_index=range_index)
+            # In case empty DataFrame or None that represents unsuccessful
+            # field extraction from records.
+            if val_df is None or val_df.empty:
+                continue
+            valid_values.append(val_df.iloc[:, 0])
+            valid_index.append(idx)
+
+        # Save the original Index names before as the `pd.concat` may reset
+        # the Index names.
+        ori_index_names = src.index.names
+        if len(valid_values):
+            src = pd.concat(valid_values, keys=valid_index)
+            # Update the index names with the result of `rebuild_rec2df`.
+            ori_index_names += src.index.names[len(ori_index_names):]
+            # Recover the Index names.
+            src.index.set_names(ori_index_names, inplace=True)
+        else:
+            src = pd.Series(dtype=object)
+            return src
+
+        if dropna:
+            src = src.dropna()
+
+    return src
+
+
+# %%
+def flat_records(
+    src: pd.Series[str, dict] | dict,
+    confs: list,
+    env: Mapping = None,
+    envp: EnvParser = None,
+    drop_rid: bool = True,
+    regex_specs: Mapping = REGEX_TOKEN_SPECS,
+) -> pd.DataFrame:
+    """Flat Series of records into DataFrame.
+
+    Extract multiple fields from records once upon a time.
+    1. Values of fields could be scalar or list of the same length. And list
+      will be exploded vertically.
+    2. As the `explode` is always set and no `index_rules` is provided, the
+      result of `rebuild_rec2df` will always be a DataFrame with meaningless
+      index, which will be dropped default.
+    3. If dtype is specified, the casting function and default value in
+      `REGEX_TOKEN_SPECS` will be used as default.
+    4. Make sure to set default value if possible, or the dtype of the
+      DataFrame return will be Object, which will be hard to handle.
+
+    Params:
+    ------------------
+    src: Series[INDEX, JSON-STRING]
+      Each item represents a record.
+    confs: List of 2/3/4/5-Tuple of rules for value extraction.
+      2-Tuple: [key, steps]
+      3-Tuple: [key, steps, dtype]
+      4-Tuple: [key, from_, steps, dtype]
+      5-Tuple: [key, from_, steps, dtype, default]
+        key: Key in the new dict.
+        from_: Dependency and source from which get the value and will be
+          passed to `extract_field` as `obj.`
+        steps: Steps passed to `extract_field` as `steps`.
+        dtype: Dtype passed to `extract_field` as `dtype`.
+        default: Default value passed to `extract_field` as `dfill`.
+    env: Mapping to provide extra searching space for EnvParser.
+    envp: EnvParser to execute string.
+      ATTENTION: `env` will be ignored if `envp` is passed.
+    drop_rid: If to drop the meaningless last level of index created by
+      `rebuild_rec2df` with `explode`.
+    regex_specs: Mapping[dtype, (regex, convert-function, default,...)]
+      Mapping storing the dtype name and the handler.
+
+    Return:
+    ------------------
+    DataFrame: Column[keys], Index[src.index]
+    Exploded DataFrame: Column[keys], Index[(src.index, Range(N))]
+    """
+    # Init EnvParser.
+    if envp is None:
+        if env is None:
+            envp = EnvParser(EXGINE_ENV)
+        else:
+            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+
+    ret = src.apply(rebuild_rec2df,
+                    val_rules=confs,
+                    envp=envp,
+                    explode=True,
+                    regex_specs=regex_specs)
+
+    # In case empty result that doesn't support `pd.concat`.
+    if ret.empty:
+        ret = pd.DataFrame()
+    else:
+        ret = pd.concat(ret.values, keys=src.index)
+        if drop_rid:
+            ret = ret.droplevel(-1)
+
+    return ret
 
 
 # %%

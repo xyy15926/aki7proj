@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-04-15 18:17:58
-#   Updated: 2024-07-28 21:10:02
+#   Updated: 2024-09-19 21:29:38
 #   Description:
 # ---------------------------------------------------------
 
@@ -22,7 +22,8 @@ import pandas as pd
 import os
 import json
 from flagbear.fliper import extract_field, rebuild_dict
-from modsbear.exgine import rebuild_rec2df, agg_on_df, trans_on_df
+from modsbear.exgine import (rebuild_rec2df, agg_on_df, trans_on_df,
+                             compress_hierarchy, flat_records)
 
 ASSETS = os.path.join(os.curdir, "assets")
 PBOC_JSON = os.path.join(ASSETS, "pboc_utf8.json")
@@ -271,3 +272,148 @@ def test_agg_on_df():
     assert agged["c1_acc_cat_cnt"] == (src["acc_cat"] == 99).sum()
     assert agged["d1r41_acc_cat_cnt"] == (src["acc_cat"] <= 3).sum()
     assert agged["d1r4_acc_cat_cnt"] == (src["acc_cat"] <= 2).sum()
+
+
+# %%
+def test_compress_hierarchy():
+    src = pboc_src()
+
+    acc_info_part = [
+        {
+            "content": "PDA:PD01:[_]:PD01A",
+            "key": [
+                ("rid", "PRH:PA01:PA01A:PA01AI01"),
+                ("certno", "PRH:PA01:PA01B:PA01BI01"),
+                ("accid", "PDA:PD01:[_]:PD01A:PD01AI01"),
+            ]
+        }
+    ]
+    acc_info_psrc = compress_hierarchy(src, acc_info_part)
+    assert len(acc_info_psrc) > len(src)
+    assert acc_info_psrc.index.nlevels == src.index.nlevels + 2 + 1
+
+    repay_60m_part = [
+        {
+            "content": "PDA:PD01:[_]:PD01E",
+            "key": [
+                ("rid", "PRH:PA01:PA01A:PA01AI01"),
+                ("certno", "PRH:PA01:PA01B:PA01BI01"),
+                ("accid", "PDA:PD01:[_]:PD01A:PD01AI01"),
+            ]
+        },{
+            "content": "PD01EH:[_]",
+        }
+    ]
+    repay_60m_psrc = compress_hierarchy(src, repay_60m_part)
+    assert repay_60m_psrc.index.nlevels == src.index.nlevels + 3 + 1
+    assert len(repay_60m_psrc) > len(acc_info_psrc)
+
+    repay_60m_part_v2 = [
+        {"content": "PDA:PD01:[_]"},
+        {"content": "PD01E:PD01EH:[_]"},
+    ]
+    repay_60m_psrc_v2 = compress_hierarchy(src, repay_60m_part_v2)
+    assert repay_60m_psrc_v2.index.nlevels == src.index.nlevels + 1 + 1
+    assert np.all(repay_60m_psrc.values == repay_60m_psrc_v2.values)
+
+    return acc_info_psrc, repay_60m_psrc
+
+
+# %%
+def test_compress_hierarchy_range_idx():
+    src = pboc_src()
+    # `RANGEINDEX` in `idkey_0` represents used the RangeIndex as the index.
+    repay_60m_part = [
+        {
+            "content": "PDA:PD01:[_]:PD01E",
+            "key": [
+                ("rid", "PRH:PA01:PA01A:PA01AI01"),
+                ("certno", "PRH:PA01:PA01B:PA01BI01"),
+                ("accid", "RANGEINDEX"),
+            ]
+        },{
+            "content": "PD01EH:[_]",
+        }
+    ]
+    repay_60m_psrc = compress_hierarchy(src, repay_60m_part)
+    assert repay_60m_psrc.index.nlevels == src.index.nlevels + 3 + 1
+
+
+# %%
+def test_compress_hierarchy_null_vals():
+    src = pboc_src()
+    repay_60m_part = [
+        {
+            "content": "PDA:PD01:[_]:PD01E",
+            "key": [
+                ("rid", "PRH:PA01:PA01A:PA01AI01"),
+                ("certno", "PRH:PA01:PA01B:PA01BI01"),
+                ("accid", "PDA:PD01:[_]:PD01A:PD01AI01"),
+            ]
+        },{
+            "content": "PD01AH:[_]",
+        }
+    ]
+    repay_60m_psrc = compress_hierarchy(src, repay_60m_part)
+    assert repay_60m_psrc.empty
+
+
+def test_compress_hierarchy_empty_list():
+    src = pd.Series({"a": []})
+    conf = [
+        {"content": "a"},
+        {"content": "d"},
+        {"content": "e"},
+    ]
+    nrec = compress_hierarchy(src, conf)
+    assert nrec.empty
+
+
+# %%
+def test_flat_record():
+    acc_info_psrc, repay_60m_psrc = test_compress_hierarchy()
+
+    acc_info_fields = [
+        ["PD01AD01", "PD01AD01", "VARCHAR(31)", "基本信息_账户类型"],
+        ["PD01AD02", "PD01AD02", "VARCHAR(31)", "基本信息_业务管理机构类型"],
+        ["PD01AD03", "PD01AD03", "VARCHAR(31)", "基本信息_业务种类"],
+        ["PD01AD04", "PD01AD04", "VARCHAR(31)", "基本信息_币种"],
+        ["PD01AI01", "PD01AI01", "VARCHAR(255)", "基本信息_账户编号"],
+        ["PD01AR01", "PD01AR01", "DATE", "基本信息_开日日期"],
+        ["PD01AR02", "PD01AR02", "DATE", "基本信息_到期日期"],
+    ]
+
+    tuple2_fields = [ele[:2] for ele in acc_info_fields]
+    acc_info_vals = flat_records(acc_info_psrc, tuple2_fields)
+    assert np.all(acc_info_vals.index.names == acc_info_psrc.index.names)
+    assert len(acc_info_vals) == len(acc_info_psrc)
+    assert np.all(acc_info_vals.dtypes == "object")
+
+    tuple3_fields = [ele[:3] for ele in acc_info_fields]
+    acc_info_vals = flat_records(acc_info_psrc, tuple3_fields)
+    assert np.all(acc_info_vals.index.names == acc_info_psrc.index.names)
+    assert len(acc_info_vals) == len(acc_info_psrc)
+    assert np.sum(acc_info_vals.dtypes != "object") == 1
+
+    mixed_fields = []
+    for key, step, dtype, desc in acc_info_fields:
+        if dtype == "DATE":
+            mixed_fields.append([key, None, step, dtype, np.datetime64("nat")])
+        else:
+            mixed_fields.append([key, step])
+    acc_info_vals = flat_records(acc_info_psrc, mixed_fields)
+    assert np.all(acc_info_vals.index.names == acc_info_psrc.index.names)
+    assert len(acc_info_vals) == len(acc_info_psrc)
+    assert np.sum(acc_info_vals.dtypes != "object") == 2
+
+    repay_60m_fields = [
+        ("PD01ER03", "PD01ER03", "date", "月份"),
+        ("PD01ED01", "PD01ED01", "varchar(31)", "还款状态"),
+        ("PD01EJ01", "PD01EJ01", "int", "逾期（透支）总额"),
+    ]
+    tuple2_fields = [ele[:2] for ele in repay_60m_fields]
+    repay_60m_vals = flat_records(repay_60m_psrc, tuple2_fields, drop_rid=False)
+    assert np.all(repay_60m_vals.index.names[:-1] == repay_60m_psrc.index.names)
+    assert len(repay_60m_vals) == len(repay_60m_psrc)
+
+    return acc_info_vals, repay_60m_vals
