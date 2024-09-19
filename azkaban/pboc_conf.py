@@ -3,7 +3,7 @@
 #   Name: pboc_conf.py
 #   Author: xyy15926
 #   Created: 2022-11-10 21:44:59
-#   Updated: 2024-09-05 10:29:22
+#   Updated: 2024-09-13 22:12:09
 #   Description:
 # ----------------------------------------------------------
 
@@ -30,10 +30,24 @@ MAPPERS = {
         "Z": (3  , "以资抵债"),
     },
     "repay_status_spec": {
-        "D": (31 , "担保人代还"),
-        "Z": (32 , "以资抵债"),
+        "1": (1  , "逾期1-30天"),
+        "2": (2  , "逾期31-60天"),
+        "3": (3  , "逾期61-90天"),
+        "4": (4  , "逾期91-120天"),
+        "5": (5  , "逾期121-150天"),
+        "6": (6  , "逾期151-180天"),
+        "7": (7  , "逾期180天以上"),
+        "*": (-1 , "当月不需要还款且之前没有拖欠"),
+        "#": (-1 , "未知"),
+        "/": (-1 , "跳过"),
+        "A": (-1 , "账单日调整,当月不出单"),
         "B": (71 , "呆账"),
+        "C": (-1 , "结清、正常销户"),
+        "D": (31 , "担保人代还"),
         "G": (72 , "（非正常销户）结束"),
+        "M": (-1 , "约定还款日后月底前还款"),
+        "N": (0 , "正常还款"),
+        "Z": (32 , "以资抵债"),
     },
     "currency": {
         "USD": (2       , "USD"),
@@ -109,6 +123,20 @@ MAPPERS = {
         "A1": (511      , "资产处置"),
         # 代偿
         "B1": (611      , "代偿债务"),
+    },
+    # 企业业务种类，仅相关还款责任涉及
+    "comp_biz_cat": {
+        "10": (10       , "企业债"),
+        "11": (11       , "贷款"),
+        "12": (12       , "贸易融资"),
+        "13": (13       , "保理融资"),
+        "14": (14       , "融资租赁"),
+        "15": (15       , "证券类融资"),
+        "16": (16       , "透支"),
+        "21": (21       , "票据贴现"),
+        "31": (31       , "黄金借贷"),
+        "41": (41       , "垫款"),
+        "51": (51       , "资产处置"),
     },
     "cdr_cat": {
         "D1": (1        , "非循环贷账户"),
@@ -452,12 +480,8 @@ TRANS_CONF = {
         # 贷款大部分不为外币，仅双币信用卡场合同时分别对应本币、外币账户
         # 下述聚集中将币种过滤直接设置在 `acc_cat.[r2]` 中
         ["acc_currency"                 , "map(PD01AD04, currency)"             , None  , "账户币种"],
-        ["acc_exchange_rate"            , "map(PD01AD04, exchange_rate, 1)"     , None  , "账户汇率"],
         ["acc_repay_freq"               , "map(PD01AD06, repay_freq)"           , None  , "D1R41账户还款频率"],
         ["acc_trans_status"             , "map(PD01AD10, trans_status)"         , None  , "C1账户转移时状态"],
-        ["PD01AJ01"                     , "smul(PD01AJ01, acc_exchange_rate)"   , None  , "C1D4R1借款金额（本币）"],
-        ["PD01AJ02"                     , "smul(PD01AJ02, acc_exchange_rate)"   , None  , "R123授信金额（本币）"],
-        ["PD01AJ03"                     , "smul(PD01AJ03, acc_exchange_rate)"   , None  , "R23共享授信额度（本币）"],
         ["acc_lmt"                      , "cb_fst(cb_fst(PD01AJ01, PD01AJ02), PD01AJ03)"          , None  , "账户借款、授信额"],
         ["acc_moi_range"                , "mon_itvl(PD01AR02, PD01AR01)"        , None  , "账户预期月数"],
         ["acc_moi_start"                , "mon_itvl(PD01AR01, today)"           , None  , "账户起始距今月"],
@@ -472,8 +496,6 @@ TRANS_CONF = {
         ["cur_acc_status"               , "map(PD01BD01, r23_acc_status)"       , "(acc_cat >= 4) & (acc_cat <= 5)" , "最近状态"],  # Mixed: mixed_acc_status
         ["cur_lvl5_status"              , "map(PD01BD03, lvl5_status)"          , None  , "最近5级分类"],                   # Mixed: mixed_lvl5_status
         ["cur_repay_status"             , "map(PD01BD04, repay_status)"         , None  , "最近还款状态"],
-        ["PD01BJ01"                     , "smul(PD01BJ01, acc_exchange_rate)"   , None  , "账户余额（本币）"],              # Mixed: mixed_ots
-        ["PD01BJ02"                     , "smul(PD01BJ02, acc_exchange_rate)"   , None  , "最近还款金额（本币）"],          # Mixed: mixed_last_repay_amt
         ["cur_moi_closed"               , "mon_itvl(PD01BR01, today)"           , None  , "最近关闭时间"],                  # Mixed: mixed_acc_moi_folw
         ["cur_doi_last_repay"           , "day_itvl(PD01BR02, today)"           , None  , "最近还款距今日"],                # Mixed: mixed_doi_last_repay
         ["cur_doi_report"               , "day_itvl(PD01BR03, today)"           , None  , "最近报告日期距今日"],            # Mixed: mixed_doi_report
@@ -483,21 +505,6 @@ TRANS_CONF = {
         ["monthly_acc_status"           , "map(PD01CD01, r1_acc_status)"        , "acc_cat == 3"    , "月度状态"],          # Mixed: mixed_acc_status
         ["monthly_acc_status"           , "map(PD01CD01, r23_acc_status)"       , "(acc_cat >= 4) & (acc_cat <= 5)" , "月度状态"],  # Mixed: mixed_acc_status
         ["monthly_lvl5_status"          , "map(PD01CD02, lvl5_status)"          , None  , "月度5级分类"],                   # Mixed: mixed_lvl5_status
-        ["PD01CJ01"                     , "smul(PD01CJ01, acc_exchange_rate)"   , None  , "账户余额（本币）"],              # Mixed: mixed_ots
-        ["PD01CJ02"                     , "smul(PD01CJ02, acc_exchange_rate)"   , None  , "R2已用额度（本币）"],
-        ["PD01CJ03"                     , "smul(PD01CJ03, acc_exchange_rate)"   , None  , "R2未出单大额专项分期余额（本币）"],
-        ["PD01CJ04"                     , "smul(PD01CJ04, acc_exchange_rate)"   , None  , "D1R412本月应还款（本币）"],
-        ["PD01CJ05"                     , "smul(PD01CJ05, acc_exchange_rate)"   , None  , "本月实还款（本币）"],            # Mixed: mixed_last_repay_amt
-        ["PD01CJ06"                     , "smul(PD01CJ06, acc_exchange_rate)"   , None  , "D1R412当前逾期总额（本币）"],
-        ["PD01CJ07"                     , "smul(PD01CJ07, acc_exchange_rate)"   , None  , "D1R41 M2未还本金（本币）"],
-        ["PD01CJ08"                     , "smul(PD01CJ08, acc_exchange_rate)"   , None  , "D1R41 M3未还本金（本币）"],
-        ["PD01CJ09"                     , "smul(PD01CJ09, acc_exchange_rate)"   , None  , "D1R41 M46未还本金（本币）"],
-        ["PD01CJ10"                     , "smul(PD01CJ10, acc_exchange_rate)"   , None  , "D1R41 M7p未还本金（本币）"],
-        ["PD01CJ11"                     , "smul(PD01CJ11, acc_exchange_rate)"   , None  , "R3 M7p未付余额（本币）"],
-        ["PD01CJ12"                     , "smul(PD01CJ12, acc_exchange_rate)"   , None  , "R2 最近6个月平均使用额度（本币）"],
-        ["PD01CJ13"                     , "smul(PD01CJ13, acc_exchange_rate)"   , None  , "R3 最近6个月平均透支余额（本币）"],
-        ["PD01CJ14"                     , "smul(PD01CJ14, acc_exchange_rate)"   , None  , "R2 最大使用额度（本币）"],
-        ["PD01CJ15"                     , "smul(PD01CJ15, acc_exchange_rate)"   , None  , "R3 最大透支余额（本币）"],
         ["monthly_doi_last_repay"       , "day_itvl(PD01CR03, today)"           , None  , "月度还款距今日"],                # Mixed: mixed_doi_last_repay
         ["monthly_doi_report"           , "day_itvl(PD01CR01, today)"           , None  , "月度报告日期距今日"],            # Mixed: mixed_doi_report
         ["monthly_usd_ppor"             , "sdiv(PD01CJ02, acc_lmt)"             , None  , "月度额度使用率"],
@@ -712,20 +719,34 @@ LV20_AGG_CONF = {
         "prikey": "rid,certno",
         "key_fmt": "{cond}{agg}",
         "agg": {
+            "cnt": ("{}_cnt", "count(_)", "账户数"),
             "sum": ("{}_sum", "sum({})", "{}之和"),
             "max": ("{}_max", "max({})", "{}最大值"),
             "min": ["{}_min", "min({})", "{}最小值", ],
-            "sum_amt": ("{}_sum", "sum(smul({}, acc_exchange_rate))", "{}之和（本币）"),
-            "max_amt": ("{}_max", "max(smul({}, acc_exchange_rate))", "{}最大值（本币）"),
+            "sum_amt": ("{}_sum", "sum({})", "{}之和（本币）"),
+            "max_amt": ("{}_max", "max({})", "{}最大值（本币）"),
+            "prd_sum": ("{}_prd_sum", "-sum(acc_moi_start)", "{}距今月份和"),
         },
         "cond": {
             "acc_cat": {
                 "r2": ("r2"         , "acc_cat == 4"                        , "r2"),
                 "d1r41": ("d1r41"   , "acc_cat <= 3"                        , "d1r41"),
                 "r23": ("r23"       , "(acc_cat >= 4) & (acc_cat <= 5)"     , "r23"),
-            }
+            },
+            "mixed_acc_status": [
+                ("inact"        , "mixed_acc_status < 10"                               , "关闭、未激活、转出"),
+                ("active"       , "mixed_acc_status > 10"                               , "活跃"),
+                ("nocls"        , "mixed_acc_status > 0"                                , "未结清"),
+                ("nor"          , "mixed_acc_status == 11"                              , "正常"),
+                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "逾期"),
+                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "异常"),
+                ("dum"          , "mixed_acc_status == 99"                              , "呆账"),
+                (None           , None                                                  , "所有状态"),
+            ],
         },
         "cros": {
+            "cnt": ["acc_cat", "mixed_acc_status"],
+            "prd_sum": ["acc_cat", "mixed_acc_status"],
             "sum": ["acc_cat", ],
             "max": ["acc_cat", ],
             "min": ["acc_cat", ],
@@ -744,8 +765,8 @@ LV20_AGG_CONF = {
             "sum": ("{}_sum", "sum({})", "{}之和"),
             "max": ("{}_max", "max({})", "{}最大值"),
             "min": ["{}_min", "min({})", "{}最小值", ],
-            "sum_amt": ("{}_sum", "sum(smul({}, acc_exchange_rate))", "{}之和（本币）"),
-            "max_amt": ("{}_max", "max(smul({}, acc_exchange_rate))", "{}最大值（本币）"),
+            "sum_amt": ("{}_sum", "sum({})", "{}之和（本币）"),
+            "max_amt": ("{}_max", "max({})", "{}最大值（本币）"),
         },
         "cond": {
             "acc_cat": {
@@ -774,8 +795,8 @@ LV20_AGG_CONF = {
             "sum": ("{}_sum", "sum({})", "之和"),
             "max": ("{}_max", "max({})", "最大值"),
             "min": ["{}_min", "min({})", "{}最小值", ],
-            "sum_amt": ("{}_sum", "sum(smul({}, acc_exchange_rate))", "{}之和（本币）"),
-            "max_amt": ("{}_max", "max(smul({}, acc_exchange_rate))", "{}最大值（本币）"),
+            "sum_amt": ("{}_sum", "sum({})", "{}之和（本币）"),
+            "max_amt": ("{}_max", "max({})", "{}最大值（本币）"),
         },
         "cond": {
             "acc_cat": {
@@ -801,8 +822,8 @@ LV20_AGG_CONF = {
             "sum": ("{}_sum", "sum({})", "{}之和"),
             "max": ("{}_max", "max({})", "{}最大值"),
             "min": ["{}_min", "min({})", "{}最小值", ],
-            "sum_amt": ("{}_sum", "sum(smul({}, acc_exchange_rate))", "{}之和（本币）"),
-            "max_amt": ("{}_max", "sum(smul({}, acc_exchange_rate))", "{}最大值（本币）"),
+            "sum_amt": ("{}_sum", "sum({})", "{}之和（本币）"),
+            "max_amt": ("{}_max", "max({})", "{}最大值（本币）"),
         },
         "cond": {
             "acc_cat": {
@@ -847,6 +868,7 @@ LV2_AGG_CONF = {
                 ("asset"        , "acc_repay_status_spec == 32"             , "以资抵债"),
                 ("dum"          , "acc_repay_status_spec == 71"             , "呆账"),
                 ("abcls"        , "acc_repay_status_spec == 72"             , "（非正常销户）结束"),
+                ("npaid"        , "acc_repay_status_spec == 0"              , "正常还款"),
             ],
         },
         # "agg": Dict[agg_key, Tuple[name, agg_func, desc, List[upper_agg,...]]]
@@ -854,6 +876,7 @@ LV2_AGG_CONF = {
         "agg": {
             "cnt": ("cnt", "count(_)", "期数", ["max", "sum"]),
             "status_max": ("status_max", "max(acc_repay_status)", "最大还款状态", ["max",]),
+            "status8_max": ("status8_max", "max(acc_repay_status8)", "最大还款状态8", ["max"]),
             "status_ovd_conl_max": ("status_ovd_conl_max", "flat1_max(sortby(acc_repay_status, PD01ER03, 1) > 0)", "最长连续逾期期数", ["max"]),
             "status_sum": ("status_sum", "sum(acc_repay_status)", "还款状态之和", ["max", "sum"]),
             "ovd_max": ("ovd_max", "max(PD01EJ01)", "最大逾期（透支）金额", ["max_amt"]),
@@ -1099,6 +1122,7 @@ LV1_AGG_CONF = {
                 ("biz_cat_security"     , "(acc_biz_cat > 300) & (acc_biz_cat < 400)"   , "证券融资业务"),
                 ("biz_cat_leasing"      , "(acc_biz_cat > 400) & (acc_biz_cat < 500)"   , "融资租赁业务"),
                 ("biz_cat_dum"          , "acc_biz_cat > 500"                           , "资产处置、垫款业务"),
+                ("biz_cat_91"           , "acc_biz_cat == 152"                          , "其他消费贷"),
             ],
             "mois_start": ([(f"last_{moi}m", f"acc_moi_start >= -{moi}", f"近{moi}月开立")
                             for moi in [1, 2, 3, 6, 12, 24, 36, 48]]
@@ -1108,12 +1132,18 @@ LV1_AGG_CONF = {
                          + [("closed", "acc_moi_end <= 0", "预期关闭"),
                             ("open", "acc_moi_end > 0", "预期存续")]),
             "mixed_acc_status": [
-                ("inact"        , "mixed_acc_status < 10"                               , "当前关闭、未激活、转出"),
-                ("nor"          , "mixed_acc_status == 11"                              , "当前正常"),
-                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "当前逾期"),
-                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "当前异常"),
-                ("dum"          , "mixed_acc_status == 99"                              , "当前呆账"),
+                ("inact"        , "mixed_acc_status < 10"                               , "关闭、未激活、转出"),
+                ("active"       , "mixed_acc_status > 10"                               , "活跃"),
+                ("nocls"        , "mixed_acc_status > 0"                                , "未结清"),
+                ("nor"          , "mixed_acc_status == 11"                              , "正常"),
+                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "逾期"),
+                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "异常"),
+                ("dum"          , "mixed_acc_status == 99"                              , "呆账"),
+                (None           , None                                                  , "所有状态"),
             ],
+            "lmt_amt_thresh": ([(f"lg{amt}w", f"acc_lmt >= {amt * 10000}", f"额度大于{amt}万")
+                                for amt in [2, 5, 10, 20, 30, 50]]
+                               + [(None, None, None)])
         },
         "agg": {
             "cnt": ("cnt", "count(_)", "账户数"),
@@ -1126,13 +1156,13 @@ LV1_AGG_CONF = {
         },
         "cros": [
             (["cnt", "ltm_sum", "ltm_max", "mixed_ots_sum", "mixed_ots_max", "mixed_folw_monthly_repay_sum", "mixed_folw_monthly_repay_max"],
-             ["orgs", "mois_start"]),
+             ["orgs", "lmt_amt_thresh", "mois_start"]),
             (["cnt", "ltm_sum", "ltm_max", "mixed_ots_sum", "mixed_ots_max", "mixed_folw_monthly_repay_sum", "mixed_folw_monthly_repay_max"],
              ["orgs", "mois_end"]),
             (["cnt", "ltm_sum", "ltm_max", "mixed_ots_sum", "mixed_ots_max", "mixed_folw_monthly_repay_sum", "mixed_folw_monthly_repay_max"],
              ["orgs", "mixed_acc_status"]),
             (["cnt", "ltm_sum", "ltm_max", "mixed_ots_sum", "mixed_ots_max", "mixed_folw_monthly_repay_sum", "mixed_folw_monthly_repay_max"],
-             ["biz_cat", "mois_start"]),
+             ["biz_cat", "lmt_amt_thresh", "mois_start"]),
             (["cnt", "ltm_sum", "ltm_max", "mixed_ots_sum", "mixed_ots_max", "mixed_folw_monthly_repay_sum", "mixed_folw_monthly_repay_max"],
              ["biz_cat", "mois_end"]),
             (["cnt", "ltm_sum", "ltm_max", "mixed_ots_sum", "mixed_ots_max", "mixed_folw_monthly_repay_sum", "mixed_folw_monthly_repay_max"],
@@ -1170,14 +1200,14 @@ LV1_AGG_CONF = {
                          + [("closed", "acc_moi_end <= 0", "预期关闭"),
                             ("open", "acc_moi_end > 0", "预期存续")]),
             "mixed_acc_status": [
-                ("inact"        , "mixed_acc_status < 10"                               , "当前关闭、未激活、转出"),
-                ("active"       , "mixed_acc_status > 10"                               , "当前活跃"),
-                ("nocls"        , "mixed_acc_status > 0"                                , "当前未结清"),
-                ("nor"          , "mixed_acc_status == 11"                              , "当前正常"),
-                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "当前逾期"),
-                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "当前异常"),
-                ("dum"          , "mixed_acc_status == 99"                              , "当前呆账"),
-                (None           , None                                                  , None),
+                ("inact"        , "mixed_acc_status < 10"                               , "关闭、未激活、转出"),
+                ("active"       , "mixed_acc_status > 10"                               , "活跃"),
+                ("nocls"        , "mixed_acc_status > 0"                                , "未结清"),
+                ("nor"          , "mixed_acc_status == 11"                              , "正常"),
+                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "逾期"),
+                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "异常"),
+                ("dum"          , "mixed_acc_status == 99"                              , "呆账"),
+                (None           , None                                                  , "所有状态"),
             ],
             "mixed_lvl5_status": [
                 ("lvl5_nor"         , "mixed_lvl5_status == 1"          , "五级分类正常"),
@@ -1198,6 +1228,7 @@ LV1_AGG_CONF = {
         },
         "agg": {
             "cnt": ("cnt", "count(_)", "账户数"),
+            "term_sum": ("term_sum", "sum(PD01ES01)", "存续期数"),
             "org_cnt": ("org_cnt", "count(drop_duplicates(PD01AI02))", "机构数"),
             "repay_cnt": ("repay_cnt", "sum(PD01ES01)", "近60个月还款记录数"),
             "mois_sum": ("mois_sum", "-sum(acc_moi_start)", "开立距今月份和"),
@@ -1217,7 +1248,7 @@ LV1_AGG_CONF = {
         "cros": [
             # Filter: mixed_acc_status * mois_start
             # Aggs: count, limit, period, outstanding, repayment behavior
-            (["cnt", "org_cnt", "mois_sum",
+            (["cnt", "term_sum", "org_cnt", "mois_sum",
               "lmt_sum", "lmt_max", "lmt_min", "lmt_avg",
               "last_prd_max",
               "mixed_ots_sum", "mixed_ots_max",
@@ -1266,14 +1297,14 @@ LV1_AGG_CONF = {
                          + [("closed", "acc_moi_end <= 0", "预期关闭"),
                             ("open", "acc_moi_end > 0", "预期存续")]),
             "mixed_acc_status": [
-                ("inact"        , "mixed_acc_status < 10"                               , "当前关闭、未激活、转出"),
-                ("active"       , "mixed_acc_status > 10"                               , "当前活跃"),
-                ("nocls"        , "mixed_acc_status > 0"                                , "当前未结清"),
-                ("nor"          , "mixed_acc_status == 11"                              , "当前正常"),
-                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "当前逾期"),
-                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "当前异常"),
-                ("dum"          , "mixed_acc_status == 99"                              , "当前呆账"),
-                (None           , None                                                  , None),
+                ("inact"        , "mixed_acc_status < 10"                               , "关闭、未激活、转出"),
+                ("active"       , "mixed_acc_status > 10"                               , "活跃"),
+                ("nocls"        , "mixed_acc_status > 0"                                , "未结清"),
+                ("nor"          , "mixed_acc_status == 11"                              , "正常"),
+                ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "逾期"),
+                ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "异常"),
+                ("dum"          , "mixed_acc_status == 99"                              , "呆账"),
+                (None           , None                                                  , "所有状态"),
             ],
             "mixed_lvl5_status": [
                 ("lvl5_nor"         , "mixed_lvl5_status == 1"          , "五级分类正常"),
@@ -1370,7 +1401,7 @@ LV1_AGG_CONF = {
                 ("ovd"          , "(mixed_acc_status > 20) & (mixed_acc_status < 30)"   , "逾期"),
                 ("abnor"        , "(mixed_acc_status > 30) & (mixed_acc_status < 40)"   , "异常"),
                 ("dum"          , "mixed_acc_status == 99"                              , "呆账"),
-                (None           , None                                                  , None),
+                (None           , None                                                  , "所有状态"),
             ],
             "mixed_lvl5_status": [
                 ("lvl5_nor"         , "mixed_lvl5_status == 1"          , "五级分类正常"),
@@ -1381,8 +1412,9 @@ LV1_AGG_CONF = {
             "trans_status": [(f"trans_status_eq{ts}", f"acc_trans_status == {ts}",
                               f"转移时状态为{ts}")
                              for ts in [0, 1, 2, 3, 4, 5, 6, 7]],
-            "usd_ppor": [(f"monthly_usd_ppor_lt{rt}", f"monthly_usd_ppor > {rt/100}", f"月度额度使用率大于{rt/100}")
-                         for rt in [20, 50, 80, 100]],
+            "usd_ppor": ([(f"monthly_usd_ppor_lt{rt}", f"monthly_usd_ppor > {rt/100}", f"月度额度使用率大于{rt/100}")
+                          for rt in [20, 50, 80, 100]] + 
+                         [(None, None, None)])
         },
         "agg": {
             # R2
@@ -1403,7 +1435,7 @@ LV1_AGG_CONF = {
             (["monthly_usd_sum", "monthly_usd_max",
               "monthly_special_insts_sum", "monthly_special_insts_max"],
              [("acc_cat", "r2", "r2cny", "r281", "r282", "r2spec"),
-              "mixed_acc_status", "mois_start"]),
+              "mixed_acc_status", "mois_start", "usd_ppor"]),
             # R3
             (["m7p_ovd_sum", "m7p_ovd_max"],
              [("acc_cat", "r3", ),
@@ -1785,6 +1817,7 @@ LV1_AGG_CONF = {
                 ("dorg_insur", "inq_rec_org_cat == 41", "保险"),
                 ("dorg_sloan", "inq_rec_org_cat == 51", "小额贷款公司"),
                 ("dorg_guar", "inq_rec_org_cat == 53", "融担公司"),
+                (None, None, "所有机构"),
             ],
             "inq_reason": [
                 ("for_loan", "inq_rec_reason_cat == 11", "贷前审批_贷款"),
@@ -1805,6 +1838,7 @@ LV1_AGG_CONF = {
             "org_cat_cnt": ("org_cat_cnt", "count(drop_duplicates(inq_rec_org_cat))", "机构类型数"),
             "org_reason_day_cnt": ("org_reason_cnt", "count(drop_duplicates([PH010R01, PH010Q02, PH010Q03]))", "机构、日期、查询原因数"),
             "last_6in24m_coef_var": ("coef_var", "coef_var(hist(inq_rec_moi, [-24, -18, -12, -6, 0]))", "近24个月查询量变异系数"),
+            "latest_prd_min": ("latest_prd_min", "-max(inq_rec_moi)", "最近查询距今月份数")
         },
         "cros": [
             [["cnt", "org_cnt", "org_cat_cnt", "org_reason_day_cnt"],
@@ -1816,6 +1850,7 @@ LV1_AGG_CONF = {
             [["last_6in24m_coef_var",]              , ["orgs", "inq_reason",]],
             [["last_6in24m_coef_var",]              , ["orgs",]],
             [["last_6in24m_coef_var",]              , ["inq_reason",]],
+            [["latest_prd_min",]                   , ["orgs", "inq_reason"]],
         ],
     },
 }
