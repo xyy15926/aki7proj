@@ -3,11 +3,12 @@
 #   Name: test_npf.py
 #   Author: xyy15926
 #   Created: 2024-07-12 15:02:14
-#   Updated: 2024-07-12 21:50:19
+#   Updated: 2024-09-20 20:52:04
 #   Description:
 # ---------------------------------------------------------
 
 # %%
+import pytest
 from typing import Tuple, List, Any
 import numpy as np
 import numpy_financial as npf
@@ -19,6 +20,8 @@ from scipy import optimize
 # fv +
 # pv ** (1 + r) ** n +
 # pmt * (1 + r * [end 0, begin 1]) * ((1 + r) ** n - 1) / r == 0
+@pytest.mark.pkgs
+@pytest.mark.numpy
 def test_future_value():
     # Terms, the compound interests will be computed for each terms.
     n_months = 36
@@ -60,6 +63,8 @@ def test_future_value():
 
 # %%
 # `pv` the value at the begin of the first period.
+@pytest.mark.pkgs
+@pytest.mark.numpy
 def test_present_value():
     # Terms, the compound interests will be computed for each terms.
     n_months = 36
@@ -98,6 +103,8 @@ def test_present_value():
 
 
 # %%
+@pytest.mark.pkgs
+@pytest.mark.numpy
 def test_npv():
     pmt = 100
     nper = 3
@@ -112,6 +119,8 @@ def test_npv():
 
 
 # %%
+@pytest.mark.pkgs
+@pytest.mark.numpy
 def test_pmt():
     r = 0.05
     nper = 3 * 12
@@ -139,6 +148,8 @@ def test_pmt():
 
 
 # %%
+@pytest.mark.pkgs
+@pytest.mark.numpy
 def test_irr():
     r = 0.05
     nper = 3 * 12
@@ -159,6 +170,8 @@ def test_irr():
     assert np.isclose(irr, r)
 
 
+@pytest.mark.pkgs
+@pytest.mark.numpy
 def test_mirr():
     vals = np.array([100, -100, 100, -100])
     # Cash-in cost rate.

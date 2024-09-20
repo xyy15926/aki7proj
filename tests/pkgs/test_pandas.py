@@ -3,7 +3,7 @@
 #   Name: test_pandas.py
 #   Author: xyy15926
 #   Created: 2024-05-06 14:44:03
-#   Updated: 2024-05-07 11:20:29
+#   Updated: 2024-09-20 20:31:56
 #   Description:
 # ---------------------------------------------------------
 
@@ -34,31 +34,54 @@ def repeat_df(NN):
 # `DataFrame.groupby().apply` features:
 # 1. If DF returned by the callable applied shares the same index with the
 #   group-DF, the result of groupby won't add and additional level of Index.
+@pytest.mark.pkgs
+@pytest.mark.pandas
 def test_groupby_apply_index():
     def func_reset_index(df):
         df = df.copy()
-        df = df.reset_index()
+        df = df.reset_index(drop=False)
         return df
 
     def func_keep_index(df):
         df = df.copy()
-        df["idx"] = df.index
         return df
-    tqdm.pandas(desc="Iters")
+
+    def func_circle_index(df):
+        df = df.copy()
+        df.index = list(df.index)
+        return df
+
+    def func_change_value(df):
+        df = df.copy()
+        df["GPKey1"] = 1
+        return df
 
     NN = 1000
-    data = repeat_df(NN).set_index("GPKey4")
+    data = repeat_df(NN).set_index("GPKey3Rand")
 
-    rret = data.groupby("GPKey1").progress_apply(func_reset_index)
-    assert rret.index.nlevels == data.index.nlevels + 1
+    index_added = data.groupby("GPKey3", group_keys=True).apply(func_reset_index)
+    assert index_added.index.nlevels == data.index.nlevels + 1
 
-    kret = data.groupby("GPKey1",
-                        sort=True).progress_apply(func_keep_index)
+    # No additional index will be added if the index value are not changed
+    # in `apply`, while the original Index will be sorted in a hash way.
+    kret = data.groupby("GPKey3", group_keys=True).apply(func_keep_index)
+    assert kret.index.nlevels == data.index.nlevels
+
+    # Ditto.
+    kret = data.groupby("GPKey3", group_keys=True).apply(func_circle_index)
+    assert kret.index.nlevels == data.index.nlevels
+
+    # Ditto.
+    kret = data.groupby("GPKey3", group_keys=True).apply(func_change_value)
+    assert kret.index.nlevels == data.index.nlevels
+
+    # Ditto.
+    kret = data.groupby("GPKey3", sort=False, group_keys=True).apply(func_change_value)
     assert kret.index.nlevels == data.index.nlevels
 
 
 # %%
-# BUG:
+# 2. BUG alog with the former:
 # If DF returned by callable applied keep the index unchanged, the duplicates
 # in the index and the group-key will slow down the process of concatenation.
 # And the more duplicated the index is, the lower efficiency the concatenator
@@ -69,7 +92,10 @@ def test_groupby_apply_index():
 # Solution:
 # 1. Reset index.
 # 2. Pre-sort group-key.
-# @pytest.mark.skip(reason="Efficiency demo")
+@pytest.mark.skipif(pd.__version__ == '1.4.4',
+                    reason="Efficiency demo")
+@pytest.mark.pkgs
+@pytest.mark.pandas
 def test_groupby_apply_efficiency():
     def func_reset_index(df):
         df = df.copy()
@@ -96,7 +122,7 @@ def test_groupby_apply_efficiency():
 
     tqdm.pandas(desc="Iters")
 
-    NN = 1000
+    NN = 10000
     # data = repeat_df(NN).set_index("GPKey4")
     data = repeat_df(NN).set_index("GPKey4Rand")
     # data = repeat_df(NN).set_index("GPKey3Rand")
@@ -125,3 +151,24 @@ def test_groupby_apply_efficiency():
     ret = data.groupby("GPKey3", sort=True).progress_apply(func_modified_index)
     # Time: 20s -> Few groups, many duplicates.
     ret = data.groupby("GPKey5", sort=True).progress_apply(func_keep_index)
+
+
+# %%
+@pytest.mark.pkgs
+@pytest.mark.pandas
+def test_zero_divide():
+    # ZeroDivisionError won't be raised for numeric dtype.
+    df = pd.DataFrame(np.arange(10).reshape((5, 2)))
+    div_ret = df[1] / df[0]
+
+    # ZeroDivisionError won't be raised for numeric dtype.
+    df = pd.DataFrame(np.arange(10).reshape((5, 2)).astype(float))
+    div_ret = df[1] / df[0]
+
+    # While the it will be raised for object dtype though nothing is done
+    # except dtype change.
+    df = pd.DataFrame(np.arange(10).reshape((5, 2))).astype(object)
+    assert np.all(df.dtypes == "object")
+    assert isinstance(df.iloc[0, 0], int)
+    with pytest.raises(ZeroDivisionError):
+        div_ret = df[1] / df[0]
