@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-08 20:59:28
-#   Updated: 2024-09-19 14:17:34
+#   Updated: 2024-09-20 14:39:35
 #   Description:
 # ---------------------------------------------------------
 
@@ -285,7 +285,6 @@ ORG_CAT = {
 
 def org_cat(field: str):
     orgs = [
-        ("org_bank", f"{field} == 11", "商业银行"),
         ("org_allbank", f"{field} < 20", "银行机构"),
         ("org_nbank", f"({field} > 20) & ({field} < 60)", "非银机构"),
         ("org_other", f"{field} > 90", "其他机构"),

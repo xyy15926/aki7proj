@@ -3,7 +3,7 @@
 #   Name: confagg.py
 #   Author: xyy15926
 #   Created: 2024-09-10 10:52:24
-#   Updated: 2024-09-19 17:26:01
+#   Updated: 2024-09-20 14:46:54
 #   Description:
 # ---------------------------------------------------------
 
@@ -284,7 +284,7 @@ def _basic_upper_aggs(lower_conf: dict, desc: str = "账户"):
     lvup_fmt = {
         "max": ("{}_max", "max({})", "{}" + desc + "最大值"),
         "min": ("{}_min", "min({})", "{}" + desc + "最小值"),
-        "sum": ("{}_sum", "max({})", "{}" + desc + "之和"),
+        "sum": ("{}_sum", "sum({})", "{}" + desc + "之和"),
     }
     lvup_refs = {
         "cnt": ["max", "sum"],
@@ -657,7 +657,10 @@ ACC_INFO = {
         "acc_cat_nc": acc_cat("acc_cat", ["d1", "r4", "r1", "d1r4", "d1r41",
                                           "r2", "r2cny", "r23", "r281", "r282"]),
         "acc_cat_c": acc_cat("acc_cat", ["c1"]),
-        "orgs": org_cat("acc_org_cat"),
+        # 账户模块中，`org_bank` 上线字段中意为 “商业银行”
+        # 但查询模块中，`org_bank` 上线字段中意为 “银行机构”
+        "orgs": (org_cat("acc_org_cat")
+                 + [("org_bank", "acc_org_cat == 11", "商业银行")]),
         "biz_cat": biz_cat("acc_biz_cat"),
         "mixed_acc_status": acc_status("mixed_acc_status"),
         "mixed_lvl5_status": lvl5_status("mixed_lvl5_status"),
@@ -1150,7 +1153,10 @@ INQ_REC = {
     "key_fmt": "inq_rec_{cond}_{agg}",
     "cond": {
         "mois": last_mois("inq_rec_moi") + last_dois("inq_rec_doi"),
-        "orgs": org_cat("inq_rec_org_cat"),
+        # 查询模块中，`org_bank` 上线字段中意为 “银行机构”
+        # 但账户模块中，`org_bank` 上线字段中意为 “商业银行”
+        "orgs": (org_cat("inq_rec_org_cat")
+                 + [("org_bank", "inq_rec_org_cat < 20", "银行机构")]),
         "inq_reason": inq_rec_reason_cat("inq_rec_reason_cat")
     },
     "agg": {
