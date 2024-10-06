@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-09-18 23:33:15
+#   Updated: 2024-09-28 13:06:46
 #   Description:
 # ---------------------------------------------------------
 
@@ -23,6 +23,7 @@ from flagbear.parser import EnvParser
 from flagbear.fliper import rebuild_dict, extract_field
 from flagbear.fliper import regex_caster
 from flagbear.patterns import REGEX_TOKEN_SPECS
+from modsbear.chnwords import ChineseHolidaysCalendar
 
 
 # %%
@@ -141,6 +142,15 @@ def _drop_duplicates(x: pd.Series | list):
     return x.drop_duplicates()
 
 
+def _not_busiday(x: pd.Series):
+    chc = ChineseHolidaysCalendar().holidays()
+    return x.isin(chc) | x.dt.weekday.isin([0, 6])
+
+
+def _is_busiday(x: pd.Series):
+    return ~_not_busiday(x)
+
+
 EXGINE_ENV = {
     "today"     : pd.Timestamp.today(),
     "map"       : _ser_map,
@@ -177,6 +187,8 @@ EXGINE_ENV = {
     "contains"  : lambda x, y: y in x,
     "isnull"    : pd.isna,
     "notnull"   : pd.notna,
+    "is_busiday": _is_busiday,
+    "not_busiday": _not_busiday,
 }
 
 

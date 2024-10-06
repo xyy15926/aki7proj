@@ -3,7 +3,7 @@
 #   Name: chnwords.py
 #   Author: xyy15926
 #   Created: 2024-07-25 14:01:53
-#   Updated: 2024-07-26 21:49:08
+#   Updated: 2024-09-28 12:57:22
 #   Description:
 # ---------------------------------------------------------
 
@@ -22,6 +22,8 @@ from IPython.core.debugger import set_trace
 import pandas as pd
 import jieba
 from jieba import posseg
+from pandas.tseries.holiday import AbstractHolidayCalendar, Holiday
+from chinese_calendar import holidays
 from suitbear.finer import get_tmp_path, get_assets_path
 
 # %%
@@ -228,3 +230,18 @@ class GeoEncoder:
                                        if flag.startswith("n")])
 
         return rets
+
+
+# %%
+class ChineseHolidaysCalendar(AbstractHolidayCalendar):
+    """Chinese Holiday Calendar.
+
+    Read holiday constant from the module `chinese_calendar` for initiation,
+    which only record the holiday from 2004 to the current year.
+    So remember to update the package annually or it will be outdated.
+    """
+    rules = [
+        Holiday(val, year=key.year,
+                month=key.month,
+                day=key.day)
+        for key, val in holidays.items()]
