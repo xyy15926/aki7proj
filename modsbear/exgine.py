@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-09-28 13:06:46
+#   Updated: 2024-10-24 09:11:45
 #   Description:
 # ---------------------------------------------------------
 
@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import json
 from typing import Any, TypeVar
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence, Callable
 from collections import ChainMap
 import numpy as np
 import pandas as pd
@@ -58,7 +58,10 @@ def _flat1_max(x: pd.Series):
 def _getn(x: pd.Series, y: int):
     if y is None or y >= len(x):
         return None
-    return x.iloc[y]
+    if isinstance(x, pd.Series):
+        return x.iloc[y]
+    else:
+        return x[y]
 
 
 def _mon_itvl(x: pd.Series | pd.Timestamp, y: pd.Series | pd.Timestamp):
@@ -87,7 +90,7 @@ def _mon_itvl(x: pd.Series | pd.Timestamp, y: pd.Series | pd.Timestamp):
     return (x - y).apply(lambda x: getattr(x, "n", np.nan))
 
 
-def _ser_map(x: pd.Series, y: dict, z: Any = None):
+def _ser_map(x: pd.Series, y: dict | Callable, z: Any = None):
     """Map with default value for NaN.
     """
     if z is None:
@@ -151,6 +154,27 @@ def _is_busiday(x: pd.Series):
     return ~_not_busiday(x)
 
 
+def _sep_map(ser: pd.Series[str],
+             mapref: Mapping,
+             sep_from: str = ",",
+             sep_to: str = None):
+    def str_sep_map(val: str):
+        vals = set()
+        for ele in val.strip().split(sep_from):
+            med = mapref.get(ele)
+            if med is not None:
+                vals.add(med)
+        if sep_to is None:
+            return tuple(vals)
+        else:
+            return sep_to.join([str(ele) for ele in vals])
+    return ser.apply(str_sep_map)
+
+
+def _any_contains(ser: pd.Series[tuple], target: Sequence):
+    return ser.apply(lambda x: np.any([ele in x for ele in target]))
+
+
 EXGINE_ENV = {
     "today"     : pd.Timestamp.today(),
     "map"       : _ser_map,
@@ -184,11 +208,13 @@ EXGINE_ENV = {
     "sdiv"      : lambda x, y: np.nan if isinstance(y, int) and y == 0 else x / y,
     "hist"      : lambda x, y: np.histogram(x, y)[0],
     "coef_var"  : lambda x: 0 if len(x) == 0 else np.std(x) / np.mean(x),
-    "contains"  : lambda x, y: y in x,
+    "contains"  : lambda x, y: x.apply(lambda val: y in val),
     "isnull"    : pd.isna,
     "notnull"   : pd.notna,
     "is_busiday": _is_busiday,
     "not_busiday": _not_busiday,
+    "sep_map"   : _sep_map,
+    "any_contains": _any_contains,
 }
 
 

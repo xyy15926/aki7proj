@@ -45,68 +45,68 @@ pboc_company,PB040R02,PB040R02,date,信息更新日期
 pboc_score,PC010Q01,PSM:PC01:PC010Q01,int,数字解读
 pboc_score,PC010Q02,PSM:PC01:PC010Q02,int,相对位置
 pboc_score,PC010D01,PSM:PC01:PC010D01,varchar(1022),分数说明
-pboc_biz_abst,PC02AD01_11,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""11""",varchar(31),业务类型:11 个人住房贷款
-pboc_biz_abst,PC02AD02_11,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""11""",varchar(31),业务类型:11 个人住房贷款|业务大类：贷款
-pboc_biz_abst,PC02AR02_11,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""11""",date,首笔住房贷款发放月份
-pboc_biz_abst,PC02AS03_11,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""11""",int,住房贷款账户数
-pboc_biz_abst,PC02AD01_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""12""",varchar(31),业务类型:12 个人商用房（包括商住两用房）贷款
-pboc_biz_abst,PC02AD02_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""12""",varchar(21),业务类型:12 个人商用房（包括商住两用房）贷款|业务大类：贷款
-pboc_biz_abst,PC02AR02_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""12""",date,首笔商用房贷款发放月份
-pboc_biz_abst,PC02AS03_12,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""12""",int,商用房贷款账户数
-pboc_biz_abst,PC02AD01_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""19""",varchar(31),业务类型:19 其他类贷款
-pboc_biz_abst,PC02AD02_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""19""",varchar(31),业务类型:19 其他类贷款|业务大类：贷款
-pboc_biz_abst,PC02AR02_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""19""",date,首笔其他类贷款发放月份
-pboc_biz_abst,PC02AS03_19,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""19""",int,其他类贷款账户数
-pboc_biz_abst,PC02AD01_21,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""21""",varchar(31),业务类型:21 贷记卡
-pboc_biz_abst,PC02AD02_21,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""21""",varchar(31),业务类型:21 贷记卡|业务大类：信用卡
-pboc_biz_abst,PC02AR02_21,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""21""",date,贷记卡首笔业务发放月份
-pboc_biz_abst,PC02AS03_21,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""21""",int,贷记卡账户数
-pboc_biz_abst,PC02AD01_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""22""",varchar(31),业务类型:22 准贷记卡
-pboc_biz_abst,PC02AD02_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""22""",varchar(31),业务类型:22 准贷记卡|业务大类：信用卡
-pboc_biz_abst,PC02AR02_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""22""",date,准贷记卡首笔业务发放月份
-pboc_biz_abst,PC02AS03_22,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""22""",int,准贷记卡账户数
-pboc_biz_abst,PC02AD01_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD01&&PC02AD01==""99""",varchar(31),业务类型:99 其他
-pboc_biz_abst,PC02AD02_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AD02&&PC02AD01==""99""",varchar(31),业务类型:99 其他|业务大类：其他
-pboc_biz_abst,PC02AR02_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AR01&&PC02AD01==""99""",date,首笔其他信贷账户业务发放月份
-pboc_biz_abst,PC02AS03_99,"PCO:PC02:PC02A:PC02AH:[nnfilter(_)[0]]:PC02AS03&&PC02AD01==""99""",int,其他信贷账户业务账户数
+pboc_biz_abst,PC02AD01_11,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD01&&PC02AD01==""11""",varchar(31),业务类型:11 个人住房贷款
+pboc_biz_abst,PC02AD02_11,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD02&&PC02AD01==""11""",varchar(31),业务类型:11 个人住房贷款|业务大类：贷款
+pboc_biz_abst,PC02AR02_11,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AR01&&PC02AD01==""11""",date,首笔住房贷款发放月份
+pboc_biz_abst,PC02AS03_11,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AS03&&PC02AD01==""11""",int,住房贷款账户数
+pboc_biz_abst,PC02AD01_12,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD01&&PC02AD01==""12""",varchar(31),业务类型:12 个人商用房（包括商住两用房）贷款
+pboc_biz_abst,PC02AD02_12,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD02&&PC02AD01==""12""",varchar(21),业务类型:12 个人商用房（包括商住两用房）贷款|业务大类：贷款
+pboc_biz_abst,PC02AR02_12,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AR01&&PC02AD01==""12""",date,首笔商用房贷款发放月份
+pboc_biz_abst,PC02AS03_12,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AS03&&PC02AD01==""12""",int,商用房贷款账户数
+pboc_biz_abst,PC02AD01_19,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD01&&PC02AD01==""19""",varchar(31),业务类型:19 其他类贷款
+pboc_biz_abst,PC02AD02_19,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD02&&PC02AD01==""19""",varchar(31),业务类型:19 其他类贷款|业务大类：贷款
+pboc_biz_abst,PC02AR02_19,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AR01&&PC02AD01==""19""",date,首笔其他类贷款发放月份
+pboc_biz_abst,PC02AS03_19,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AS03&&PC02AD01==""19""",int,其他类贷款账户数
+pboc_biz_abst,PC02AD01_21,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD01&&PC02AD01==""21""",varchar(31),业务类型:21 贷记卡
+pboc_biz_abst,PC02AD02_21,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD02&&PC02AD01==""21""",varchar(31),业务类型:21 贷记卡|业务大类：信用卡
+pboc_biz_abst,PC02AR02_21,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AR01&&PC02AD01==""21""",date,贷记卡首笔业务发放月份
+pboc_biz_abst,PC02AS03_21,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AS03&&PC02AD01==""21""",int,贷记卡账户数
+pboc_biz_abst,PC02AD01_22,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD01&&PC02AD01==""22""",varchar(31),业务类型:22 准贷记卡
+pboc_biz_abst,PC02AD02_22,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD02&&PC02AD01==""22""",varchar(31),业务类型:22 准贷记卡|业务大类：信用卡
+pboc_biz_abst,PC02AR02_22,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AR01&&PC02AD01==""22""",date,准贷记卡首笔业务发放月份
+pboc_biz_abst,PC02AS03_22,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AS03&&PC02AD01==""22""",int,准贷记卡账户数
+pboc_biz_abst,PC02AD01_99,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD01&&PC02AD01==""99""",varchar(31),业务类型:99 其他
+pboc_biz_abst,PC02AD02_99,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AD02&&PC02AD01==""99""",varchar(31),业务类型:99 其他|业务大类：其他
+pboc_biz_abst,PC02AR02_99,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AR01&&PC02AD01==""99""",date,首笔其他信贷账户业务发放月份
+pboc_biz_abst,PC02AS03_99,"PCO:PC02:PC02A:PC02AH:[getn(nnfilter(_), 0)]:PC02AS03&&PC02AD01==""99""",int,其他信贷账户业务账户数
 pboc_biz_abst,PC02AS01,PCO:PC02:PC02A:PC02AS01,int,账户数合计
 pboc_biz_abst,PC02AS02,PCO:PC02:PC02A:PC02AS02,int,业务类型记录数
-pboc_cacc_abst,PC02BD01_1,"PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BD01&&PC02BD01==""1""",varchar(31),业务类型：资产处置业务
-pboc_cacc_abst,PC02BS03_1,"PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BS03&&PC02BD01==""1""",int,资产处置业务账户数
-pboc_cacc_abst,PC02BJ02_1,"PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BJ02&&PC02BD01==""1""",int,资产处置业务账户余额
-pboc_cacc_abst,PC02BD01_2,"PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BD01&&PC02BD01==""2""",varchar(31),业务类型：垫款业务
-pboc_cacc_abst,PC02BS03_2,"PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BS03&&PC02BD01==""2""",int,垫款业务账户数
-pboc_cacc_abst,PC02BJ02_2,"PCO:PC02:PC02B:PC02BH:[nnfilter(_)[0]]:PC02BJ02&&PC02BD01==""2""",int,垫款业务账户余额
+pboc_cacc_abst,PC02BD01_1,"PCO:PC02:PC02B:PC02BH:[getn(nnfilter(_), 0)]:PC02BD01&&PC02BD01==""1""",varchar(31),业务类型：资产处置业务
+pboc_cacc_abst,PC02BS03_1,"PCO:PC02:PC02B:PC02BH:[getn(nnfilter(_), 0)]:PC02BS03&&PC02BD01==""1""",int,资产处置业务账户数
+pboc_cacc_abst,PC02BJ02_1,"PCO:PC02:PC02B:PC02BH:[getn(nnfilter(_), 0)]:PC02BJ02&&PC02BD01==""1""",int,资产处置业务账户余额
+pboc_cacc_abst,PC02BD01_2,"PCO:PC02:PC02B:PC02BH:[getn(nnfilter(_), 0)]:PC02BD01&&PC02BD01==""2""",varchar(31),业务类型：垫款业务
+pboc_cacc_abst,PC02BS03_2,"PCO:PC02:PC02B:PC02BH:[getn(nnfilter(_), 0)]:PC02BS03&&PC02BD01==""2""",int,垫款业务账户数
+pboc_cacc_abst,PC02BJ02_2,"PCO:PC02:PC02B:PC02BH:[getn(nnfilter(_), 0)]:PC02BJ02&&PC02BD01==""2""",int,垫款业务账户余额
 pboc_cacc_abst,PC02BJ01,PCO:PC02:PC02B:PC02BJ01,int,账户余额合计
 pboc_cacc_abst,PC02BS01,PCO:PC02:PC02B:PC02BS01,int,账户数合计
 pboc_cacc_abst,PC02BS02,PCO:PC02:PC02B:PC02BS02,int,C类账户记录数
 pboc_dum_abst,PC02CJ01,PCO:PC02:PC02C:PC02CJ01,int,呆账账户余额
 pboc_dum_abst,PC02CS01,PCO:PC02:PC02C:PC02CS01,int,呆账账户数
-pboc_dracc_abst,PC02DD01_1,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DD01&&PC02DD01==""1""",varchar(31),账户类型D1
-pboc_dracc_abst,PC02DS02_1,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS02&&PC02DD01==""1""",int,逾期D1账户数
-pboc_dracc_abst,PC02DS03_1,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS03&&PC02DD01==""1""",int,逾期D1月份数
-pboc_dracc_abst,PC02DJ01_1,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DJ01&&PC02DD01==""1""",int,逾期D1单月最高逾期（透支）总额
-pboc_dracc_abst,PC02DS04_1,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS04&&PC02DD01==""1""",int,逾期D1最长逾期（透支）月数
-pboc_dracc_abst,PC02DD01_2,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DD01&&PC02DD01==""2""",varchar(31),账户类型R4
-pboc_dracc_abst,PC02DS02_2,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS02&&PC02DD01==""2""",int,逾期R4账户数
-pboc_dracc_abst,PC02DS03_2,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS03&&PC02DD01==""2""",int,逾期R4月份数
-pboc_dracc_abst,PC02DJ01_2,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DJ01&&PC02DD01==""2""",int,逾期R4单月最高逾期（透支）总额
-pboc_dracc_abst,PC02DS04_2,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS04&&PC02DD01==""2""",int,逾期R4最长逾期（透支）月数
-pboc_dracc_abst,PC02DD01_3,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DD01&&PC02DD01==""3""",varchar(31),账户类型R1
-pboc_dracc_abst,PC02DS02_3,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS02&&PC02DD01==""3""",int,逾期R1账户数
-pboc_dracc_abst,PC02DS03_3,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS03&&PC02DD01==""3""",int,逾期R1月份数
-pboc_dracc_abst,PC02DJ01_3,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DJ01&&PC02DD01==""3""",int,逾期R1单月最高逾期（透支）总额
-pboc_dracc_abst,PC02DS04_3,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS04&&PC02DD01==""3""",int,逾期R1最长逾期（透支）月数
-pboc_dracc_abst,PC02DD01_4,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DD01&&PC02DD01==""4""",varchar(31),账户类型R2
-pboc_dracc_abst,PC02DS02_4,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS02&&PC02DD01==""4""",int,逾期R2账户数
-pboc_dracc_abst,PC02DS03_4,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS03&&PC02DD01==""4""",int,逾期R2月份数
-pboc_dracc_abst,PC02DJ01_4,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DJ01&&PC02DD01==""4""",int,逾期R2单月最高逾期（透支）总额
-pboc_dracc_abst,PC02DS04_4,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS04&&PC02DD01==""4""",int,逾期R2最长逾期（透支）月数
-pboc_dracc_abst,PC02DD01_5,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DD01&&PC02DD01==""5""",varchar(31),账户类型R3
-pboc_dracc_abst,PC02DS02_5,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS02&&PC02DD01==""5""",int,逾期R3账户数
-pboc_dracc_abst,PC02DS03_5,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS03&&PC02DD01==""5""",int,逾期R3月份数
-pboc_dracc_abst,PC02DJ01_5,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DJ01&&PC02DD01==""5""",int,逾期R3单月最高逾期（透支）总额
-pboc_dracc_abst,PC02DS04_5,"PCO:PC02:PC02D:PC02DH:[nnfilter(_)[0]]:PC02DS04&&PC02DD01==""5""",int,逾期R3最长逾期（透支）月数
+pboc_dracc_abst,PC02DD01_1,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DD01&&PC02DD01==""1""",varchar(31),账户类型D1
+pboc_dracc_abst,PC02DS02_1,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS02&&PC02DD01==""1""",int,逾期D1账户数
+pboc_dracc_abst,PC02DS03_1,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS03&&PC02DD01==""1""",int,逾期D1月份数
+pboc_dracc_abst,PC02DJ01_1,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DJ01&&PC02DD01==""1""",int,逾期D1单月最高逾期（透支）总额
+pboc_dracc_abst,PC02DS04_1,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS04&&PC02DD01==""1""",int,逾期D1最长逾期（透支）月数
+pboc_dracc_abst,PC02DD01_2,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DD01&&PC02DD01==""2""",varchar(31),账户类型R4
+pboc_dracc_abst,PC02DS02_2,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS02&&PC02DD01==""2""",int,逾期R4账户数
+pboc_dracc_abst,PC02DS03_2,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS03&&PC02DD01==""2""",int,逾期R4月份数
+pboc_dracc_abst,PC02DJ01_2,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DJ01&&PC02DD01==""2""",int,逾期R4单月最高逾期（透支）总额
+pboc_dracc_abst,PC02DS04_2,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS04&&PC02DD01==""2""",int,逾期R4最长逾期（透支）月数
+pboc_dracc_abst,PC02DD01_3,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DD01&&PC02DD01==""3""",varchar(31),账户类型R1
+pboc_dracc_abst,PC02DS02_3,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS02&&PC02DD01==""3""",int,逾期R1账户数
+pboc_dracc_abst,PC02DS03_3,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS03&&PC02DD01==""3""",int,逾期R1月份数
+pboc_dracc_abst,PC02DJ01_3,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DJ01&&PC02DD01==""3""",int,逾期R1单月最高逾期（透支）总额
+pboc_dracc_abst,PC02DS04_3,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS04&&PC02DD01==""3""",int,逾期R1最长逾期（透支）月数
+pboc_dracc_abst,PC02DD01_4,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DD01&&PC02DD01==""4""",varchar(31),账户类型R2
+pboc_dracc_abst,PC02DS02_4,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS02&&PC02DD01==""4""",int,逾期R2账户数
+pboc_dracc_abst,PC02DS03_4,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS03&&PC02DD01==""4""",int,逾期R2月份数
+pboc_dracc_abst,PC02DJ01_4,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DJ01&&PC02DD01==""4""",int,逾期R2单月最高逾期（透支）总额
+pboc_dracc_abst,PC02DS04_4,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS04&&PC02DD01==""4""",int,逾期R2最长逾期（透支）月数
+pboc_dracc_abst,PC02DD01_5,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DD01&&PC02DD01==""5""",varchar(31),账户类型R3
+pboc_dracc_abst,PC02DS02_5,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS02&&PC02DD01==""5""",int,逾期R3账户数
+pboc_dracc_abst,PC02DS03_5,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS03&&PC02DD01==""5""",int,逾期R3月份数
+pboc_dracc_abst,PC02DJ01_5,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DJ01&&PC02DD01==""5""",int,逾期R3单月最高逾期（透支）总额
+pboc_dracc_abst,PC02DS04_5,"PCO:PC02:PC02D:PC02DH:[getn(nnfilter(_), 0)]:PC02DS04&&PC02DD01==""5""",int,逾期R3最长逾期（透支）月数
 pboc_dracc_abst,PC02DS01,PCO:PC02:PC02D:PC02DS01,int,PC02DH 记录数
 pboc_dracc_abst,PC02ES01,PCO:PC02:PC02E:PC02ES01,int,D1管理机构数
 pboc_dracc_abst,PC02ES02,PCO:PC02:PC02E:PC02ES02,int,D1账户数
@@ -142,25 +142,25 @@ pboc_rel_abst,PC02KD02,PC02KD02,varchar(31),还款责任类型
 pboc_rel_abst,PC02KS02,PC02KS02,int,账户数
 pboc_rel_abst,PC02KJ01,PC02KJ01,int,担保责任-还款责任金额
 pboc_rel_abst,PC02KJ02,PC02KJ02,int,担保责任-账户余额
-pboc_postfee_abst,PC030D01_1,"PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030D01&&PC030D01==""1""",varchar(31),后付费业务类型：1-电信业务
-pboc_postfee_abst,PC030S02_1,"PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030S02&&PC030D01==""1""",int,电信业务欠费账户数
-pboc_postfee_abst,PC030J01_1,"PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030J01&&PC030D01==""1""",int,电信业务欠费金额
-pboc_postfee_abst,PC030D01_2,"PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030D01&&PC030D01==""2""",varchar(31),后付费业务类型：2-水电费等公共事业
-pboc_postfee_abst,PC030S02_2,"PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030S02&&PC030D01==""2""",int,水电费等公共事业欠费账户数
-pboc_postfee_abst,PC030J01_2,"PNO:PC03:PC030H:[nnfilter(_)[0]]:PC030J01&&PC030D01==""2""",int,水电费等公共事业欠费金额
+pboc_postfee_abst,PC030D01_1,"PNO:PC03:PC030H:[getn(nnfilter(_), 0)]:PC030D01&&PC030D01==""1""",varchar(31),后付费业务类型：1-电信业务
+pboc_postfee_abst,PC030S02_1,"PNO:PC03:PC030H:[getn(nnfilter(_), 0)]:PC030S02&&PC030D01==""1""",int,电信业务欠费账户数
+pboc_postfee_abst,PC030J01_1,"PNO:PC03:PC030H:[getn(nnfilter(_), 0)]:PC030J01&&PC030D01==""1""",int,电信业务欠费金额
+pboc_postfee_abst,PC030D01_2,"PNO:PC03:PC030H:[getn(nnfilter(_), 0)]:PC030D01&&PC030D01==""2""",varchar(31),后付费业务类型：2-水电费等公共事业
+pboc_postfee_abst,PC030S02_2,"PNO:PC03:PC030H:[getn(nnfilter(_), 0)]:PC030S02&&PC030D01==""2""",int,水电费等公共事业欠费账户数
+pboc_postfee_abst,PC030J01_2,"PNO:PC03:PC030H:[getn(nnfilter(_), 0)]:PC030J01&&PC030D01==""2""",int,水电费等公共事业欠费金额
 pboc_postfee_abst,PC030S01,PNO:PC03:PC030S01,int,后付费业务记录数
-pboc_public_abst,PC040D01_1,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040D01&&PC040D01==""1""",varchar(31),公共信息类型：1 欠税信息 
-pboc_public_abst,PC040S02_1,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040S02&&PC040D01==""1""",int,欠税信息记录数
-pboc_public_abst,PC040J01_1,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040J01&&PC040D01==""1""",int,欠税信息涉及金额
-pboc_public_abst,PC040D01_2,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040D01&&PC040D01==""2""",varchar(31),公共信息类型：2 民事判决信息 
-pboc_public_abst,PC040S02_2,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040S02&&PC040D01==""2""",int,民事判决信息记录数
-pboc_public_abst,PC040J01_2,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040J01&&PC040D01==""2""",int,民事判决信息涉及金额
-pboc_public_abst,PC040D01_3,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040D01&&PC040D01==""3""",varchar(31),公共信息类型：3 强制执行信息 
-pboc_public_abst,PC040S02_3,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040S02&&PC040D01==""3""",int,强制执行信息记录数
-pboc_public_abst,PC040J01_3,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040J01&&PC040D01==""3""",int,强制执行信息涉及金额
-pboc_public_abst,PC040D01_4,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040D01&&PC040D01==""4""",varchar(31),公共信息类型：4 行政处罚信息 
-pboc_public_abst,PC040S02_4,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040S02&&PC040D01==""4""",int,行政处罚信息记录数
-pboc_public_abst,PC040J01_4,"PPO:PC04:PC040H:[nnfilter(_)[0]]:PC040J01&&PC040D01==""4""",int,行政处罚信息涉及金额
+pboc_public_abst,PC040D01_1,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040D01&&PC040D01==""1""",varchar(31),公共信息类型：1 欠税信息 
+pboc_public_abst,PC040S02_1,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040S02&&PC040D01==""1""",int,欠税信息记录数
+pboc_public_abst,PC040J01_1,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040J01&&PC040D01==""1""",int,欠税信息涉及金额
+pboc_public_abst,PC040D01_2,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040D01&&PC040D01==""2""",varchar(31),公共信息类型：2 民事判决信息 
+pboc_public_abst,PC040S02_2,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040S02&&PC040D01==""2""",int,民事判决信息记录数
+pboc_public_abst,PC040J01_2,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040J01&&PC040D01==""2""",int,民事判决信息涉及金额
+pboc_public_abst,PC040D01_3,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040D01&&PC040D01==""3""",varchar(31),公共信息类型：3 强制执行信息 
+pboc_public_abst,PC040S02_3,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040S02&&PC040D01==""3""",int,强制执行信息记录数
+pboc_public_abst,PC040J01_3,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040J01&&PC040D01==""3""",int,强制执行信息涉及金额
+pboc_public_abst,PC040D01_4,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040D01&&PC040D01==""4""",varchar(31),公共信息类型：4 行政处罚信息 
+pboc_public_abst,PC040S02_4,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040S02&&PC040D01==""4""",int,行政处罚信息记录数
+pboc_public_abst,PC040J01_4,"PPO:PC04:PC040H:[getn(nnfilter(_), 0)]:PC040J01&&PC040D01==""4""",int,行政处罚信息涉及金额
 pboc_public_abst,PC040S01,PPO:PC04:PC040S01,int,公共信息记录数
 pboc_inq_abst,PC05AR01,PQO:PC05:PC05A:PC05AR01,date,上一次查询日期
 pboc_inq_abst,PC05AI01,PQO:PC05:PC05A:PC05AI01,varchar(255),上一次查询机构代码

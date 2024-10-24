@@ -3,7 +3,7 @@
 #   Name: test_grammer.py
 #   Author: xyy15926
 #   Created: 2023-11-30 09:49:53
-#   Updated: 2023-12-18 09:00:36
+#   Updated: 2024-10-21 20:27:44
 #   Description:
 # ---------------------------------------------------------
 
@@ -235,6 +235,8 @@ def test_Syntaxer_expr():
         "[1, 2, 3][2]",
         "\"abc\" + \"bc\"",
         "\"1\" != 1",
+        "[1,]",
+        "[1]",
     ]
     lexer = Lexer()
     for expr in exprs:

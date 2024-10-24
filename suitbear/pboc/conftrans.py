@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-08 20:59:28
-#   Updated: 2024-09-20 14:39:35
+#   Updated: 2024-10-17 14:01:27
 #   Description:
 # ---------------------------------------------------------
 
@@ -51,8 +51,9 @@ REPAY_STATUS_SPEC = {
 PBOC_ACC_REPAY_60_MONTHLY = {
     "part": "pboc_acc_repay_60_monthly",
     "trans": [
-        ["acc_repay_status"     , "map(PD01ED01, repay_status)"                 , None  , "还款状态"],
-        ["acc_repay_status_spec", "map(PD01ED01, repay_status_spec)"            , None  , "还款状态"],
+        ["acc_repay_status"     , "map(PD01ED01, repay_status, 0)"              , None  , "还款状态"],
+        # `acc_repay_status_spec` 需要给默认值 `-1`，否则后续 `cb_min` 逻辑出错，空值赋 8
+        ["acc_repay_status_spec", "map(PD01ED01, repay_status_spec, -1)"        , None  , "还款状态"],
         ["acc_repay_status8"    , "cb_max(cb_min(acc_repay_status_spec, 8), 0)" , None  , "还款状态"],
         ["acc_repay_moi"        , "mon_itvl(PD01ER03, today)"                   , None  , "还款月距今月"]
     ],
