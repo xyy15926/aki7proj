@@ -3,7 +3,7 @@
 #   Name: exgine.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-10-24 09:11:45
+#   Updated: 2024-11-03 21:08:30
 #   Description:
 # ---------------------------------------------------------
 
@@ -162,7 +162,7 @@ def _sep_map(ser: pd.Series[str],
         vals = set()
         for ele in val.strip().split(sep_from):
             med = mapref.get(ele)
-            if med is not None:
+            if pd.notna(med):
                 vals.add(med)
         if sep_to is None:
             return tuple(vals)
