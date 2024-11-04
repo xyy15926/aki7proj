@@ -34,7 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger()
 logger.info("Logging Start.")
 
-GOVERN_REGION_LV4 = get_assets_path() / "govern_region_level4.csv"
+GOVERN_REGION_LV4 = get_assets_path() / "govern_region/govern_region_level4.csv"
 
 
 # %%

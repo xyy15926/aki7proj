@@ -3,7 +3,7 @@
 #   Name: test_exgine.py
 #   Author: xyy15926
 #   Created: 2024-04-15 18:17:58
-#   Updated: 2024-09-19 21:29:38
+#   Updated: 2024-11-04 10:35:59
 #   Description:
 # ---------------------------------------------------------
 
@@ -25,7 +25,7 @@ from flagbear.fliper import extract_field, rebuild_dict
 from modsbear.exgine import (rebuild_rec2df, agg_on_df, trans_on_df,
                              compress_hierarchy, flat_records)
 
-ASSETS = os.path.join(os.curdir, "assets")
+ASSETS = os.path.join(os.curdir, "assets/pboc_settings")
 PBOC_JSON = os.path.join(ASSETS, "pboc_utf8.json")
 PBOC_PARTS = os.path.join(ASSETS, "pboc_parts.csv")
 PBOC_FIELDS = os.path.join(ASSETS, "pboc_fields.csv")

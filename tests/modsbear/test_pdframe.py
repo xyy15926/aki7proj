@@ -26,7 +26,7 @@ from suitbear.finer import get_assets_path
 
 # %%
 def test_format_table():
-    file = get_assets_path() / "wechat_cashflow_demo.pdf"
+    file = get_assets_path() / "cashflow/wechat_cashflow_demo.pdf"
     table = extract_tables(file)[0]
 
     columns = {
