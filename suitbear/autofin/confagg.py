@@ -3,7 +3,7 @@
 #   Name: confagg.py
 #   Author: xyy15926
 #   Created: 2024-09-23 12:10:17
-#   Updated: 2024-11-03 20:22:18
+#   Updated: 2024-11-06 09:51:00
 #   Description:
 # ---------------------------------------------------------
 
@@ -16,8 +16,8 @@ from itertools import product
 from suitbear.crosconf import cross_aggs_and_filters
 from suitbear.autofin.conftrans import (
     acc_status,
-    approval_result_reprs,
-    approval_code_reprs,
+    appr_res_reprs,
+    appr_code_reprs,
     biztype_cats_reprs,
 )
 
@@ -25,7 +25,6 @@ from suitbear.autofin.conftrans import (
 # %%
 def last_mois(field: str, desc: str = ""):
     mois = [1, 2, 3, 6, 9, 12, 18, 24, 36, 48]
-    mois = [12, 24]
     reprs = [(f"last_{moi}m",
               f"({field} >= -{moi}) & ({field} <= 0)",
               f"近{moi}月{desc}") for moi in mois]
@@ -35,7 +34,6 @@ def last_mois(field: str, desc: str = ""):
 
 def last_dois(field: str, desc: str = ""):
     dois = [1, 3, 7, 15, 30, 60, 90, 180, 365, 730]
-    dois = [180, 730]
     reprs = [(f"last_{doi}d",
               f"({field} >= -{doi}) & ({field} <= 0)",
               f"近{doi}日{desc}")
@@ -50,16 +48,17 @@ def amt_bins_1(field: str = "loan_term",
                edges: list | tuple = None):
     edges = [12, 24, 36, 48] if edges is None else edges
     lower, upper = edges[0], edges[-1]
-    reprs = [(f"{field}_le{lower}w",
+    reprs = [(f"{field}_le{lower}",
               f"{field} < {lower}",
               f"{desc}小于{lower}")]
-    reprs += [(f"{field}_{fr}to{to}w",
+    reprs += [(f"{field}_{fr}to{to}",
                f"({field} >= {fr}) & ({field} < {to})",
                f"{desc}介于{fr}至{to}")
               for fr,to in zip(edges[:-1], edges[1:])]
-    reprs += [(f"{field}_ge{upper}w",
+    reprs += [(f"{field}_ge{upper}",
                f"{field} >= {upper}",
                f"{desc}大于{upper}")]
+    reprs += [(None, None, None)]
     return reprs
 
 
@@ -78,6 +77,7 @@ def amt_bins_w(field: str = "loan_amt",
     reprs += [(f"{field}_ge{upper}w",
                f"{field} >= {upper}",
                f"{desc}大于{upper}万")]
+    reprs += [(None, None, None)]
     return reprs
 
 
@@ -124,6 +124,10 @@ def _basic_upper_aggs(lower_conf: dict, desc: str = "账户"):
         "lmt": ["max", "sum"],
         "usd": ["max", "sum"],
         "ots": ["max", "sum"],
+        "ovdd": ["max", "sum"],
+        "ovdt": ["max", "sum"],
+        "ovdo": ["max", "sum"],
+        "ovdp": ["max", "sum"],
     }
     for key, _cond, _agg, desc in lower_agg_conf:
         agg_type = key[-3:]
@@ -146,7 +150,7 @@ LOAN_REPAYMENT = {
     "from_": ["loan_repayment_monthly"],
     "key_fmt": "repay_{cond}_{agg}",
     "cond": {
-        "mois": last_mois("day_itvl(repay_date, today)"),
+        "mois": last_mois("duepay_moi"),
         "ovdd": amt_threshs_1("ovd_days", "ovd_days", "逾期天数"),
         "None": none_of_all(),
     },
@@ -154,23 +158,22 @@ LOAN_REPAYMENT = {
         "cnt": ("cnt", "count(_)", "期数"),
         # 历史还款，未包含：最大连续逾期期数、逾期期数和、最大逾期金额之类
         "ovdd_max": ("ovdd_max", "max(ovd_days)", "最大逾期天数"),
-        "fpd_ovdd": ("fpd_ovdd", "getn(ovd_days, 0)", "首期逾期天数"),
+        "fpd_ovdd": ("fpd_ovdd", "getn(sortby(ovd_days, mob), 0)", "首期逾期天数"),
         # 当前状态
-        "cur_ovd_days": ("cur_ovd_days", "max(ovd_days[isnull(repay_date)])", "当前逾期天数"),
-        "cur_ovd_prds": ("cur_ovd_prds", "count(ovd_days[isnull(repay_date)])", "当前逾期期数"),
-        "cur_ovd_amt": ("cur_ovd_amt", "sum(duepay_amt[isnull(repay_date) & (ovd_days > 0)])", "当前逾期金额"),
-        "cur_ovd_pri": ("cur_ovd_pri", "sum(duepay_pri[isnull(repay_date) & (ovd_days > 0)])", "当前逾期本金"),
-        "rem_amt": ("rem_amt", "sum(duepay_amt[isnull(repay_date)])", "剩余未还金额"),
-        "rem_pri": ("rem_pri", "sum(duepay_pri[isnull(repay_date)])", "剩余未还本金"),
+        "cur_ovdd": ("cur_ovdd_cnt", "max(ovd_days[isnull(repay_date)])", "当前逾期天数"),
+        "cur_ovdt": ("cur_ovdt_cnt", "count(ovd_days[isnull(repay_date)])", "当前逾期期数"),
+        "cur_ovdo": ("cur_ovdo_sum", "sum(duepay_amt[isnull(repay_date) & (ovd_days > 0)])", "当前逾期金额"),
+        "cur_ovdp": ("cur_ovdp_sum", "sum(duepay_pri[isnull(repay_date) & (ovd_days > 0)])", "当前逾期本金"),
+        "remo_sum": ("remo_sum", "sum(duepay_amt[isnull(repay_date)])", "剩余未还金额"),
+        "remp_sum": ("remp_sum", "sum(duepay_pri[isnull(repay_date)])", "剩余未还本金"),
     },
     "cros": [
         (["cnt",],
          ["mois", "ovdd"]),
         (["ovdd_max", "fpd_ovdd"],
          ["mois",]),
-        (["cur_ovd_days", "cur_ovd_prds",
-          "cur_ovd_amt", "cur_ovd_pri",
-          "rem_amt", "rem_pri"],
+        (["cur_ovdd", "cur_ovdt", "cur_ovdo", "cur_ovdp",
+          "remo_sum", "remp_sum"],
          ["None"])
     ],
 }
@@ -187,14 +190,14 @@ AGG_LOAN_REPAYMENT = {
                 ["certno", "order_no"]],
     "key_fmt": "{cond}_{agg}",
     "cond": {
-        "pri_amt": amt_bins_w("pri_amt", "融资额"),
+        "loan_pri": amt_bins_w("loan_pri", "融资额"),
         "loan_term": amt_bins_1("loan_term", "期限"),
         "loan_ppor": amt_bins_1("loan_ppor", "融资比例"),
     },
     "agg": _basic_upper_aggs(LOAN_REPAYMENT),
     "cros": [
         (list(_basic_upper_aggs(LOAN_REPAYMENT).keys()),
-         ["pri_amt"]),
+         ["loan_pri"]),
         (list(_basic_upper_aggs(LOAN_REPAYMENT).keys()),
          ["loan_term"]),
         (list(_basic_upper_aggs(LOAN_REPAYMENT).keys()),
@@ -217,12 +220,13 @@ AGG_LOAN_ACC_INFO = {
     },
     "agg": {
         "cnt": ("cnt", "count(_)", "账户数"),
-        "last_loan_dcnt": ("last_loan_dcnt", "min(day_itvl(today, loan_date))", "上次放款距今"),
+        "last_loans_mcnt": ("last_loans_dcnt", "min(-acc_start_moi)", "上次放款距今月"),
+        "last_loane_mcnt": ("last_loane_dcnt", "min(-acc_end_moi)", "上次关闭距今月"),
     },
     "cros": [
         (["cnt",],
          ["status"]),
-        (["last_loan_dcnt"],
+        (["last_loans_mcnt", "last_loane_mcnt"],
          ["None"]),
     ],
 }
@@ -238,14 +242,14 @@ AGG_AUTOFIN_PRETRIAL = {
     "key_fmt": "pretrial_{cond}_{agg}",
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
-        "approval_result": approval_result_reprs("approval_result"),
-        "infocode_cats": approval_code_reprs("infocode_cats"),
-        "dois": last_dois("day_itvl(apply_date, today)"),
+        "approval_result": appr_res_reprs("appr_res"),
+        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "dois": last_dois("apply_doi"),
     },
     "agg": {
         "cnt": ("cnt", "count(_)", "预审数"),
         "last_apply_dcnt": ("last_apply_dcnt",
-                            "min(day_itvl(today, apply_date))",
+                            "min(-apply_doi)",
                             "上次预审距今日"),
     },
     "cros": [
@@ -267,14 +271,14 @@ AGG_AUTOFIN_SECTRIAL = {
     "key_fmt": "sectrial_{cond}_{agg}",
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
-        "approval_result": approval_result_reprs("approval_result"),
-        "infocode_cats": approval_code_reprs("infocode_cats"),
-        "dois": last_dois("day_itvl(apply_date, today)"),
+        "approval_result": appr_res_reprs("appr_res"),
+        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "dois": last_dois("apply_doi"),
     },
     "agg": {
         "cnt": ("cnt", "count(_)", "资审数"),
         "last_apply_dcnt": ("last_apply_dcnt",
-                            "min(day_itvl(today, apply_date))",
+                            "min(-apply_doi)",
                             "上次资审距今日"),
     },
     "cros": [
@@ -296,9 +300,9 @@ MASS_AUTOFIN_PRETRIAL = {
     "key_fmt": "mpretrial_{cond}_{agg}",
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
-        "approval_result": approval_result_reprs("approval_result"),
-        "infocode_cats": approval_code_reprs("infocode_cats"),
-        "dois": last_dois("day_itvl(apply_date, today)"),
+        "approval_result": appr_res_reprs("appr_res"),
+        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "dois": last_dois("apply_doi"),
     },
     "agg": {
         "cnt": ("cnt", "count(_)", "数量"),
@@ -319,9 +323,9 @@ MASS_AUTOFIN_SECTRIAL = {
     "key_fmt": "mpretrial_{cond}_{agg}",
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
-        "approval_result": approval_result_reprs("approval_result"),
-        "infocode_cats": approval_code_reprs("infocode_cats"),
-        "dois": last_dois("day_itvl(apply_date, today)"),
+        "approval_result": appr_res_reprs("appr_res"),
+        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "dois": last_dois("apply_doi"),
     },
     "agg": {
         "cnt": ("cnt", "count(_)", "数量"),
@@ -343,9 +347,9 @@ GROUP_AUTOFIN_PRETRIAL_TMPL = {
     "key_fmt": "gpretrial_{cond}_{agg}",
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
-        "approval_result": approval_result_reprs("approval_result"),
-        "infocode_cats": approval_code_reprs("infocode_cats"),
-        "dois": last_dois("day_itvl(apply_date, today)"),
+        "approval_result": appr_res_reprs("appr_res"),
+        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "dois": last_dois("apply_doi"),
     },
     "agg": {
         "cnt": ("cnt", "count(_)", "数量"),
@@ -366,9 +370,9 @@ GROUP_AUTOFIN_SECTRIAL_TMPL = {
     "key_fmt": "gsectrial_{cond}_{agg}",
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
-        "approval_result": approval_result_reprs("approval_result"),
-        "infocode_cats": approval_code_reprs("infocode_cats"),
-        "dois": last_dois("day_itvl(apply_date, today)"),
+        "approval_result": appr_res_reprs("appr_res"),
+        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "dois": last_dois("apply_doi"),
     },
     "agg": {
         "cnt": ("cnt", "count(_)", "数量"),

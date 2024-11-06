@@ -3,7 +3,7 @@
 #   Name: crosconf.py
 #   Author: xyy15926
 #   Created: 2024-09-30 09:28:51
-#   Updated: 2024-10-23 11:55:40
+#   Updated: 2024-11-06 14:30:59
 #   Description:
 # ---------------------------------------------------------
 
@@ -30,57 +30,6 @@ logger.info("Logging Start.")
 
 
 # %%
-def cproduct_aggs_and_filters(
-    aggs: list | dict,
-    filters: list,
-    key_fmt: str = "{cond}_{agg}",
-) -> list[tuple]:
-    """Generate Cartesian Product for aggregations and filters.
-
-    Each aggregation and all filters will be looped to get the Cartesian
-    Product as the configuration.
-    1. Cartesian Product of condition-groups will be generated with the
-      filters in `filters` without aggregations.
-    2. Aggregations and the condition-groups will be grouped together later
-      for each aggregation to get configuration of how to aggregate.
-
-    Params:
-    -----------------------
-    aggs: List of 3-Tuples[NAME, AGG-EXPR, COMMENT] describing the
-      aggregations.
-    filters: List of 3-Tuples[NAME, COND-EXPR, COMMENT] describing the
-      the filters.
-    key_fmt: Formation string for constructing the key's names.
-
-    Return:
-    -----------------------
-    List of 4-Tuple[KEY, COND-EXPR, AGG-EXPR, CMT]
-    """
-    conds = []
-    # Outer Cartesian Product of aggregations and condition-groups.
-    for agg_varn, agg_fn, agg_cmt in aggs:
-        # Inner Cartesian Product of conditions.
-        for cond_grp in product(*filters):
-            # Zip to gather the list of NAMEs, CONDITIONs and COMMENTs.
-            # And filter `NONE` in NAMEs, CONDITIONs and COMMENTs.
-            cond_varn, cond_cond, cond_cmt = [
-                list(filter(lambda x: x is not None, ele))
-                for ele in zip(*cond_grp)
-            ]
-            cond_varn_str = "_".join(cond_varn)
-            cond_cond_str = " & ".join([f"({ele})" for ele in cond_cond])
-            cond_cmt_str = "".join(cond_cmt)
-
-            # `_` will be repeated in some formation string with no filter set.
-            key_str = (key_fmt.format(cond=cond_varn_str, agg=agg_varn)
-                       .strip("_")
-                       .replace("__", "_"))
-            conds.append((key_str, cond_cond_str, agg_fn,
-                          cond_cmt_str + agg_cmt))
-    return conds
-
-
-# %%
 def cross_aggs_and_filters(
     cros: tuple[list, list],
     aggs_D: dict[str, list],
@@ -98,13 +47,10 @@ def cross_aggs_and_filters(
 
     Params:
     ----------------------
-    cros: 2-Tuple[AGG-CODE-LIST, FILTER-CODE-LIST], indicating how to pair
-      aggregations and filters.
+    cros: List of 2-Tuple[AGG-CODE-LIST, FILTER-CODE-LIST], indicating how to
+      pair aggregations and filters.
       AGG-CODE-LIST: List of str indicating the aggregations.
-      FILTER-CODE-LIST: List of str or tuple indicating the filters.
-        tuple: [FILTER-CODE, FILTER-BRANCHES,...]
-        str-tuple: <FILTER-CODE>.[FILTRE-BRANCHES,...]
-        simple str: filter-code from `filters_D`
+      FILTER-CODE-LIST: List of str indicating the filters.
     aggs_D: Dict[AGG-CODE, aggregation description], from which to get
       the aggregation description with the code.
     filters_D: Dict[FILTER-CODE, dict or list of filter description], from
@@ -173,13 +119,10 @@ def cross_graph_aggs_and_filters(
 
     Params:
     ----------------------
-    cros: 2-Tuple[AGG-CODE-LIST, FILTER-CODE-LIST], indicating how to pair
-      aggregations and filters.
+    cros: List of dict[aggs: AGG-CODE-LIST, conds: FILTER-CODE-DICT], indicating
+      how to pair aggregations and filters.
       AGG-CODE-LIST: List of str indicating the aggregations.
-      FILTER-CODE-LIST: List of str or tuple indicating the filters.
-        tuple: [FILTER-CODE, FILTER-BRANCHES,...]
-        str-tuple: <FILTER-CODE>.[FILTRE-BRANCHES,...]
-        simple str: filter-code from `filters_D`
+      FILTER-CODE-LIST: Dict indicating the filters for source, target or both.
     aggs_D: Dict[AGG-CODE, aggregation description], from which to get
       the aggregation description with the code.
     filters_D: Dict[FILTER-CODE, dict or list of filter description], from
@@ -200,8 +143,10 @@ def cross_graph_aggs_and_filters(
         conds = []
         # Outer Cartesian Product of aggregations and condition-groups.
         for agg_varn, agg_fn, agg_cmt in aggs_:
+            # Cross different conditions from different steps.
             for d_filter_grps in product(*[ele.items() for ele in
-                                           cros_item["filters"]]):
+                                           cros_item["conds"]]):
+                # Seperate directions and conds.
                 directions, filter_grps = list(zip(*d_filter_grps))
                 filters = [filters_D[fc] for fc in
                            chain.from_iterable(
@@ -212,26 +157,31 @@ def cross_graph_aggs_and_filters(
                 for cond_grp in product(*filters):
                     # Zip to gather the list of NAMEs, CONDITIONs and COMMENTs.
                     # And filter `NONE` in NAMEs, CONDITIONs and COMMENTs.
-                    cond_varn, cond_cond, cond_cmt = [
-                        list(filter(lambda x: x is not None, ele))
-                        for ele in zip(*cond_grp)
-                    ]
-                    cond_varn_str = "_".join(cond_varn)
+
+                    # ATTENTION: No None will be filtered out to keep the
+                    # length unchanged.
+                    cond_varn, cond_cond, cond_cmt = zip(*cond_grp)
+
+                    cond_varn_str = "_".join(
+                        filter(lambda x: x is not None, cond_varn))
                     cond_cond_strs = []
                     start, end = 0, 0
                     for direction, (rel_step, node_step) in zip(directions, fns):
                         end += rel_step
-                        rel_ccs = " & ".join([f"({ele})" for ele in
-                                              cond_cond[start: end]])
+                        rel_ccs = " & ".join([f"({ele})"
+                                              for ele in cond_cond[start: end]
+                                              if ele is not None])
                         start = end
 
                         end += node_step
-                        node_ccs = " & ".join([f"({ele})" for ele in
-                                               cond_cond[start: end]])
+                        node_ccs = " & ".join([f"({ele})"
+                                               for ele in cond_cond[start: end]
+                                               if ele is not None])
                         start = end
 
                         cond_cond_strs.append((direction, rel_ccs, node_ccs))
-                    cond_cmt_str = "".join(cond_cmt)
+                    cond_cmt_str = "".join(
+                        filter(lambda x: x is not None, cond_cmt))
 
                     # `_` will be repeated in some formation string with no filter set.
                     key_str = (key_fmt.format(cond=cond_varn_str, agg=agg_varn)

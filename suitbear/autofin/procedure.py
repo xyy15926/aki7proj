@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2024-11-04 11:04:45
+#   Updated: 2024-11-06 10:43:11
 #   Description:
 # ---------------------------------------------------------
 
@@ -21,9 +21,10 @@ if __name__ == "__main__":
     from flagbear import patterns, parser, fliper
     from modsbear import exgine
     from suitbear import finer
+    from suitbear import crosconf
     from suitbear.autofin import confflat, conftrans
     from suitbear.autofin import confagg
-    from suitbear.kgraph import kgenum, afrels, pbocrels
+    from suitbear.kgraph import kgenum, afrels, pbocrels, display
     from suitbear.autofin import graphagg
     from suitbear.kgraph import gxgine
     reload(patterns)
@@ -31,6 +32,7 @@ if __name__ == "__main__":
     reload(fliper)
     reload(exgine)
     reload(finer)
+    reload(crosconf)
     reload(confflat)
     reload(conftrans)
     reload(confagg)
@@ -78,6 +80,7 @@ from suitbear.autofin.graphagg import (df_graph_agg_confs,
                                        GRAPH_REL,
                                        GRAPH_NODE)
 from suitbear.kgraph.gxgine import gagg_on_dfs
+from suitbear.kgraph.display import save_as_html
 
 TRANS_ENV["today"] = pd.Timestamp.today()
 AUTOFIN_AGG_CONF = {**PERSONAL_CONF, **MASS_CONF}
@@ -334,10 +337,14 @@ if __name__ == "__main__":
     TRANS_ENV["infocode_map"] = df.set_index("infocode")["cats"]
 
     # Prepare mock data.
+    flat_pconfs, flat_fconfs = df_flat_confs()
     xlr = pd.ExcelFile(mock_file)
     dfs = {}
     for shname in xlr.sheet_names:
-        dfs[shname] = pd.read_excel(xlr, sheet_name=shname)
+        df = pd.read_excel(xlr, sheet_name=shname)
+        if "biztype" in df:
+            df["biztype"] = df["biztype"].astype(str)
+        dfs[shname] = df
     afrel_df, afnode_df = afrels.build_graph_df(dfs)
     pbrel_df, pbnode_df = pbocrels.build_graph_df(dfs)
     rel_df = (pd.concat([afrel_df, pbrel_df])
@@ -353,16 +360,4 @@ if __name__ == "__main__":
     dfs, agg_rets = autofin_vars(dfs)
     save_with_excel(agg_rets, "autofin/agg_rets")
     save_with_excel(dfs, "autofin/dfs")
-
-    import networkx as nx
-    from pyvis.network import Network
-    rel_dfc = rel_df.copy()
-    rel_dfc["update"] = rel_df["update"].dt.strftime("%Y%m%d")
-    dig = nx.from_pandas_edgelist(rel_dfc, source="source",
-                                  target="target",
-                                  edge_attr=True)
-    net = Network()
-    net.from_nx(dig)
-    fname = tmp_file("autofin/autofin_rels_graph.html")
-    # `Network` only support reltive path.
-    net.save_graph(os.path.relpath(fname))
+    save_as_html(rel_df, node_df, "autofin/autofin_graph")

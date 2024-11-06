@@ -3,13 +3,13 @@
 #   Name: confflat.py
 #   Author: xyy15926
 #   Created: 2024-09-28 15:24:40
-#   Updated: 2024-11-03 17:57:43
+#   Updated: 2024-11-05 21:30:36
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 from __future__ import annotations
-from typing import Any, TypeVar
+from typing import Any, TypeVar, TYPE_CHECKING
 from collections.abc import Mapping
 
 
@@ -103,13 +103,13 @@ LOAN_ACC_INFO = {
     "fields": [
         ("order_no"             , None  , "VARCHAR(31)"     , "订单编号"),
         ("certno"               , None  , "VARCHAR(31)"     , "身份证号"),
-        ("loan_date"            , None  , "VARCHAR(31)"     , "放款时间"),
+        ("loan_date"            , None  , "DATE"            , "放款时间"),
+        ("close_date"           , None  , "DATE"            , "关闭时间"),
         ("debit_card"           , None  , "VARCHAR(31)"     , "划扣卡号"),
         ("acc_status"           , None  , "VARCHAR(31)"     , "账户状态"),
-        ("pri_amt"              , None  , "INT"             , "融资金额"),
+        ("loan_pri"             , None  , "INT"             , "融资金额"),
         ("loan_ppor"            , None  , "FLOAT"           , "融资比例"),
         ("loan_term"            , None  , "INT"             , "期数"),
-        ("rem_pri"              , None  , "INT"             , "剩余本金"),
     ]
 }
 
@@ -191,6 +191,7 @@ AUTOFIN_PARTS = {
 # %%
 def df_flat_confs():
     import pandas as pd
+
     af_parts = []
     af_fields = []
     for val in AUTOFIN_PARTS.values():

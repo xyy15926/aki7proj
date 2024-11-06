@@ -3,7 +3,7 @@
 #   Name: kgenum.py
 #   Author: xyy15926
 #   Created: 2024-10-15 21:00:54
-#   Updated: 2024-10-31 15:18:27
+#   Updated: 2024-11-04 17:58:19
 #   Description:
 # ---------------------------------------------------------
 
@@ -30,13 +30,13 @@ class RelType(IntEnum):
 # %%
 @enum.unique
 class NodeType(IntEnum):
-    CERTNO = 1
+    CERTNO = 0
+    TEL = 1
     ORGNO = 2
     VIN = 3
-    TEL = 4
-    ORGNAME = 5
-    ADDR = 6
-    PACCNO = 7
+    ORGNAME = 4
+    ADDR = 5
+    PACCNO = 6
 
 
 NODE_TYPE_MAPPER = {

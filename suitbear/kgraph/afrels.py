@@ -3,7 +3,7 @@
 #   Name: confgraph.py
 #   Author: xyy15926
 #   Created: 2024-09-24 21:33:27
-#   Updated: 2024-11-03 20:47:46
+#   Updated: 2024-11-06 11:44:34
 #   Description:
 # ---------------------------------------------------------
 
@@ -13,7 +13,9 @@ from typing import TypeVar, TYPE_CHECKING
 if TYPE_CHECKING:
     import pandas as pd
 from itertools import product
-from suitbear.kgraph.kgenum import RelType, NodeType, RoleType, ROLE_TYPE_MAPPER
+from suitbear.kgraph.kgenum import (RelType, NodeType, RoleType,
+                                    NODE_TYPE_MAPPER,
+                                    ROLE_TYPE_MAPPER)
 from suitbear.autofin.confagg import LOAN_REPAYMENT, df_agg_confs
 from IPython.core.debugger import set_trace
 
@@ -519,13 +521,25 @@ def node_role_reprs(
                          f"作为{to_desc}被关联至{from_desc}")
                 reprs.append(repr_)
             elif (direction == "both"
-                    and node_type == node_types_D[from_node]["nattr"]["ntype"]
-                    and node_type == node_types_D[to_node]["nattr"]["ntype"]):
+                    and (node_type == node_types_D[from_node]["nattr"]["ntype"]
+                         or node_type == node_types_D[to_node]["nattr"]["ntype"])):
                 repr_ = (f"{to_key}_ft_{from_key}",
                          f"(source_role == {source_role}) "
                          f"& (target_role == {target_role})",
                          f"作为{to_desc}或{from_desc}相关联")
                 reprs.append(repr_)
+
+    return reprs
+
+
+# %%
+def ntype_reprs(ntypes: list[NodeType] = None) -> list[tuple]:
+    ntypes = NodeType if ntypes is None else ntypes
+    reprs = []
+    for nt in ntypes:
+        kd, cd = NODE_TYPE_MAPPER[nt]
+        reprs.append((kd, f"ntype == {nt.value}", cd))
+    reprs += [(None, None, None), ]
 
     return reprs
 
