@@ -3,7 +3,7 @@
 #   Name: pbocrels.py
 #   Author: xyy15926
 #   Created: 2024-10-15 21:02:53
-#   Updated: 2024-11-03 20:50:12
+#   Updated: 2024-11-07 16:41:48
 #   Description:
 # ---------------------------------------------------------
 
@@ -14,13 +14,28 @@ if TYPE_CHECKING:
     import pandas as pd
 
 from itertools import product
-from suitbear.kgraph.kgenum import RelType, NodeType, RoleType, ROLE_TYPE_MAPPER
+from suitbear.kgraph.kgenum import (RelSrc,
+                                    NodeType, NODE_TYPE_MAPPER,
+                                    LinkType, LINK_TYPE_MAPPER,
+                                    RoleType, ROLE_TYPE_MAPPER)
+
+import logging
+
+# %%
+logging.basicConfig(
+    format="%(module)s: %(asctime)s: %(levelname)s: %(message)s",
+    level=logging.INFO,
+    force=(__name__ == "__main__"),
+)
+logger = logging.getLogger()
+logger.info("Logging Start.")
+
 
 # %%
 REL_BASIC_INFO = {
     "part": "pboc_basic_info_rel",
     "from_": ["pboc_basic_info"],
-    "etype": RelType.PBOC,
+    "etype": RelSrc.PBOC,
     "nodes": {
         "certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -58,31 +73,31 @@ REL_BASIC_INFO = {
             "target": "PB01AQ02",
             "update": "PA01AR01",
             "rid": "rid",
+            "ltype": LinkType.N_RESI,
         },{
             "source": "certno",
             "target": "PB01AQ03",
             "update": "PA01AR01",
             "rid": "rid",
+            "ltype": LinkType.N_RESI,
         },{
             "source": "certno",
             "target": "PB020I01",
             "update": "PA01AR01",
             "rid": "rid",
+            "ltype": LinkType.N_SPOS,
         },{
             "source": "PB020I01",
             "target": "PB020Q02",
             "update": "PA01AR01",
             "rid": "rid",
+            "ltype": LinkType.N_COMP,
         },{
-            "source": "certno",
+            "source": "PB020I01",
             "target": "PB020Q03",
             "update": "PA01AR01",
             "rid": "rid",
-        },{
-            "source": "certno",
-            "target": "PB020Q02",
-            "update": "PA01AR01",
-            "rid": "rid",
+            "ltype": LinkType.NO_TEL,
         }
     ]
 }
@@ -92,7 +107,7 @@ REL_BASIC_INFO = {
 REL_MOBILE = {
     "part": "pboc_mobile_rel",
     "from_": ["pboc_mobile"],
-    "etype": RelType.PBOC,
+    "etype": RelSrc.PBOC,
     "nodes": {
         "certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -109,6 +124,7 @@ REL_MOBILE = {
             "target": "PB01BQ01",
             "update": "PB01BR01",
             "rid": "rid",
+            "ltype": LinkType.NO_TEL,
         }
     ]
 }
@@ -118,7 +134,7 @@ REL_MOBILE = {
 REL_ADDRESS = {
     "part": "pboc_address_rel",
     "from_": ["pboc_address"],
-    "etype": RelType.PBOC,
+    "etype": RelSrc.PBOC,
     "nodes": {
         "certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -141,11 +157,13 @@ REL_ADDRESS = {
             "target": "PB030Q01",
             "update": "PB030R01",
             "rid": "rid",
+            "ltype": LinkType.N_RESI,
         },{
             "source": "certno",
             "target": "PB030Q02",
             "update": "PB030R01",
             "rid": "rid",
+            "ltype": LinkType.NO_TEL,
         }
     ]
 }
@@ -155,7 +173,7 @@ REL_ADDRESS = {
 REL_COMPANY = {
     "part": "pboc_company_rel",
     "from_": ["pboc_company"],
-    "etype": RelType.PBOC,
+    "etype": RelSrc.PBOC,
     "nodes": {
         "certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -178,21 +196,39 @@ REL_COMPANY = {
         },
     },
     "rels": [
+        # 个人
         {
             "source": "certno",
             "target": "PB040Q01",
             "update": "PB040R01",
             "rid": "rid",
+            "ltype": LinkType.N_COMP,
         },{
             "source": "certno",
             "target": "PB040Q02",
             "update": "PB040R01",
             "rid": "rid",
+            "ltype": LinkType.N_RESI,
         },{
             "source": "certno",
             "target": "PB040Q03",
             "update": "PB040R01",
             "rid": "rid",
+            "ltype": LinkType.NL_TEL,
+        },
+        # 单位
+        {
+            "source": "PB040Q01",
+            "target": "PB040Q02",
+            "update": "PB040R01",
+            "rid": "rid",
+            "ltype": LinkType.M_RESI,
+        },{
+            "source": "PB040Q01",
+            "target": "PB040Q03",
+            "update": "PB040R01",
+            "rid": "rid",
+            "ltype": LinkType.MO_TEL,
         }
     ]
 }
@@ -202,7 +238,7 @@ REL_COMPANY = {
 REL_HOUSING_FUND = {
     "part": "pboc_housing_fund_rel",
     "from_": ["pboc_housing_fund"],
-    "etype": RelType.PBOC,
+    "etype": RelSrc.PBOC,
     "nodes": {
         "certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -219,6 +255,7 @@ REL_HOUSING_FUND = {
             "target": "PF05AQ04",
             "update": "PF05AR03",
             "rid": "rid",
+            "ltype": LinkType.N_COMP,
         }
     ]
 }
@@ -300,6 +337,50 @@ def node_role_reprs(
                          f"& (target_role == {target_role})",
                          f"作为{to_desc}或{from_desc}相关联")
                 reprs.append(repr_)
+
+    return reprs
+
+
+# %%
+def link_type_reprs(
+    ntype: NodeType,
+    direction: str = "both"
+) -> list[tuple]:
+    # Collect all possible link types for each kind of node types.
+    ns_ltypes = {}
+    for rec_conf in PBOC_GRAPH_CONFS.values():
+        node_types_D = rec_conf["nodes"]
+        for rel in rec_conf["rels"]:
+            for drt in ("source", "target"):
+                node = rel[drt]
+                cur_ntype = node_types_D[node]["nattr"]["ntype"]
+                n_ltypes = ns_ltypes.setdefault(cur_ntype, {})
+                _ltypes = n_ltypes.setdefault(drt, set())
+                _ltypes.add(rel["ltype"])
+
+    if ntype not in ns_ltypes:
+        logger.warning(f"No relations fits for the node type {ntype.name}.")
+        return []
+
+    # Construct reprs.
+    if direction == "source":
+        ltypes = (ns_ltypes[ntype].get(direction, []), [])
+    elif direction == "target":
+        ltypes = ([], ns_ltypes[ntype].get(direction, []))
+    else:
+        ltypes = (ns_ltypes[ntype].get("source", []),
+                  ns_ltypes[ntype].get("target", []))
+
+    reprs = []
+    for lt in ltypes[0]:
+        kdesc, cdesc = LINK_TYPE_MAPPER[lt][0]
+        reprs.append((kdesc, f"ltype == {lt.value}", cdesc))
+    for lt in ltypes[1]:
+        kdesc, cdesc = LINK_TYPE_MAPPER[lt][1]
+        reprs.append((kdesc, f"ltype == {lt.value}", cdesc))
+
+    if len(reprs) == 0:
+        logger.warning(f"No relations fits for the node type {ntype.name}.")
 
     return reprs
 

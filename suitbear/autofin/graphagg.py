@@ -3,7 +3,7 @@
 #   Name: graphagg.py
 #   Author: xyy15926
 #   Created: 2024-10-15 09:13:32
-#   Updated: 2024-11-06 20:16:34
+#   Updated: 2024-11-07 17:27:28
 #   Description:
 # ---------------------------------------------------------
 
@@ -44,7 +44,6 @@ def none_of_all():
 
 
 # %%
-# TODO
 GREL_CERTNO_DP1 = {
     "part": "grel_certno_dp1",
     "desc": "身份证1度关联",
@@ -52,12 +51,10 @@ GREL_CERTNO_DP1 = {
     "prikey": ["nid"],
     "depth": 1,
     "ntype": [NodeType.CERTNO, ],
-    "key_fmt": "{cond}_{agg}",
+    "key_fmt": "certno_{cond}_{agg}",
     "cond": {
-        "rel_type_src": (afrels.node_role_reprs(NodeType.CERTNO, "source")
-                         + pbocrels.node_role_reprs(NodeType.CERTNO, "source")),
-        "rel_type_tgt": (afrels.node_role_reprs(NodeType.CERTNO, "target")
-                         + pbocrels.node_role_reprs(NodeType.CERTNO, "target")),
+        "link_type": (afrels.link_type_reprs(NodeType.CERTNO, "both")
+                      + pbocrels.link_type_reprs(NodeType.CERTNO, "both")),
         "dois": last_dois("day_itvl(update, today)"),
         "NONE": none_of_all(),
     },
@@ -69,17 +66,10 @@ GREL_CERTNO_DP1 = {
             "aggs": ["cnt",],
             "conds": [
                 {
-                    "source": (["rel_type_src", "dois"], ["NONE"]),
+                    "both": (["link_type", "dois"], ["NONE"]),
                 }
             ]
-        },{
-            "aggs": ["cnt",],
-            "conds": [
-                {
-                    "target": (["rel_type_tgt", "dois"], ["NONE"]),
-                }
-            ]
-        },
+        }
     ]
 }
 
@@ -92,12 +82,10 @@ GREL_TEL_DP1 = {
     "prikey": ["nid"],
     "depth": 1,
     "ntype": [NodeType.TEL, ],
-    "key_fmt": "{cond}_{agg}",
+    "key_fmt": "tel_{cond}_{agg}",
     "cond": {
-        "rel_type_src": (afrels.node_role_reprs(NodeType.TEL, "source")
-                         + pbocrels.node_role_reprs(NodeType.TEL, "source")),
-        "rel_type_tgt": (afrels.node_role_reprs(NodeType.TEL, "target")
-                         + pbocrels.node_role_reprs(NodeType.TEL, "target")),
+        "link_type": (afrels.link_type_reprs(NodeType.TEL, "both")
+                      + pbocrels.link_type_reprs(NodeType.TEL, "both")),
         "dois": last_dois("day_itvl(update, today)"),
         "NONE": none_of_all(),
     },
@@ -109,17 +97,10 @@ GREL_TEL_DP1 = {
             "aggs": ["cnt",],
             "conds": [
                 {
-                    "source": (["rel_type_src", "dois"], ["NONE"]),
+                    "both": (["link_type", "dois"], ["NONE"]),
                 }
             ]
-        },{
-            "aggs": ["cnt",],
-            "conds": [
-                {
-                    "target": (["rel_type_tgt", "dois"], ["NONE"]),
-                }
-            ]
-        },
+        }
     ]
 }
 
@@ -132,9 +113,10 @@ GREL_VIN_DP1 = {
     "prikey": ["nid"],
     "depth": 1,
     "ntype": [NodeType.VIN],
-    "key_fmt": "{cond}_{agg}",
+    "key_fmt": "vin_{cond}_{agg}",
     "cond": {
-        "vin_rel_type": (afrels.node_role_reprs(NodeType.VIN, "both")),
+        "link_type": (afrels.link_type_reprs(NodeType.VIN, "both")
+                      + pbocrels.link_type_reprs(NodeType.VIN, "both")),
         "dois": last_dois("day_itvl(update, today)"),
         "NONE": none_of_all(),
     },
@@ -146,7 +128,7 @@ GREL_VIN_DP1 = {
             "aggs": ["cnt",],
             "conds": [
                 {
-                    "both": (["vin_rel_type", "dois"], ["NONE"]),
+                    "both": (["link_type", "dois"], ["NONE"]),
                 }
             ]
         },
@@ -154,9 +136,72 @@ GREL_VIN_DP1 = {
 }
 
 
+# %%
+GREL_ORGNAME_DP1 = {
+    "part": "grel_orgname_dp1",
+    "desc": "机构名称1度关联",
+    "from_": ["GRAPH_REL"],
+    "prikey": ["nid"],
+    "depth": 1,
+    "ntype": [NodeType.ORGNAME],
+    "key_fmt": "orgname_{cond}_{agg}",
+    "cond": {
+        "link_type": (afrels.link_type_reprs(NodeType.ORGNAME, "both")
+                      + pbocrels.link_type_reprs(NodeType.ORGNAME, "both")),
+        "dois": last_dois("day_itvl(update, today)"),
+        "NONE": none_of_all(),
+    },
+    "agg": {
+        "cnt": ("cnt", "count(_)", "数量"),
+    },
+    "cros": [
+        {
+            "aggs": ["cnt",],
+            "conds": [
+                {
+                    "both": (["link_type", "dois"], ["NONE"]),
+                }
+            ]
+        },
+    ]
+}
+
+
+# %%
+GREL_ADDR_DP1 = {
+    "part": "grel_addr_dp1",
+    "desc": "地址1度关联",
+    "from_": ["GRAPH_REL"],
+    "prikey": ["nid"],
+    "depth": 1,
+    "ntype": [NodeType.ADDR, ],
+    "key_fmt": "addr_{cond}_{agg}",
+    "cond": {
+        "rel_type": (afrels.link_type_reprs(NodeType.ADDR, "both")
+                     + pbocrels.link_type_reprs(NodeType.ADDR, "both")),
+        "dois": last_dois("day_itvl(update, today)"),
+        "NONE": none_of_all(),
+    },
+    "agg": {
+        "cnt": ("cnt", "count(_)", "数量"),
+    },
+    "cros": [
+        {
+            "aggs": ["cnt",],
+            "conds": [
+                {
+                    "both": (["rel_type", "dois"], ["NONE"]),
+                }
+            ]
+        },
+    ]
+}
+
+
+# %%
 GREL_VIN_DP2 = {
     "part": "grel_vin_dp2",
-    "desc": "车架号1度关联",
+    "desc": "测试多层次-车架号1度关联",
     "from_": ["GRAPH_REL"],
     "prikey": ["nid"],
     "depth": 2,
@@ -189,75 +234,14 @@ GREL_VIN_DP2 = {
 }
 
 
-
-# %%
-GREL_ORGNO_DP1 = {
-    "part": "grel_orgno_dp1",
-    "desc": "统一代码1度关联",
-    "from_": ["GRAPH_REL"],
-    "prikey": ["nid"],
-    "depth": 1,
-    "ntype": [NodeType.ORGNO],
-    "key_fmt": "{cond}_{agg}",
-    "cond": {
-        "rel_type": (afrels.node_role_reprs(NodeType.ORGNO, "both")),
-        "dois": last_dois("day_itvl(update, today)"),
-        "NONE": none_of_all(),
-    },
-    "agg": {
-        "cnt": ("cnt", "count(_)", "数量"),
-    },
-    "cros": [
-        {
-            "aggs": ["cnt",],
-            "conds": [
-                {
-                    "both": (["rel_type", "dois"], ["NONE"]),
-                }
-            ]
-        },
-    ]
-}
-
-
-# %%
-GREL_ORGNAME_DP1 = {
-    "part": "grel_orgname_dp1",
-    "desc": "机构名称1度关联",
-    "from_": ["GRAPH_REL"],
-    "prikey": ["nid"],
-    "depth": 1,
-    "ntype": [NodeType.ORGNAME],
-    "key_fmt": "{cond}_{agg}",
-    "cond": {
-        "rel_type": (afrels.node_role_reprs(NodeType.ORGNAME, "both")),
-        "dois": last_dois("day_itvl(update, today)"),
-        "NONE": none_of_all(),
-    },
-    "agg": {
-        "cnt": ("cnt", "count(_)", "数量"),
-    },
-    "cros": [
-        {
-            "aggs": ["cnt",],
-            "conds": [
-                {
-                    "both": (["rel_type", "dois"], ["NONE"]),
-                }
-            ]
-        },
-    ]
-}
-
-
 # %%
 GRAPH_LINKS_CONF = {
     GREL_CERTNO_DP1["part"]     : GREL_CERTNO_DP1,
     GREL_TEL_DP1["part"]        : GREL_TEL_DP1,
     GREL_VIN_DP1["part"]        : GREL_VIN_DP1,
-    GREL_VIN_DP2["part"]        : GREL_VIN_DP2,
-    GREL_ORGNO_DP1["part"]      : GREL_ORGNO_DP1,
     GREL_ORGNAME_DP1["part"]    : GREL_ORGNAME_DP1,
+    GREL_ADDR_DP1["part"]       : GREL_ADDR_DP1,
+    GREL_VIN_DP2["part"]        : GREL_VIN_DP2,
 }
 
 

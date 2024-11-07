@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2024-11-06 10:43:11
+#   Updated: 2024-11-06 21:15:12
 #   Description:
 # ---------------------------------------------------------
 
@@ -116,13 +116,13 @@ def write_autofin_confs(conf_file: str):
 
     pboc_pconfs, pboc_node_confs, pboc_rel_confs = pbocrels.df_graph_confs()
     dfs["pboc_graph_parts"] = pboc_pconfs
-    dfs["pboc_graph_rels"] = pboc_rel_confs
     dfs["pboc_graph_nodes"] = pboc_node_confs
+    dfs["pboc_graph_rels"] = pboc_rel_confs
 
-    af_gconfs, af_rel_confs, af_node_confs = afrels.df_graph_confs()
+    af_gconfs, af_node_confs, af_rel_confs = afrels.df_graph_confs()
     dfs["autofin_graph_parts"] = af_gconfs
-    dfs["autofin_graph_rels"] = af_rel_confs
     dfs["autofin_graph_nodes"] = af_node_confs
+    dfs["autofin_graph_rels"] = af_rel_confs
 
     graph_agg_pconfs, graph_agg_fconfs = df_graph_agg_confs()
     dfs["graph_var_parts"] = graph_agg_pconfs
@@ -358,6 +358,7 @@ if __name__ == "__main__":
         dfs[ele.value] = node_df
 
     dfs, agg_rets = autofin_vars(dfs)
+
     save_with_excel(agg_rets, "autofin/agg_rets")
     save_with_excel(dfs, "autofin/dfs")
     save_as_html(rel_df, node_df, "autofin/autofin_graph")

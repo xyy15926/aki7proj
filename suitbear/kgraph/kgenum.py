@@ -3,7 +3,7 @@
 #   Name: kgenum.py
 #   Author: xyy15926
 #   Created: 2024-10-15 21:00:54
-#   Updated: 2024-11-04 17:58:19
+#   Updated: 2024-11-07 17:29:43
 #   Description:
 # ---------------------------------------------------------
 
@@ -22,12 +22,13 @@ from enum import IntEnum
 #    `RoleType`
 # `IntEnum` is JSON-serializable.
 @enum.unique
-class RelType(IntEnum):
+class RelSrc(IntEnum):
     PBOC = 1
     AUTOFIN = 2
 
 
 # %%
+# 1. 枚举值从 0 开始是为了兼容 `pyecharts.Graph` 筛选节点分类
 @enum.unique
 class NodeType(IntEnum):
     CERTNO = 0
@@ -81,7 +82,9 @@ class RoleType(IntEnum):
     RETAILER_REP_TEL = 207
     SP_CERTNO = 105
     SP_TEL = 208
-    REPAY_ACCNO = 701
+    BUCKLE_ACCNO = 701
+    REPAY_ACCNO = 702
+    RETAILER_NAME = 603
 
 
 ROLE_TYPE_MAPPER = {
@@ -107,7 +110,53 @@ ROLE_TYPE_MAPPER = {
     RoleType.RETAILER_REP_TEL: ("ret_rep_tel", "门店法人代表手机号", NodeType.TEL),
     RoleType.SP_CERTNO: ("sp_certno", "SP身份证号", NodeType.CERTNO),
     RoleType.SP_TEL: ("sp_tel", "SP手机号", NodeType.TEL),
+    RoleType.BUCKLE_ACCNO: ("buckle_accno", "划扣卡号", NodeType.PACCNO),
     RoleType.REPAY_ACCNO: ("repay_accno", "还款卡号", NodeType.PACCNO),
+    RoleType.RETAILER_NAME: ("retailer_name", "门店名称", NodeType.ORGNAME),
+}
+
+
+# %%
+# 1. 自然人主体用身份证号，清晰、准确
+# 2. 企业主体多数未获取统一代码，则使用企业名称作为主体
+@enum.unique
+class LinkType(IntEnum):
+    # 自然人主体关系
+    N_SPOS = 1
+    N_CNTC = 2
+    NO_CAR = 3
+    N_COMP = 4
+    NO_TEL = 5
+    NL_TEL = 6
+    N_RESI = 7
+    N_PACC = 8
+    N_PURCH_N = 9
+    N_PURCH_M = 10
+    N_FIN_N = 11
+    N_FIN_M = 12
+    # 企业主体
+    MO_TEL = 99
+    M_ORGNO = 98
+    M_RESI = 97
+
+
+# 映射关联类型、关系描述
+LINK_TYPE_MAPPER = {
+    LinkType.N_SPOS: [("cping", "配偶"), ("cped", "被配偶")],
+    LinkType.N_CNTC: [("cntcing", "联系人"), ("cntced", "被联系人")],
+    LinkType.NO_CAR: [("caring", "拥有车辆"), ("cared", "所属人")],
+    LinkType.N_COMP: [("comping", "工作机构"), ("comped", "机构包含")],
+    LinkType.NO_TEL: [("teling", "拥有电话"), ("teled", "电话所属人")],
+    LinkType.NL_TEL: [("lteling", "关联电话"), ("lteled", "电话关联人")],
+    LinkType.N_RESI: [("resing", "地址"), ("resed", "地址关联")],
+    LinkType.N_PACC: [("payby", "还款账户"), ("payfor", "付款对象")],
+    LinkType.N_PURCH_N: [("pselln", "金融销售"), ("pbuyer", "交易客户")],
+    LinkType.N_PURCH_M: [("psellm", "金融机构"), ("pbuyer", "交易客户")],
+    LinkType.N_FIN_N: [("fselln", "交易销售"), ("fbuyer", "客户")],
+    LinkType.N_FIN_M: [("fsellm", "交易机构"), ("fbuyer", "客户")],
+    LinkType.MO_TEL: [("mteling", "机构拥有电话"), ("mteled", "电话所属机构")],
+    LinkType.M_ORGNO: [("orgnoing", "机构号"), ("orgnoed", "机构名")],
+    LinkType.M_RESI: [("resing", "地址"), ("resed", "地址关联")],
 }
 
 

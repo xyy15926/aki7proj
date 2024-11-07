@@ -3,7 +3,7 @@
 #   Name: confflat.py
 #   Author: xyy15926
 #   Created: 2024-09-28 15:24:40
-#   Updated: 2024-11-05 21:30:36
+#   Updated: 2024-11-07 15:57:25
 #   Description:
 # ---------------------------------------------------------
 
@@ -70,6 +70,7 @@ AUTOFIN_SECTRIAL = {
         ("link5_tel"            , None  , "VARCHAR(31)"     , "联系人手机号"),
         ("vin"                  , None  , "VARCHAR(31)"     , "车辆VIN码"),
         ("retailer_orgno"       , None  , "VARCHAR(31)"     , "门店统一社会信用代码"),
+        ("retailer_name"        , None  , "VARCHAR(1022)"   , "门店名称"),
         ("res_addr"             , None  , "VARCHAR(1022)"   , "居住地址"),
         ("res_tel"              , None  , "VARCHAR(31)"     , "住址电话"),
         ("domi_addr"            , None  , "VARCHAR(31)"     , "户籍地"),

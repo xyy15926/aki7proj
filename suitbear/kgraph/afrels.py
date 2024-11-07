@@ -3,7 +3,7 @@
 #   Name: confgraph.py
 #   Author: xyy15926
 #   Created: 2024-09-24 21:33:27
-#   Updated: 2024-11-06 11:44:34
+#   Updated: 2024-11-07 16:20:46
 #   Description:
 # ---------------------------------------------------------
 
@@ -13,18 +13,29 @@ from typing import TypeVar, TYPE_CHECKING
 if TYPE_CHECKING:
     import pandas as pd
 from itertools import product
-from suitbear.kgraph.kgenum import (RelType, NodeType, RoleType,
-                                    NODE_TYPE_MAPPER,
-                                    ROLE_TYPE_MAPPER)
+from suitbear.kgraph.kgenum import (RelSrc,
+                                    NodeType, NODE_TYPE_MAPPER,
+                                    RoleType, ROLE_TYPE_MAPPER,
+                                    LinkType, LINK_TYPE_MAPPER)
 from suitbear.autofin.confagg import LOAN_REPAYMENT, df_agg_confs
-from IPython.core.debugger import set_trace
+
+import logging
+
+# %%
+logging.basicConfig(
+    format="%(module)s: %(asctime)s: %(levelname)s: %(message)s",
+    level=logging.INFO,
+    force=(__name__ == "__main__"),
+)
+logger = logging.getLogger()
+logger.info("Logging Start.")
 
 
 # %%
 REL_AUTOFIN_PRETRIAL = {
     "part": "rel_autofin_pretrial",
     "from_": ["autofin_pretrial"],
-    "etype": RelType.AUTOFIN,
+    "etype": RelSrc.AUTOFIN,
     "nodes": {
         "certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -45,11 +56,13 @@ REL_AUTOFIN_PRETRIAL = {
             "target": "tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
         },{
             "source": "certno",
             "target": "saler_certno",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.N_FIN_N,
         },
     ]
 }
@@ -59,7 +72,7 @@ REL_AUTOFIN_PRETRIAL = {
 REL_AUTOFIN_SECTRIAL = {
     "part": "rel_autofin_sectrial",
     "from_": ["autofin_sectrial"],
-    "etype": RelType.AUTOFIN,
+    "etype": RelSrc.AUTOFIN,
     "nodes": {
         "certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -77,6 +90,7 @@ REL_AUTOFIN_SECTRIAL = {
             "nattr": {"ntype": NodeType.TEL, },
             "rattr": {"role": RoleType.SPOS_TEL, },
         },
+        # 至多 5 联系人
         "link1_certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
             "rattr": {"role": RoleType.LINK_CERTNO, },
@@ -117,6 +131,7 @@ REL_AUTOFIN_SECTRIAL = {
             "nattr": {"ntype": NodeType.TEL, },
             "rattr": {"role": RoleType.LINK_TEL, },
         },
+        # 车、交易、工作、地址
         "vin": {
             "nattr": {"ntype": NodeType.VIN, },
             "rattr": {"role": RoleType.APPLYIED_VIN, },
@@ -124,6 +139,10 @@ REL_AUTOFIN_SECTRIAL = {
         "retailer_orgno": {
             "nattr": {"ntype": NodeType.ORGNO, },
             "rattr": {"role": RoleType.RETAILER_ORGNO, },
+        },
+        "retailer_name": {
+            "nattr": {"ntype": NodeType.ORGNAME, },
+            "rattr": {"role": RoleType.RETAILER_NAME, },
         },
         "res_addr": {
             "nattr": {"ntype": NodeType.ADDR, },
@@ -162,160 +181,216 @@ REL_AUTOFIN_SECTRIAL = {
             "rattr": {"role": RoleType.SPOS_COMP_TEL, },
         },
     },
+    # 身份证号、手机号、车架号、统一代码关联
     "rels": [
-        # 身份证号、手机号、车架号、统一代码关联
         {
             "source": "certno",
             "target": "tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
         },{
             "source": "certno",
             "target": "spos_certno",
             "update": "apply_date",
             "rid": "order_no",
-        },{
-            "source": "certno",
-            "target": "spos_tel",
-            "update": "apply_date",
-            "rid": "order_no",
+            "ltype": LinkType.N_SPOS,
         },{
             "source": "spos_certno",
             "target": "spos_tel",
             "update": "apply_date",
             "rid": "order_no",
-        },{
+            "ltype": LinkType.NO_TEL,
+        },
+        # 联系人
+        {
             "source": "certno",
             "target": "link1_certno",
             "update": "apply_date",
             "rid": "order_no",
-        },{
-            "source": "certno",
-            "target": "link1_tel",
-            "update": "apply_date",
-            "rid": "order_no",
+            "ltype": LinkType.N_CNTC,
         },{
             "source": "link1_certno",
             "target": "link1_tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
+        },{
+            "source": "certno",
+            "target": "link1_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
         },{
             "source": "certno",
             "target": "link2_certno",
             "update": "apply_date",
             "rid": "order_no",
-        },{
-            "source": "certno",
-            "target": "link2_tel",
-            "update": "apply_date",
-            "rid": "order_no",
+            "ltype": LinkType.N_CNTC,
         },{
             "source": "link2_certno",
             "target": "link2_tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
+        },{
+            "source": "certno",
+            "target": "link2_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
         },{
             "source": "certno",
             "target": "link3_certno",
             "update": "apply_date",
             "rid": "order_no",
-        },{
-            "source": "certno",
-            "target": "link3_tel",
-            "update": "apply_date",
-            "rid": "order_no",
+            "ltype": LinkType.N_CNTC,
         },{
             "source": "link3_certno",
             "target": "link3_tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
+        },{
+            "source": "certno",
+            "target": "link3_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
         },{
             "source": "certno",
             "target": "link4_certno",
             "update": "apply_date",
             "rid": "order_no",
-        },{
-            "source": "certno",
-            "target": "link4_tel",
-            "update": "apply_date",
-            "rid": "order_no",
+            "ltype": LinkType.N_CNTC,
         },{
             "source": "link4_certno",
             "target": "link4_tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
+        },{
+            "source": "certno",
+            "target": "link4_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
         },{
             "source": "certno",
             "target": "link5_certno",
             "update": "apply_date",
             "rid": "order_no",
-        },{
-            "source": "certno",
-            "target": "link5_tel",
-            "update": "apply_date",
-            "rid": "order_no",
+            "ltype": LinkType.N_CNTC,
         },{
             "source": "link5_certno",
             "target": "link5_tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
         },{
+            "source": "certno",
+            "target": "link5_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
+        },
+        # 车、交易
+        {
             "source": "certno",
             "target": "vin",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_CAR,
         },{
             "source": "certno",
-            "target": "retailer_orgno",
+            "target": "retailer_name",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.N_PURCH_M,
         },
-        # 地址、机构名称、机构电话关联
+        # 居住地
         {
             "source": "certno",
             "target": "res_addr",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.N_RESI,
         },{
             "source": "certno",
             "target": "res_tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
         },{
             "source": "certno",
             "target": "domi_addr",
             "update": "apply_date",
             "rid": "order_no",
-        },{
+            "ltype": LinkType.N_RESI,
+        },
+        # 工作
+        {
             "source": "certno",
             "target": "comp_name",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.N_COMP,
+        },{
+            "source": "comp_name",
+            "target": "comp_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.MO_TEL,
         },{
             "source": "certno",
             "target": "comp_tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
+        },{
+            "source": "comp_name",
+            "target": "comp_addr",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.M_RESI,
         },{
             "source": "certno",
             "target": "comp_addr",
             "update": "apply_date",
             "rid": "order_no",
-        },{
+            "ltype": LinkType.N_RESI,
+        },
+        # 配偶信息
+        {
             "source": "spos_certno",
             "target": "spos_comp_name",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.N_COMP,
+        },{
+            "source": "spos_comp_name",
+            "target": "spos_comp_addr",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.M_RESI,
         },{
             "source": "spos_certno",
             "target": "spos_comp_addr",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.N_RESI,
+        },{
+            "source": "spos_comp_name",
+            "target": "spos_comp_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.MO_TEL,
         },{
             "source": "spos_certno",
             "target": "spos_comp_tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
         },
     ]
 }
@@ -325,7 +400,7 @@ REL_AUTOFIN_SECTRIAL = {
 REL_AUTOFIN_RETAIL = {
     "part": "rel_autofin_retail",
     "from_": ["autofin_retail"],
-    "etype": RelType.AUTOFIN,
+    "etype": RelSrc.AUTOFIN,
     "nodes": {
         "rep_certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -339,6 +414,10 @@ REL_AUTOFIN_RETAIL = {
             "nattr": {"ntype": NodeType.ORGNO, },
             "rattr": {"role": RoleType.RETAILER_ORGNO, },
         },
+        "orgname": {
+            "nattr": {"ntype": NodeType.ORGNAME, },
+            "rattr": {"role": RoleType.RETAILER_NAME, },
+        },
         "org_addr": {
             "nattr": {"ntype": NodeType.ADDR, },
             "rattr": {"role": RoleType.RETAILER_ADDR, },
@@ -346,28 +425,39 @@ REL_AUTOFIN_RETAIL = {
     },
     "rels": [
         {
-            "source": "orgno",
-            "target": "org_addr",
+            "source": "rep_certno",
+            "target": "orgname",
             "update": "apply_date",
             "rid": "order_no",
-        },{
-            "source": "orgno",
-            "target": "rep_certno",
-            "update": "apply_date",
-            "rid": "order_no",
+            "ltype": LinkType.N_COMP,
         },{
             "source": "rep_certno",
             "target": "rep_tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
+        },{
+            "source": "orgname",
+            "target": "org_addr",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.M_RESI,
+        },{
+            "source": "orgname",
+            "target": "orgno",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.M_ORGNO,
         }
     ]
 }
 
+
+# %%
 REL_AUTOFIN_SALER = {
     "part": "rel_autofin_saler",
     "from_": ["autofin_saler"],
-    "etype": RelType.AUTOFIN,
+    "etype": RelSrc.AUTOFIN,
     "nodes": {
         "certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -384,6 +474,7 @@ REL_AUTOFIN_SALER = {
             "target": "tel",
             "update": "apply_date",
             "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
         },
     ]
 }
@@ -393,7 +484,7 @@ REL_AUTOFIN_SALER = {
 REL_LOAN_ACC_INFO = {
     "part": "rel_loan_acc_info",
     "from_": ["loan_acc_info"],
-    "etype": RelType.AUTOFIN,
+    "etype": RelSrc.AUTOFIN,
     "nodes": {
         "certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -401,7 +492,7 @@ REL_LOAN_ACC_INFO = {
         },
         "debit_card": {
             "nattr": {"ntype": NodeType.PACCNO, },
-            "rattr": {"role": RoleType.REPAY_ACCNO, },
+            "rattr": {"role": RoleType.BUCKLE_ACCNO, },
         }
     },
     "rels": [
@@ -410,6 +501,7 @@ REL_LOAN_ACC_INFO = {
             "target": "debit_card",
             "update": "loan_date",
             "rid": "order_no",
+            "ltype": LinkType.N_PACC,
         }
     ]
 }
@@ -417,7 +509,7 @@ REL_LOAN_ACC_INFO = {
 REL_REPAYMENT_MONTHLY = {
     "part": "rel_repayment_monthly",
     "from_": ["loan_repayment_monthly"],
-    "etype": RelType.AUTOFIN,
+    "etype": RelSrc.AUTOFIN,
     "nodes": {
         "certno": {
             "nattr": {"ntype": NodeType.CERTNO, },
@@ -434,6 +526,7 @@ REL_REPAYMENT_MONTHLY = {
             "target": "repay_card",
             "update": "repay_date",
             "rid": "order_no",
+            "ltype": LinkType.N_PACC,
         }
     ]
 }
@@ -443,7 +536,7 @@ REL_REPAYMENT_MONTHLY = {
 NODE_LOAN_REPAYMENT = {
     "part": "node_loan_repayment_monthly",
     "from_": [LOAN_REPAYMENT["part"],],
-    "etype": RelType.AUTOFIN,
+    "etype": RelSrc.AUTOFIN,
     "nodes": {
         "certno": {key: key for key in df_agg_confs(
             {LOAN_REPAYMENT["part"]: LOAN_REPAYMENT})[1]["key"].values},
@@ -477,6 +570,7 @@ for key, val in AUTOFIN_GRAPH_CONFS.items():
 
 
 # %%
+# 分类过多、太细，无意义
 def node_role_reprs(
     node_type: int = NodeType.CERTNO,
     direction: str = "source",
@@ -528,6 +622,50 @@ def node_role_reprs(
                          f"& (target_role == {target_role})",
                          f"作为{to_desc}或{from_desc}相关联")
                 reprs.append(repr_)
+
+    return reprs
+
+
+# %%
+def link_type_reprs(
+    ntype: NodeType,
+    direction: str = "both"
+) -> list[tuple]:
+    # Collect all possible link types for each kind of node types.
+    ns_ltypes = {}
+    for rec_conf in AUTOFIN_GRAPH_CONFS.values():
+        node_types_D = rec_conf["nodes"]
+        for rel in rec_conf["rels"]:
+            for drt in ("source", "target"):
+                node = rel[drt]
+                cur_ntype = node_types_D[node]["nattr"]["ntype"]
+                n_ltypes = ns_ltypes.setdefault(cur_ntype, {})
+                _ltypes = n_ltypes.setdefault(drt, set())
+                _ltypes.add(rel["ltype"])
+
+    if ntype not in ns_ltypes:
+        logger.warning(f"No relations fits for the node type {ntype.name}.")
+        return []
+
+    # Construct reprs.
+    if direction == "source":
+        ltypes = (ns_ltypes[ntype].get(direction, []), [])
+    elif direction == "target":
+        ltypes = ([], ns_ltypes[ntype].get(direction, []))
+    else:
+        ltypes = (ns_ltypes[ntype].get("source", []),
+                  ns_ltypes[ntype].get("target", []))
+
+    reprs = []
+    for lt in ltypes[0]:
+        kdesc, cdesc = LINK_TYPE_MAPPER[lt][0]
+        reprs.append((kdesc, f"ltype == {lt.value}", cdesc))
+    for lt in ltypes[1]:
+        kdesc, cdesc = LINK_TYPE_MAPPER[lt][1]
+        reprs.append((kdesc, f"ltype == {lt.value}", cdesc))
+
+    if len(reprs) == 0:
+        logger.warning(f"No relations fits for the node type {ntype.name}.")
 
     return reprs
 
@@ -624,7 +762,6 @@ def build_graph_df(
       should be with these elements:
       part: The part name for the graph.
       from_: The part name from where to construct the graph.
-      etype: Relation label indicating the relation type.
       nodes: Dict of the fields acting as the nodes.
         Mandatory labels:
           ntype: Node label indicating the node type.

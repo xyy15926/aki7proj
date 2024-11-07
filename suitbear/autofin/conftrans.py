@@ -158,7 +158,7 @@ def merge_certno_perday(df: pd.DataFrame):
             set(sub_df["approval_codes"].dropna().values))
         return ser
 
-    df = (df.groupby(["biztype", "certno", "apply_date"])
+    df = (df.groupby(["biztype", "channel_code", "certno", "apply_date"])
           .apply(drop_and_merge)
           .reset_index(drop=True))
 
