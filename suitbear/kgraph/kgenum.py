@@ -164,6 +164,7 @@ LINK_TYPE_MAPPER = {
 ENUM_MAPPERS = {
     "node_type": NODE_TYPE_MAPPER,
     "role_type": ROLE_TYPE_MAPPER,
+    "link_type": LINK_TYPE_MAPPER,
 }
 
 
