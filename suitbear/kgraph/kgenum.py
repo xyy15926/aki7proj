@@ -3,7 +3,7 @@
 #   Name: kgenum.py
 #   Author: xyy15926
 #   Created: 2024-10-15 21:00:54
-#   Updated: 2024-11-07 17:29:43
+#   Updated: 2024-11-08 16:33:38
 #   Description:
 # ---------------------------------------------------------
 
@@ -28,16 +28,15 @@ class RelSrc(IntEnum):
 
 
 # %%
-# 1. 枚举值从 0 开始是为了兼容 `pyecharts.Graph` 筛选节点分类
 @enum.unique
 class NodeType(IntEnum):
-    CERTNO = 0
-    TEL = 1
-    ORGNO = 2
-    VIN = 3
-    ORGNAME = 4
-    ADDR = 5
-    PACCNO = 6
+    CERTNO = 1
+    TEL = 2
+    ORGNO = 3
+    VIN = 4
+    ORGNAME = 5
+    ADDR = 6
+    PACCNO = 7
 
 
 NODE_TYPE_MAPPER = {

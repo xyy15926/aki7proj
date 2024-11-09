@@ -3,7 +3,7 @@
 #   Name: display.py
 #   Author: xyy15926
 #   Created: 2024-11-04 16:41:52
-#   Updated: 2024-11-04 18:39:48
+#   Updated: 2024-11-08 16:27:43
 #   Description:
 # ---------------------------------------------------------
 
@@ -41,17 +41,20 @@ def save_as_html(
                           | node_df["nid"].isin(rel_df["target"])]
         # Set node categories.
         categories = [{"name": nt.name} for nt in NodeType]
+        cat_map = {nt.value: idx for idx, nt in enumerate(NodeType)}
+        # Echcarts graph html with duplicated nodes won't render correctly.
+        node_df = (pd.DataFrame({"name": node_df["nid"],
+                                 "category": node_df["ntype"].map(cat_map)})
+                   .drop_duplicates(subset="name"))
     else:
         node_df = (pd.concat([rel_df["source"], rel_df["target"]])
                    .drop_duplicates()
-                   .to_frame("nid"))
-        node_df["ntype"] = 0
+                   .to_frame("name"))
+        node_df["category"] = 0
         categories = [{"name": "undefined"}]
 
     # Prepare nodes and links.
-    nodes = (node_df[["nid", "ntype"]]
-             .rename({"nid": "name", "ntype": "category"}, axis=1)
-             .to_dict("records"))
+    nodes = node_df.to_dict("records")
 
     links = (rel_df[["source", "target"]]
              .to_dict("records"))
@@ -92,7 +95,7 @@ def save_as_html(
             )
         )
     )
-    ghtml = g.render(tmp_file(fname).with_suffix(".html"))
+    ghtml = g.render(tmp_file(fname, incr=0).with_suffix(".html"))
     logger.info(f"Graph saved at {ghtml}.")
 
     return g
