@@ -3,7 +3,7 @@
 #   Name: networkx.py
 #   Author: xyy15926
 #   Created: 2024-07-29 10:08:59
-#   Updated: 2024-07-29 17:13:05
+#   Updated: 2024-11-09 17:44:59
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,6 +11,7 @@
 import logging
 from typing import List, Tuple
 
+import os
 import networkx as nx
 from pyvis.network import Network
 import matplotlib.pyplot as plt
@@ -107,8 +108,13 @@ def draw_graph():
 
     net = Network()
     net.from_nx(G)
-    net.show(get_tmp_path() / "pyvis_network_show.html")
+    curdir = os.path.abspath(os.path.curdir)
+    fname = get_tmp_path() / "pyvis_network_show.html"
+    rfname = fname.relative_to(curdir)
+    # `Network.show` only support relative path, and a `lib` folder will be 
+    # created at the root folder.
+    net.show(str(rfname))
     # `display` may not be supported in some front-end.
-    display(HTML(get_tmp_path() / "pyvis_network_show.html"))
+    # display(HTML(fname))
 
 
