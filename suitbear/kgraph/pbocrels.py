@@ -3,7 +3,7 @@
 #   Name: pbocrels.py
 #   Author: xyy15926
 #   Created: 2024-10-15 21:02:53
-#   Updated: 2024-11-07 16:41:48
+#   Updated: 2024-11-11 11:16:30
 #   Description:
 # ---------------------------------------------------------
 
@@ -13,13 +13,15 @@ from typing import TypeVar, TYPE_CHECKING
 if TYPE_CHECKING:
     import pandas as pd
 
-from itertools import product
-from suitbear.kgraph.kgenum import (RelSrc,
-                                    NodeType, NODE_TYPE_MAPPER,
-                                    LinkType, LINK_TYPE_MAPPER,
-                                    RoleType, ROLE_TYPE_MAPPER)
-
 import logging
+from itertools import product
+
+from suitbear.kgraph.kgenum import (
+    RelSrc,
+    NodeType, NODE_TYPE_MAPPER,
+    LinkType, LINK_TYPE_MAPPER,
+    RoleType, ROLE_TYPE_MAPPER,
+)
 
 # %%
 logging.basicConfig(

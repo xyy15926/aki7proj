@@ -14,8 +14,8 @@ if TYPE_CHECKING:
     import pandas as pd
 from itertools import product
 
-from suitbear.finer import get_assets_path
-from modsbear.chnwords import get_chn_govrs
+from suitbear.slp.finer import get_assets_path
+from modsbear.locale.govreg import get_chn_govrs
 
 
 # %%

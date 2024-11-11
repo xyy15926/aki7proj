@@ -3,7 +3,7 @@
 #   Name: confgraph.py
 #   Author: xyy15926
 #   Created: 2024-09-24 21:33:27
-#   Updated: 2024-11-07 16:20:46
+#   Updated: 2024-11-11 11:14:10
 #   Description:
 # ---------------------------------------------------------
 
@@ -12,14 +12,17 @@ from __future__ import annotations
 from typing import TypeVar, TYPE_CHECKING
 if TYPE_CHECKING:
     import pandas as pd
-from itertools import product
-from suitbear.kgraph.kgenum import (RelSrc,
-                                    NodeType, NODE_TYPE_MAPPER,
-                                    RoleType, ROLE_TYPE_MAPPER,
-                                    LinkType, LINK_TYPE_MAPPER)
-from suitbear.autofin.confagg import LOAN_REPAYMENT, df_agg_confs
 
 import logging
+from itertools import product
+
+from suitbear.kgraph.kgenum import (
+    RelSrc,
+    NodeType, NODE_TYPE_MAPPER,
+    RoleType, ROLE_TYPE_MAPPER,
+    LinkType, LINK_TYPE_MAPPER
+)
+from suitbear.autofin.confagg import LOAN_REPAYMENT, df_agg_confs
 
 # %%
 logging.basicConfig(

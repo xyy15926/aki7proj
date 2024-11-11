@@ -10,14 +10,14 @@
 # %%
 from __future__ import annotations
 from typing import TypeVar, TYPE_CHECKING
-import logging
 
+import logging
 import os
 import pandas as pd
 from pyecharts import options as opts
 from pyecharts.charts import Graph
 
-from suitbear.finer import tmp_file
+from flagbear.slp.finer import tmp_file
 from suitbear.kgraph.kgenum import NodeType
 
 # %%

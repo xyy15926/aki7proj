@@ -13,7 +13,7 @@ from typing import TypeVar
 import logging
 from itertools import product
 
-from suitbear.crosconf import cross_graph_aggs_and_filters
+from suitbear.dirt.crosconf import cross_graph_aggs_and_filters
 from suitbear.kgraph.kgenum import NodeType
 from suitbear.kgraph import afrels, pbocrels
 from suitbear.kgraph.gxgine import GRAPH_REL, GRAPH_NODE

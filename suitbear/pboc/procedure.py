@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-09-19 10:39:07
+#   Updated: 2024-11-11 11:20:16
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,13 +18,11 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear import patterns, parser, fliper
-    from modsbear import exgine
+    from modsbear.dflater import ex2df, ex4df, exenv
     from suitbear.pboc import confflat, confagg, conftrans
-    reload(patterns)
-    reload(parser)
-    reload(fliper)
-    reload(exgine)
+    reload(ex2df)
+    reload(ex4df)
+    reload(exenv)
     reload(confflat)
     reload(conftrans)
     reload(confagg)
@@ -35,21 +33,16 @@ import sqlalchemy as sa
 from tqdm import tqdm
 from IPython.core.debugger import set_trace
 
-from flagbear.patterns import REGEX_TOKEN_SPECS
-from flagbear.parser import EnvParser
-from flagbear.fliper import extract_field
-from modsbear.exgine import (agg_on_df,
-                             compress_hierarchy,
-                             flat_records,
-                             trans_on_df,
-                             EXGINE_ENV)
-from suitbear.finer import get_assets_path, get_tmp_path
+from flagbear.llp.patterns import REGEX_TOKEN_SPECS
+from flagbear.llp.parser import EnvParser
+from flagbear.str2.fliper import extract_field
+from flagbear.slp.finer import get_assets_path, get_tmp_path
+from modsbear.dflater.ex2df import compress_hierarchy, flat_records
+from modsbear.dflater.ex4df import trans_on_df, agg_on_df
+from modsbear.dflater.exenv import EXGINE_ENV
 from suitbear.pboc.confflat import PBOC_PARTS, df_flat_confs
 from suitbear.pboc.conftrans import MAPPERS, MAPPERS_CODE, TRANS_CONF, df_trans_confs
-from suitbear.pboc.confagg import (df_agg_confs,
-                                   LV2_AGG_CONF,
-                                   LV20_AGG_CONF,
-                                   LV1_AGG_CONF)
+from suitbear.pboc.confagg import df_agg_confs, LV2_AGG_CONF, LV20_AGG_CONF, LV1_AGG_CONF
 
 MAPPERS_CODE["today"] = pd.Timestamp.today()
 PBOC_AGG_CONF = {**LV2_AGG_CONF, **LV20_AGG_CONF,

@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2024-11-06 21:15:12
+#   Updated: 2024-11-11 11:12:57
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,20 +18,14 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear import patterns, parser, fliper
-    from modsbear import exgine
-    from suitbear import finer
-    from suitbear import crosconf
-    from suitbear.autofin import confflat, conftrans
-    from suitbear.autofin import confagg
-    from suitbear.kgraph import kgenum, afrels, pbocrels, display
+    from modsbear.dflater import ex2df, ex4df, exenv
+    from suitbear.dirt import crosconf
+    from suitbear.autofin import confflat, conftrans, confagg
+    from suitbear.kgraph import kgenum, afrels, pbocrels, display, gxgine
     from suitbear.autofin import graphagg
-    from suitbear.kgraph import gxgine
-    reload(patterns)
-    reload(parser)
-    reload(fliper)
-    reload(exgine)
-    reload(finer)
+    reload(ex2df)
+    reload(ex4df)
+    reload(exenv)
     reload(crosconf)
     reload(confflat)
     reload(conftrans)
@@ -39,8 +33,8 @@ if __name__ == "__main__":
     reload(kgenum)
     reload(afrels)
     reload(pbocrels)
-    reload(graphagg)
     reload(gxgine)
+    reload(graphagg)
 
 import os
 from collections import ChainMap
@@ -48,39 +42,18 @@ import sqlalchemy as sa
 from tqdm import tqdm
 from IPython.core.debugger import set_trace
 
-from flagbear.patterns import REGEX_TOKEN_SPECS
-from flagbear.parser import EnvParser
-from flagbear.fliper import extract_field
-from modsbear.exgine import (agg_on_df,
-                             compress_hierarchy,
-                             flat_records,
-                             trans_on_df,
-                             EXGINE_ENV)
-from suitbear.finer import (tmp_file,
-                            save_with_excel,
-                            load_from_pickle,
-                            get_tmp_path,
-                            get_assets_path)
-
-from suitbear.autofin.confflat import df_flat_confs
-from suitbear.autofin.conftrans import (df_trans_confs,
-                                        TRANS_ENV,
-                                        TRANS_CONF,
-                                        MAPPERS,
-                                        MAPPERS_CHN,
-                                        MAPPERS_CODE)
-from suitbear.autofin.confagg import (df_agg_confs,
-                                      PERSONAL_CONF,
-                                      MASS_CONF)
-from suitbear.kgraph.kgenum import (NodeType,
-                                    RoleType,
-                                    df_enum_confs,
-                                    ROLE_TYPE_MAPPER)
-from suitbear.autofin.graphagg import (df_graph_agg_confs,
-                                       GRAPH_REL,
-                                       GRAPH_NODE)
+from flagbear.llp.parser import EnvParser
+from flagbear.slp.finer import get_tmp_path, get_assets_path
+from flagbear.slp.pdsl import save_with_excel
+from modsbear.dflater.ex4df import agg_on_df, trans_on_df
+from modsbear.dflater.exenv import EXGINE_ENV
+from suitbear.kgraph.kgenum import NodeType, RoleType, df_enum_confs, ROLE_TYPE_MAPPER
 from suitbear.kgraph.gxgine import gagg_on_dfs
 from suitbear.kgraph.display import save_as_html
+from suitbear.autofin.confflat import df_flat_confs
+from suitbear.autofin.conftrans import df_trans_confs, TRANS_ENV, TRANS_CONF, MAPPERS
+from suitbear.autofin.confagg import df_agg_confs, PERSONAL_CONF, MASS_CONF
+from suitbear.autofin.graphagg import df_graph_agg_confs, GRAPH_REL, GRAPH_NODE
 
 TRANS_ENV["today"] = pd.Timestamp.today()
 AUTOFIN_AGG_CONF = {**PERSONAL_CONF, **MASS_CONF}

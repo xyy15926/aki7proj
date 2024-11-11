@@ -13,7 +13,7 @@ from typing import TypeVar
 import logging
 from itertools import product
 
-from suitbear.crosconf import cross_aggs_and_filters
+from suitbear.dirt.crosconf import cross_aggs_and_filters
 from suitbear.autofin.conftrans import (
     acc_status,
     appr_res_reprs,
