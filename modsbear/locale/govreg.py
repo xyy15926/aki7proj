@@ -19,7 +19,7 @@ except ImportError:
 from functools import lru_cache
 import pandas as pd
 
-from suitbear.finer import get_assets_path
+from flagbear.slp.finer import get_assets_path
 
 # %%
 logging.basicConfig(

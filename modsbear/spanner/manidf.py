@@ -3,7 +3,7 @@
 #   Name: manidf.py
 #   Author: xyy15926
 #   Created: 2024-06-06 11:17:46
-#   Updated: 2024-11-11 14:50:28
+#   Updated: 2024-11-11 16:40:13
 #   Description:
 # ---------------------------------------------------------
 
@@ -13,7 +13,7 @@ import logging
 import json
 from typing import Any, TypeVar
 from collections.abc import Mapping, Callable
-from collections import ChainMap
+
 import numpy as np
 import pandas as pd
 from IPython.core.debugger import set_trace
@@ -32,13 +32,11 @@ logger.info("Logging Start.")
 # %%
 def merge_dfs(
     dfs: list[pd.DataFrame],
-    on: str | list[str],
-    by: str | list[str] = None,
+    ons: str | list[list[str]],
+    bys: str | list[list[str]] = None,
+    hows: str | list[str] = "inner",
     tolerance: int | None = 0,
     direction: str = "nearest",
-    *,
-    ons: list = None,
-    bys: list = None,
 ) -> pd.DataFrame:
     """Merge DataFrames.
 
@@ -52,25 +50,32 @@ def merge_dfs(
     Params:
     ------------------------
     dfs: DataFrames to be merged.
-    on: Field names to join on, which must be found in all DataFrames.
-    by: Field names to match as group before join, which must be found in all
+    ons: Field names to join on, which must be found in all DataFrames.
+    bys: Field names to match as group before join, which must be found in all
       DataFrames.
       This will only take effect in fuzzy match join situation.
+    hows: How to merge.
     tolerance: Tolerance for fuzzy match.
     direction: How to find the match for join key.
       backward:
       forward:
       nearest:
-    ons: Field names to join on for corespondant DataFrame.
-    bys: Field names to match as group before join for corespondant DataFrame.
 
     Return:
     ------------------------
     Merged DataFrame
     """
-    assert len(dfs) > 1
-    ons = [on, ] * len(dfs) if ons is None else ons
-    bys = [by, ] * len(dfs) if bys is None else bys
+    dfs = list(filter(lambda df: not df.empty, dfs))
+    if len(dfs) == 1:
+        logger.warning("Only 1 no-empty DataFrame passed.")
+        return dfs[0]
+    elif len(dfs) == 0:
+        logger.warning("No no-empty DataFrame passed.")
+        return pd.DataFrame()
+
+    ons = [[ons], ] * len(dfs) if np.isscalar(ons) else ons
+    bys = [[bys], ] * len(dfs) if bys is None or np.isscalar(bys) else bys
+    hows = [hows, ] * (len(dfs) - 1) if np.isscalar(hows) else hows
 
     # Rename overlaped elements if necessary and then construct the column
     # mapper for each DataFrame with join and group keys excluded.
@@ -91,11 +96,12 @@ def merge_dfs(
     merged = dfs[0].sort_values(lon).rename(col_Ds[0], axis=1)
 
     # Merge on by one with `pd.merge_asof` for inexact matching join.
-    for rdf, ron, rby, rcol_D in zip(dfs[1:], ons[1:], bys[1:], col_Ds[1:]):
+    for rdf, ron, how, rby, rcol_D in zip(dfs[1:], ons[1:], hows, bys[1:], col_Ds[1:]):
         rdf = rdf.sort_values(ron).rename(rcol_D, axis=1)
         if tolerance == 0:
             merged = pd.merge(merged, rdf,
-                              left_on=lon, right_on=ron)
+                              left_on=lon, right_on=ron,
+                              how=how)
         else:
             merged = pd.merge_asof(merged, rdf,
                                    left_on=lon, right_on=ron,
