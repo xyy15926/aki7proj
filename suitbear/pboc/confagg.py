@@ -3,7 +3,7 @@
 #   Name: confagg.py
 #   Author: xyy15926
 #   Created: 2024-09-10 10:52:24
-#   Updated: 2024-09-20 14:46:54
+#   Updated: 2024-11-15 09:46:07
 #   Description:
 # ---------------------------------------------------------
 
@@ -369,12 +369,18 @@ ACC_REPAY_60M_AGG_BASIC = {
     # 已上线字段已使用 `key_fmt`，不方便再修改:(
     "key_fmt": "{cond}{agg}",
     "cond": {
-        "acc_cat": acc_cat("acc_cat", ["r2", "d1r41", "r23"]),
+        "acc_cat": acc_cat("acc_cat", ["r2", "d1r41", "r23", "r1", "d1"]),
+        "biz_cat": biz_cat("acc_biz_cat"),
+        "orgs": org_cat("acc_org_cat"),
     },
     "agg": _basic_upper_aggs(ACC_REPAY_60M),
     "cros": [
         (list(_basic_upper_aggs(ACC_REPAY_60M).keys()),
          ["acc_cat"]),
+        (list(_basic_upper_aggs(ACC_REPAY_60M).keys()),
+         ["biz_cat"]),
+        (list(_basic_upper_aggs(ACC_REPAY_60M).keys()),
+         ["orgs"]),
     ],
 }
 
@@ -676,6 +682,7 @@ ACC_INFO = {
         "lmt_min": ("lmt_min", "min(acc_lmt)", "借款、授信额度最小值"),
         "lmt_avg": ("lmt_avg", "avg(acc_lmt)", "借款、授信额度均值"),
         "last_prd_max": ("last_prd_max", "max(-acc_moi_start)", "首个账户距今"),
+        "cls_prd_min": ("cls_prd_min", "min(-cur_moi_closed)", "最后关闭账户距今"),
         "repay_cnt": ("repay_cnt", "sum(PD01ES01)", "近60个月还款记录数"),
         "org_cnt": ("org_cnt", "count(drop_duplicates(PD01AI02))", "机构数"),
         "term_sum": ("term_sum", "sum(PD01ES01)", "还款记录数量"),
@@ -750,6 +757,8 @@ ACC_INFO = {
     "cros": [
         # 机构划分
         (["cnt", "lmt_sum", "lmt_max", "mixed_ots_sum", "mixed_ots_max",
+          "last_prd_max",
+          "cls_prd_min",
           "mixed_folw_monthly_repay_sum"],
          ["orgs", "mois_start"]),
         (["cnt", "lmt_sum", "lmt_max", "mixed_ots_sum", "mixed_ots_max",
@@ -761,6 +770,7 @@ ACC_INFO = {
         # 业务类型划分
         (["cnt", "lmt_sum", "lmt_max", "mixed_ots_sum", "mixed_ots_max",
           "last_prd_max",
+          "cls_prd_min",
           "mixed_folw_monthly_repay_sum"],
          ["biz_cat", "mois_start"]),
         (["cnt", "lmt_sum", "lmt_max", "mixed_ots_sum", "mixed_ots_max",

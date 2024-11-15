@@ -520,7 +520,7 @@ PBOC_ACC_INFO_MONTHLY = [
 ]
 PBOC_ACC_INFO_MIXED = [
     # 最新表现、月度表现根据说明文档混合
-    ["mixed_acc_moi_folw"       , "mon_itvl(cb_fst(PD01BR01, PD01AR02), today)"         , None  , "账户关闭距今月"],
+    # ["mixed_acc_moi_folw"       , "mon_itvl(cb_fst(PD01BR01, PD01AR02), today)"         , None  , "账户关闭距今月"],
     ["mixed_acc_status"         , "cb_fst(cur_acc_status, monthly_acc_status)"          , None  , "账户状态"],
     ["mixed_lvl5_status"        , "cb_max(cur_lvl5_status, monthly_lvl5_status)"        , None  , "账户5级分类"],
     ["mixed_ots"                , "cb_min(PD01BJ01, PD01CJ01)"                          , None  , "账户余额"],

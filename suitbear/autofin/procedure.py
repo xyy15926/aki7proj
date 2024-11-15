@@ -192,6 +192,6 @@ if __name__ == "__main__":
 
     dfs, agg_rets = autofin_vars(dfs)
 
-    save_with_excel(agg_rets, "autofin/agg_rets")
-    save_with_excel(dfs, "autofin/dfs")
-    save_as_html(rel_df, node_df, "autofin/autofin_graph")
+    save_with_excel(agg_rets, "autofin/agg_rets.xlsx")
+    save_with_excel(dfs, "autofin/dfs.xlsx")
+    save_as_html(rel_df, node_df, "autofin/autofin_graph.xlsx")
