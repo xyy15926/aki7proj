@@ -3,7 +3,7 @@
 #   Name: manidf.py
 #   Author: xyy15926
 #   Created: 2024-06-06 11:17:46
-#   Updated: 2024-11-11 16:40:13
+#   Updated: 2024-11-19 17:38:49
 #   Description:
 # ---------------------------------------------------------
 
@@ -74,7 +74,10 @@ def merge_dfs(
         return pd.DataFrame()
 
     ons = [[ons], ] * len(dfs) if np.isscalar(ons) else ons
-    bys = [[bys], ] * len(dfs) if bys is None or np.isscalar(bys) else bys
+    if bys is None:
+        bys = [None] * len(dfs)
+    elif np.isscalar(bys):
+        bys = [[bys], ] * len(dfs)
     hows = [hows, ] * (len(dfs) - 1) if np.isscalar(hows) else hows
 
     # Rename overlaped elements if necessary and then construct the column

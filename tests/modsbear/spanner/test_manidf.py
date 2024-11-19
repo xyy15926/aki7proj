@@ -3,7 +3,7 @@
 #   Name: test_manidf.py
 #   Author: xyy15926
 #   Created: 2024-06-06 11:19:40
-#   Updated: 2024-11-11 14:48:23
+#   Updated: 2024-11-19 17:39:21
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,6 +18,7 @@ if __name__ == "__main__":
     reload(manidf)
 
 from modsbear.spanner.manidf import merge_dfs, pivot_tags, sequeeze_named_columns
+from flagbear.str2.dups import rename_overlaped
 
 
 # %%
@@ -30,7 +31,7 @@ def test_merge_dfs():
                         "vals": np.arange(N)})
     df2 = pd.DataFrame({"on": np.arange(N, dtype=np.float_) - 0.1,
                         "by": np.random.choice(by6, N),
-                        "vals": np.arange(N)})
+                        "vals_1": np.arange(N)})
     df3 = pd.DataFrame({"on": np.arange(N, dtype=np.float_) + 0.2,
                         "by": np.random.choice(by6, N),
                         "vals": np.arange(N)})
@@ -39,16 +40,16 @@ def test_merge_dfs():
                         "vals": np.arange(N)})
     dfs = [df1, df2, df3, df4]
 
-    merged = merge_dfs(dfs, on="on")
+    merged = merge_dfs(dfs, ons="on")
     assert merged.empty
 
-    merged = merge_dfs([df1, df1, df1], on="on")
+    merged = merge_dfs([df1, df1, df1], ons="on")
     assert np.all(merged.iloc[:, 2] == merged.iloc[:, 4])
 
-    merged = merge_dfs(dfs, on="on", tolerance=None)
+    merged = merge_dfs(dfs, ons="on", tolerance=None)
     assert np.all(merged.iloc[:, 2] == merged.iloc[:, 4])
 
-    merged = merge_dfs(dfs, on="on", by="by", tolerance=None)
+    merged = merge_dfs(dfs, ons="on", bys="by", tolerance=None)
 
 
 # %%

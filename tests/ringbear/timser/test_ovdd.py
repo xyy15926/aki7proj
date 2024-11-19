@@ -14,10 +14,10 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from ringbear import tsarr
-    reload(tsarr)
+    from ringbear.timser import ovdd
+    reload(ovdd)
 
-from ringbear.tsarr import ovdd_from_duepay_records, month_date
+from ringbear.timser.ovdd import ovdd_from_duepay_records, month_date
 
 
 # %%
