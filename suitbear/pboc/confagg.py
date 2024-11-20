@@ -461,7 +461,7 @@ ACC_SPECIAL_ACCD = {
     "prikey": ["rid", "certno", "accid"],
     "key_fmt": "acc_special_accd_{cond}_{agg}",
     "cond": {
-        "mois": last_mois("acc_special_acc_moi"),
+        "mois": last_mois("acc_special_accd_moi"),
         "trans": special_accd("acc_special_accd_type"),
     },
     "agg": {
