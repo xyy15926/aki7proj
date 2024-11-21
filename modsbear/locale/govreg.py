@@ -3,7 +3,7 @@
 #   Name: govreg.py
 #   Author: xyy15926
 #   Created: 2024-11-09 21:46:19
-#   Updated: 2024-11-09 21:49:36
+#   Updated: 2024-11-21 20:14:18
 #   Description:
 # ---------------------------------------------------------
 
@@ -34,36 +34,35 @@ GOVERN_REGION_LV4 = get_assets_path() / "govern_region/govern_region_level4.csv"
 
 # %%
 @lru_cache
-def get_chn_govrs(glv: int = 1):
+def get_chn_govrs(deep: int = None):
     """Get get governing region code.
+
+    ATTENTION:
+    Not all government code could be cut into 3-level, 469026 for example.
+    So usd pid to chain lower and upper level government region may be better?
 
     Params:
     --------------------------
-    glv: Governing region level
-      1: Province
-      2: City
-      3: County
-      4: Town
+    deep: Governing region level
+      0: Province
+      1: City
+      2: County
+      3: Town
 
     Return:
     --------------------------
     DataFrame[id, name, PinYin,...]
     """
-    if glv < 1 or glv > 4:
-        logger.error(f"Unexpected governing level: {glv}.")
-        raise ValueError(f"Unexpected governing level: {glv}.")
-    glvm = {
-        0: 0,
-        1: 1e2,
-        2: 1e4,
-        3: 1e6,
-        4: 1e8,
-        5: 1e11,
-    }
+    if isinstance(deep, int) and (deep < 0 or deep > 3):
+        logger.error(f"Unexpected governing level: {deep}.")
+        raise ValueError(f"Unexpected governing level: {deep}.")
     reg_df = pd.read_csv(GOVERN_REGION_LV4)
     reg_df["PinYin"] = reg_df["pinyin"].apply(
         lambda x: "".join([ele.capitalize() for ele in x.split(" ")]))
-    reg_lved = reg_df[(reg_df["id"] > glvm[glv - 1])
-                      & (reg_df["id"] < glvm[glv])]
-    return reg_lved
 
+    if deep is None:
+        reg_lved = reg_df
+    else:
+        reg_lved = reg_df[reg_df["deep"] == deep]
+
+    return reg_lved

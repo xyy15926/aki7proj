@@ -3,7 +3,7 @@
 #   Name: confagg.py
 #   Author: xyy15926
 #   Created: 2024-09-23 12:10:17
-#   Updated: 2024-11-06 09:51:00
+#   Updated: 2024-11-20 18:27:43
 #   Description:
 # ---------------------------------------------------------
 
@@ -170,8 +170,10 @@ LOAN_REPAYMENT = {
     "cros": [
         (["cnt",],
          ["mois", "ovdd"]),
-        (["ovdd_max", "fpd_ovdd"],
+        (["ovdd_max"],
          ["mois",]),
+        (["fpd_ovdd"],
+         ["None",]),
         (["cur_ovdd", "cur_ovdt", "cur_ovdo", "cur_ovdp",
           "remo_sum", "remp_sum"],
          ["None"])

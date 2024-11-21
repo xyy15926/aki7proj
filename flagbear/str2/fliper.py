@@ -17,6 +17,7 @@ from collections import deque
 from flagbear.llp.parser import EnvParser
 from flagbear.llp.patterns import REGEX_TOKEN_SPECS
 from flagbear.str2.dtyper import str_caster
+from IPython.core.debugger import set_trace
 
 # %%
 logging.basicConfig(
@@ -157,6 +158,95 @@ def extract_field(
         cur_obj = dfill
 
     return cur_obj
+
+
+# %%
+def reset_field(
+    obj: dict | str,
+    steps: str,
+    val: Any,
+    envp: EnvParser | None = None,
+) -> Any:
+    """Extract field from dict.
+
+    Reset field's in `obj` indicated by the `steps`. String that can be
+    converted to dict is also supported, but only JSON string currently.
+    1. If no proper field found in `obj`, nothing will be changed.
+    2. `steps` will use `:` as seperator for each level.
+    3. This will be called recursively to for each step in steps.
+
+    Example:
+    ----------------
+    obj = {
+      "a": {
+        "c": {
+          "d": [1, 2, 3],
+        },
+        "d": 1,
+      },
+    }
+    steps = "a:c&&d=1:c"  -> list
+    steps = "a:c&&d=2:c"  -> None
+
+    Params:
+    ----------------
+    obj: dict | str
+      dict: Dict where fields will be found.
+      str: JSON string, which dict will loaded from.
+    steps: str | list
+      str: String representing the path to extract field in `obj`.
+      list: List of steps.
+    val: Target value.
+    envp: EvnParser to execute the conditions and the aggragation.
+      EvnParser with default arguments will be used as default.
+
+    Return:
+    ----------------
+    Modifed `obj`.
+    """
+    envp = EnvParser() if envp is None else envp
+    steps = steps.split(":") if isinstance(steps, str) else steps
+    if isinstance(obj, str):
+        try:
+            cur_obj = json.loads(obj)
+        # In case the `obj` is merely a string with no JSON structure.
+        except json.JSONDecodeError:
+            cur_obj = obj
+    else:
+        cur_obj = obj
+
+    for idx, step in enumerate(steps[:-1]):
+        # Stop early.
+        # `[]` or `{}` shouldn't stop early to keep behavior consistent while
+        #   aggregating.
+        if cur_obj is None:
+            break
+
+        if step[0] in "[{" and step[-1] in "]}":
+            # Iterate over the values of `cur_obj`.
+            if step[0] == "{":
+                cur_obj = cur_obj.values()
+            for obj_ in cur_obj:
+                reset_field(obj_, steps[idx + 1:], val, envp)
+        else:
+            # Split target and conditions.
+            # 1. `*conds` ensures that it's always be successful to match the
+            #   result of `steps.split`. And `conds[0]` will be the conditions
+            #   if conditions exists.
+            dest, *conds = step.split("&&")
+            if conds and not envp.bind_env(cur_obj).parse(conds[0]):
+                return obj
+            cur_obj = (cur_obj.get(dest, None) if isinstance(cur_obj, dict)
+                       else None)
+    else:
+        # Set value.
+        if isinstance(cur_obj, dict) and steps[-1] in cur_obj:
+            if callable(val):
+                cur_obj[steps[-1]] = val()
+            else:
+                cur_obj[steps[-1]] = val
+
+    return obj
 
 
 # %%

@@ -3,7 +3,7 @@
 #   Name: test_fliper.py
 #   Author: xyy15926
 #   Created: 2023-12-18 19:42:15
-#   Updated: 2024-11-11 14:12:15
+#   Updated: 2024-11-21 20:01:05
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,10 +11,11 @@
 import pytest
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear.llp import lex, syntax, parser, patterns, graph, tree
+    from flagbear.tree import tree
+    from flagbear.llp import lex, syntax, parser, patterns, graph
     from flagbear.str2 import fliper
-    reload(graph)
     reload(tree)
+    reload(graph)
     reload(patterns)
     reload(lex)
     reload(syntax)
@@ -27,6 +28,7 @@ from flagbear.llp.patterns import REGEX_TOKEN_SPECS, LEX_ENDFLAG
 from flagbear.llp.lex import Lexer
 from flagbear.llp.parser import EnvParser
 from flagbear.str2.fliper import extract_field, rebuild_dict
+from flagbear.str2.fliper import reset_field
 
 
 # %%
@@ -267,3 +269,50 @@ def test_rebuild_dict_with_forced_dtype_element_wise():
     assert rets["int"] != element_wise["int"]
     assert rets["varchar"] == element_wise["varchar"]
     assert rets["date"] != element_wise["date"]
+
+
+# %%
+def test_reset_field():
+    env = {
+        "a": 1,
+        "b": 2,
+        "c": {
+            "ca": "ca",
+            "cb": "2",
+            "cc": {
+                "cca": 1,
+                "ccb": [
+                    {"ccba": 1, "ccbb": 2, },
+                    {"ccba": 2, "ccbb": 4, },
+                    {"ccba": 1, "ccbb": 4, },
+                    {
+                        "ccba": "2",
+                        "ccbb": 2,
+                        "ccbc": [
+                            {"ccbca": 1, "ccbcb": 2, },
+                            {"ccbca": 2, "ccbcb": 4, },
+                        ],
+                    },
+                    {
+                        "ccba": 1,
+                        "ccbb": 1,
+                        "ccbc": [
+                            {"ccbca": 1, "ccbcb": 2, },
+                            {"ccbca": 2, "ccbcb": 4, },
+                        ],
+                    },
+                ],
+            },
+        },
+    }
+    reset_field(env, "c:cc:cca", 2)
+    assert env["c"]["cc"]["cca"] == 2
+    reset_field(env, "c:cc:ccc", 2)
+    assert env["c"]["cc"].get("ccc") is None
+    reset_field(env, "c:cc:ccb:[_]:ccbc:[_]:ccbca", 300)
+    assert extract_field(env, "c:cc:ccb:[_]:ccbc:[_]:ccbca")[-1] == [300, 300]
+
+    def val():
+        return 2
+    reset_field(env, "c:cc:ccb", val)
+    assert env["c"]["cc"]["ccb"] == val()
