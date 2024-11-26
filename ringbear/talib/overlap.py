@@ -3,9 +3,10 @@
 #   Name: overlap.py
 #   Author: xyy15926
 #   Created: 2024-11-18 10:02:45
-#   Updated: 2024-11-21 09:26:54
+#   Updated: 2024-11-23 19:56:35
 #   Description:
 #   Ref: https://github.com/frgomes/ta-lib_code/blob/master/ta-lib/c/src/ta_func/
+#   Ref: https://www.fmlabs.com/reference/default.htm
 #   Ref: https://blog.csdn.net/weixin_43420026/article/details/118462233
 # ---------------------------------------------------------
 
@@ -186,11 +187,9 @@ def mavp(
     NDA of the `close` shape with `np.nan` filling the preceding non-defined.
     """
     ret = np.ndarray(len(close))
+    ret[:maxperiod - 1] = np.nan
     MA = np.mean
-    for i in range(len(close)):
-        if i < maxperiod - 1:
-            ret[i] = np.nan
-            continue
+    for i in range(maxperiod - 1, len(close)):
         prd = max(minperiod, periods[i])
         prd = min(maxperiod, prd)
         ret[i] = MA(close[i - prd + 1: i + 1])
@@ -200,7 +199,9 @@ def mavp(
 # %%
 def ema(
     close: np.ndarray,
-    timeperiod: int = 30
+    timeperiod: int = 30,
+    *,
+    K: float = None,
 ) -> np.ndarray:
     """Exponential moving average.
 
@@ -211,22 +212,22 @@ def ema(
     close: Close price.
     timeperiod: Time period.
 
+    Addtional:
+    --------------------------
+    K: Exponential index.
+
     Return:
     --------------------------
     NDA of the `close` shape with `np.nan` filling the preceding non-defined.
     """
     # ws = np.power((1 - K), np.arange(timeperiod)) * ([K] * (timeperiod - 1) + [1])
     ret = np.ndarray(len(close))
-    K = 2 / (timeperiod + 1)
-    for i in range(len(close)):
-        if i < timeperiod - 1:
-            ret[i] = np.nan
-            continue
-        # Use SMA as the first element of EMA.
-        elif i == timeperiod - 1:
-            ret[i] = np.mean(close[:timeperiod])
-        else:
-            ret[i] = K * close[i] + (1 - K) * ret[i - 1]
+    ret[:timeperiod - 1] = np.nan
+    # Use SMA as the first element of EMA.
+    ret[timeperiod - 1] = np.mean(close[:timeperiod])
+    K = 2 / (timeperiod + 1) if K is None else K
+    for i in range(timeperiod, len(close)):
+        ret[i] = K * close[i] + (1 - K) * ret[i - 1]
 
     return ret
 
@@ -465,11 +466,9 @@ def bbands(
     """
     mid = ma(close, timeperiod, matype)
     stds = np.ndarray(len(close))
-    for i in range(len(close)):
-        if i < timeperiod - 1:
-            stds[i] = np.nan
-        else:
-            stds[i] = np.std(close[i - timeperiod + 1: i + 1])
+    stds[:timeperiod - 1] = np.nan
+    for i in range(timeperiod - 1, len(close)):
+        stds[i] = np.std(close[i - timeperiod + 1: i + 1])
     upperband = mid + nbdevup * stds
     lowerband = mid - nbdevdn * stds
 

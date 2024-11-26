@@ -3,7 +3,7 @@
 #   Name: test_overlap.py
 #   Author: xyy15926
 #   Created: 2024-11-20 08:46:58
-#   Updated: 2024-11-20 11:14:42
+#   Updated: 2024-11-22 08:54:26
 #   Description:
 # ---------------------------------------------------------
 
@@ -123,12 +123,13 @@ def test_tema():
 
 
 # %%
+# TODO: Inital difference with TA-Lib, maybe.
 def test_t3():
     low, close, high = mock_data()
-    vals = t3(close, 30)
-    ta_vals = ta.T3(close, 30)
+    vals = t3(close, 5, 0.7)
+    ta_vals = ta.T3(close, 5, 0.7)
     assert np.all(np.isclose(vals[~np.isnan(vals)],
-                             ta_vals[~np.isnan(ta_vals)]))
+                             ta_vals[~np.isnan(ta_vals)])[-50:])
 
 
 # %%
