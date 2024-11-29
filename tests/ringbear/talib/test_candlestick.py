@@ -3,7 +3,7 @@
 #   Name: test_candlestick.py
 #   Author: xyy15926
 #   Created: 2024-11-25 13:59:19
-#   Updated: 2024-11-26 15:23:01
+#   Updated: 2024-11-29 12:10:19
 #   Description:
 # ---------------------------------------------------------
 
@@ -25,6 +25,13 @@ from ringbear.talib.candlestick import (
     belthold, closing_marubozu, doji, dragonfly_doji, gravestone_doji,
     counter_attack, darkcloud_cover, doji_star, engulfing,
     hammer, hangingman,
+    crows2, black_crows3, inside3, outside3,
+    stars_insouth3, white_soldiers3, line_strike3,
+    conceal_baby_swall, abandoned_baby,
+    evening_doji_star, evening_star,
+    gap_side_side_white,
+    break_away,
+    advance_block,
 )
 
 
@@ -156,3 +163,143 @@ def test_hangingman():
         ta_val = ta.CDLHANGINGMAN(open_, high, low, close)
 
         assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_crows2():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = crows2(open_, high, low, close)
+        ta_val = ta.CDL2CROWS(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_blackcrows3():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = black_crows3(open_, high, low, close)
+        ta_val = ta.CDL3BLACKCROWS(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_inside3():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = inside3(open_, high, low, close)
+        ta_val = ta.CDL3INSIDE(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_outside3():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = outside3(open_, high, low, close)
+        ta_val = ta.CDL3OUTSIDE(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_starsinsouth3():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = stars_insouth3(open_, high, low, close)
+        ta_val = ta.CDL3STARSINSOUTH(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_whitesoldiers3():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = white_soldiers3(open_, high, low, close)
+        ta_val = ta.CDL3WHITESOLDIERS(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_line_strike_3():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = line_strike3(open_, high, low, close)
+        ta_val = ta.CDL3LINESTRIKE(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_abandoned_baby():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = abandoned_baby(open_, high, low, close)
+        ta_val = ta.CDLABANDONEDBABY(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_evening_doji_star():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = evening_doji_star(open_, high, low, close)
+        ta_val = ta.CDLEVENINGDOJISTAR(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_evening_star():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = evening_star(open_, high, low, close)
+        ta_val = ta.CDLEVENINGSTAR(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_gap_side_side_white():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = gap_side_side_white(open_, high, low, close)
+        ta_val = ta.CDLGAPSIDESIDEWHITE(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_conceal_baby_swall():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = conceal_baby_swall(open_, high, low, close)
+        ta_val = ta.CDLCONCEALBABYSWALL(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_break_away():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = break_away(open_, high, low, close)
+        ta_val = ta.CDLBREAKAWAY(open_, high, low, close)
+
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))
+
+
+# %%
+def test_advance_block():
+    for i in range(TEST_N):
+        open_, high, low, close, volume = mock_data_all()
+        val = advance_block(open_, high, low, close)
+        ta_val = ta.CDLADVANCEBLOCK(open_, high, low, close)
+
+        # assert np.all(np.isclose(val, ta_val, equal_nan=True))
