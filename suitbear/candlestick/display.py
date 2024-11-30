@@ -3,7 +3,7 @@
 #   Name: display.py
 #   Author: xyy15926
 #   Created: 2024-11-29 12:13:36
-#   Updated: 2024-11-29 17:22:42
+#   Updated: 2024-11-30 20:24:00
 #   Description:
 # ---------------------------------------------------------
 
@@ -15,6 +15,7 @@ import logging
 import os
 import pandas as pd
 from pyecharts import options as opts
+from pyecharts.globals import ThemeType
 from pyecharts.charts import Kline, Line, Bar, Grid
 
 from flagbear.slp.finer import tmp_file, get_assets_path
@@ -29,17 +30,38 @@ logger.info("Logging Start.")
 
 
 # %%
-def kline(
-    oris: pd.DataFrame,
+def draw_kline(
+    data: pd.DataFrame,
     mas: pd.DataFrame = None,
-    fname: str = "stock/kline.html",
-) -> Kline:
+    ptns: pd.DataFrame = None,
+    fname: str = None,
+) -> Grid:
+    """Draw KLine with volume bars, trend lines.
+
+    Params:
+    ------------------------
+    data: Price data with columns
+      date:
+      open_:
+      high:
+      low:
+      close:
+      volume:
+    mas: MA trend line.
+    fname: Filename for saving html render
+
+    Return:
+    ------------------------
+    Grid Chart
     """
-    """
-    xticks = oris["date"].tolist()
-    bars = oris[["open_", "close", "high", "low"]].values.tolist()
-    updn = (oris["close"] > oris["open_"]).astype(int) * 2 - 1
-    volumes = list(zip(range(len(oris)), oris["volume"].values.tolist(), updn))
+    xticks = data["date"].tolist()
+    bars = data[["open_", "close", "high", "low"]].values.tolist()
+    updn = (data["close"] > data["open_"]).astype(int) * 2 - 1
+    # `Series.values.tolist()` is necessary or unsupported `np.int64` will
+    # be passed.
+    volumes = list(zip(range(len(data)),
+                       data["volume"].values.tolist(),
+                       updn))
 
     # Basic Kline.
     kline = (
@@ -51,14 +73,17 @@ def kline(
         ).set_global_opts(
             title_opts=opts.TitleOpts(title="KLine"),
             legend_opts=opts.LegendOpts(
-                is_show=False,
-                pos_bottom=10,
+                is_show=True,
+                pos_top=10,
                 pos_left="center"
             ),
+            # Set both two DataZoom wigets for xaxis:
+            # 1. inside: scoll to zoom in or out
+            # 2. slider: slider bar
+            # But bugs: two pair of datazoom wigets will be rendered if
+            #   a list is passed. So two datazooms are set for different
+            #   chart.
             datazoom_opts=[
-                # Set both two DataZoom wigets for xaxis:
-                # 1. inside: scoll to zoom in or out
-                # 2. slider: slider bar
                 opts.DataZoomOpts(
                     is_show=False,
                     type_="inside",
@@ -66,15 +91,16 @@ def kline(
                     xaxis_index=[0, 1],
                     range_start=98,
                     range_end=100,
+                    min_value_span=30,
                 ),
                 opts.DataZoomOpts(
-                    # Bug: Two slide bars show.
                     is_show=True,
                     xaxis_index=[0, 1],
                     type_="slider",
-                    pos_top="85%",
+                    pos_top="90%",
                     range_start=98,
                     range_end=100,
+                    min_value_span=30,
                 ),
             ],
             xaxis_opts=opts.AxisOpts(is_scale=True),
@@ -108,18 +134,35 @@ def kline(
     )
 
     # Add MA Lines.
-    line = Line().add_xaxis(xaxis_data=xticks)
     mas = pd.DataFrame() if mas is None else mas
-    for ma in mas:
+    line = Line() .add_xaxis(xaxis_data=xticks)
+    for matype in mas:
         line.add_yaxis(
-            series_name=ma,
-            y_axis=mas[ma].tolist(),
+            series_name=matype,
+            y_axis=mas[matype].tolist(),
+            yaxis_index=0,
+            is_smooth=True,
+            is_hover_animation=False,
+            linestyle_opts=opts.LineStyleOpts(width=3, opacity=0.5),
+            label_opts=opts.LabelOpts(is_show=False),
+        )
+    # Add candlstick patterns.
+    ptns = pd.DataFrame() if ptns is None else ptns
+    for ptntype in ptns:
+        line.add_yaxis(
+            series_name=ptntype,
+            y_axis=ptns[ptntype].tolist(),
+            yaxis_index=1,
             is_smooth=True,
             is_hover_animation=False,
             linestyle_opts=opts.LineStyleOpts(width=3, opacity=0.5),
             label_opts=opts.LabelOpts(is_show=False),
         )
     overlaped = kline.overlap(line)
+    # The bottom axes will be overrided, so the `extend_axis` on the overlapped.
+    overlaped.extend_axis(
+        yaxis=opts.AxisOpts(type_="value", position="right")
+    )
 
     # Volume Bar.
     bar = (
@@ -129,7 +172,7 @@ def kline(
             series_name="Volume",
             y_axis=volumes,
             xaxis_index=1,
-            yaxis_index=1,
+            yaxis_index=2,
             label_opts=opts.LabelOpts(is_show=False),
         ).set_global_opts(
             xaxis_opts=opts.AxisOpts(
@@ -159,11 +202,11 @@ def kline(
                 is_show=False,
                 dimension=2,
                 # Index among the whole data series.
-                series_index=mas.shape[1] + 1,
+                series_index=mas.shape[1] + ptns.shape[1] + 1,
                 is_piecewise=True,
                 pieces=[
-                    {"value": 1, "color": "#00da3c"},
-                    {"value": -1, "color": "#ec0000"},
+                    {"value": 1, "color": "#ec0000"},
+                    {"value": -1, "color": "#00da3c"},
                 ],
             ),
         )
@@ -173,41 +216,65 @@ def kline(
         init_opts=opts.InitOpts(
             width="1000px",
             height="800px",
-            animation_opts=opts.AnimationOpts(animation=False)
+            animation_opts=opts.AnimationOpts(animation=False),
+            theme=ThemeType.INFOGRAPHIC,
         )
     )
     grid_chart.add(
         overlaped,
         grid_opts=opts.GridOpts(
-            pos_left="10%",
-            pos_right="8%",
-            height="50%",
-        )
+            pos_left="5%",
+            pos_right="5%",
+            height="60%",
+        ),
+        grid_index=0,
+        # Control axis by self, so the axis index won't be overrided by the
+        # Grid with `grid_index`.
+        is_control_axis_index=True,
     )
     grid_chart.add(
         bar,
         grid_opts=opts.GridOpts(
-            pos_left="10%",
-            pos_right="8%",
-            pos_top="63%",
-            height="16%",
-        )
+            pos_left="5%",
+            pos_right="5%",
+            pos_top="75%",
+            height="15%",
+        ),
+        grid_index=1,
+        is_control_axis_index=True,
     )
+    grid_chart.options["dataZoom"] = grid_chart.options["dataZoom"][:-1]
 
     if fname is not None:
-        ghtml = grid_chart.render(tmp_file(fname, incr=0).with_suffix(".html"))
+        ghtml = grid_chart.render(fname)
         logger.info(f"Graph saved at {ghtml}.")
 
-    return kline
+    return grid_chart
 
 
 # %%
 if __name__ == "__main__":
     import json
+    from ringbear.talib.overlap import ma
+    from ringbear.talib.momentum import aroon
+    from ringbear.talib.candlestick import advance_block
+    import talib as ta
 
+    fnamep = "stock/kline.html"
+    fname = tmp_file(fnamep, incr=0).with_suffix(".html")
     dfile = get_assets_path() / "stock/stock_jdi.json"
     data = json.load(open(dfile))
-    oris = pd.DataFrame.from_records(
+    data = pd.DataFrame.from_records(
         data,
         columns=["date", "open_", "close", "low", "high", "volume"])
-    kline(oris)
+    mas = pd.DataFrame({
+        "MA30": ma(data["close"].values),
+    })
+    ptns = pd.DataFrame({
+        "AROON14": aroon(data["high"].values, data["low"].values)[0],
+        "ADB": advance_block(data["open_"].values, data["high"].values,
+                             data["low"].values, data["close"].values),
+        "TAADB": ta.CDLADVANCEBLOCK(data["open_"], data["high"],
+                                    data["low"], data["close"]),
+    })
+    ka = draw_kline(data, mas, ptns, fname)

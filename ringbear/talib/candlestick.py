@@ -3,7 +3,7 @@
 #   Name: candlestick.py
 #   Author: xyy15926
 #   Created: 2024-11-25 13:44:52
-#   Updated: 2024-11-29 12:09:37
+#   Updated: 2024-11-30 21:54:27
 #   Description:
 #   Ref: https://github.com/frgomes/ta-lib_code/blob/master/ta-lib/c/src/ta_func/
 #   Ref: https://www.fmlabs.com/reference/default.htm
@@ -66,7 +66,7 @@ def candle_spec(
 ) -> np.ndarray:
     """Candle stick basic specifications.
 
-    Global Setting: https://github.com/frgomes/ta-lib_code/blob/master/ta-lib/c/src/ta_common/ta_global.c#L128
+    Global Setting: https://github.com/frgomes/ta-lib_code/blob/master/ta-lib/c/src/ta_common/ta_global.c#L142
 
     1 Candle Terms:
     ---------------------------
