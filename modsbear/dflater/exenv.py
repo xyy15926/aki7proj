@@ -3,7 +3,7 @@
 #   Name: exenv.py
 #   Author: xyy15926
 #   Created: 2024-11-10 19:33:40
-#   Updated: 2024-11-10 19:35:34
+#   Updated: 2024-12-03 20:09:52
 #   Description:
 # ---------------------------------------------------------
 
@@ -80,6 +80,32 @@ def _mon_itvl(x: pd.Series | pd.Timestamp, y: pd.Series | pd.Timestamp):
         y = pd.to_datetime(y).dt.to_period("M")
     else:
         y = pd.to_datetime(y).to_period("M")
+
+    return (x - y).apply(lambda x: getattr(x, "n", np.nan))
+
+
+def _day_itvl(x: pd.Series | pd.Timestamp, y: pd.Series | pd.Timestamp):
+    """Months of the intervals.
+    The arguments will be converted the Period[M] directly without consider
+    the days.
+
+    Example:
+    >>> mon_itvl("2023-02-01", "2023-01-31") == 1
+    """
+    # x = np.array(x, dtype="datetime64[M]")
+    # y = np.array(y, dtype="datetime64[M]")
+    # return np.asarray(x - y, dtype=int)
+    if x is None or y is None:
+        return np.nan
+
+    if isinstance(x, pd.Series):
+        x = pd.to_datetime(x).dt.to_period("D")
+    else:
+        x = pd.to_datetime(x).to_period("D")
+    if isinstance(y, pd.Series):
+        y = pd.to_datetime(y).dt.to_period("D")
+    else:
+        y = pd.to_datetime(y).to_period("D")
 
     return (x - y).apply(lambda x: getattr(x, "n", np.nan))
 
@@ -177,7 +203,7 @@ EXGINE_ENV = {
     "cb_max"    : _cb_max,
     "cb_min"    : _cb_min,
     "mon_itvl"  : _mon_itvl,
-    "day_itvl"  : lambda x, y: (pd.to_datetime(x) - pd.to_datetime(y)).dt.days,
+    "day_itvl"  : _day_itvl,
     "drop_duplicates": _drop_duplicates,
     "isin"      : lambda x, y: x.isin(y),
     "count"     : len,
