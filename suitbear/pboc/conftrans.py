@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-08 20:59:28
-#   Updated: 2024-10-17 14:01:27
+#   Updated: 2024-12-04 14:28:18
 #   Description:
 # ---------------------------------------------------------
 
@@ -528,6 +528,7 @@ PBOC_ACC_INFO_MIXED = [
     ["mixed_doi_last_repay"     , "cb_min(cur_doi_last_repay, monthly_doi_last_repay)"  , None  , "最近还款距今日"],
     ["mixed_doi_report"         , "cb_min(cur_doi_report, monthly_doi_report)"          , None  , "报告时间"],
     # 按月应还 - 包含已结清
+    # TODO: 即使 `acc_repay_freq == 3` 按月还款，`PD01AS01`、`PD01CS01` 还款期数、剩余还款期数依然可能为空
     ["alle_mon"                     , "PD01AS01"                                                    , "acc_repay_freq == 3" , "全部还款期数（月）"],
     ["alle_mon"                     , "cb_max(mon_itvl(cb_fst(PD01AR02, PD01BR01), PD01AR01), 1)"   , "acc_repay_freq != 3" , "全部还款期数（月）"],
     ["mixed_alle_monthly_repay"     , "sdiv(PD01AJ01, alle_mon)"                                    , "acc_cat <= 2"        , "D1R4全周期按月应还款"],

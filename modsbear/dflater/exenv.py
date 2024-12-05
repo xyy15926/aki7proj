@@ -3,7 +3,7 @@
 #   Name: exenv.py
 #   Author: xyy15926
 #   Created: 2024-11-10 19:33:40
-#   Updated: 2024-12-03 20:09:52
+#   Updated: 2024-12-05 20:30:09
 #   Description:
 # ---------------------------------------------------------
 
@@ -191,6 +191,18 @@ def _sep_map(ser: pd.Series[str],
     return ser.apply(str_sep_map)
 
 
+def _list_map(ser: pd.Series[list],
+              mapref: Mapping):
+    def list_sep_map(val: str):
+        vals = set()
+        for ele in val:
+            med = mapref.get(ele)
+            if pd.notna(med):
+                vals.add(med)
+        return tuple(vals)
+    return ser.apply(list_sep_map)
+
+
 def _any_contains(ser: pd.Series[tuple], target: Sequence):
     return ser.apply(lambda x: np.any([ele in x for ele in target]))
 
@@ -235,5 +247,6 @@ EXGINE_ENV = {
     "is_busiday": _is_busiday,
     "not_busiday": _not_busiday,
     "sep_map"   : _sep_map,
+    "list_map"  : _list_map,
     "any_contains": _any_contains,
 }

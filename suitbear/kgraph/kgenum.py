@@ -3,7 +3,7 @@
 #   Name: kgenum.py
 #   Author: xyy15926
 #   Created: 2024-10-15 21:00:54
-#   Updated: 2024-11-08 16:33:38
+#   Updated: 2024-12-05 21:02:48
 #   Description:
 # ---------------------------------------------------------
 
@@ -28,6 +28,7 @@ class RelSrc(IntEnum):
 
 
 # %%
+# ATTENTION: Remember to update following description mapper.
 @enum.unique
 class NodeType(IntEnum):
     CERTNO = 1
@@ -51,6 +52,7 @@ NODE_TYPE_MAPPER = {
 
 
 # %%
+# ATTENTION: Remember to update following description mapper.
 @enum.unique
 class RoleType(IntEnum):
     # 1XX: certno
@@ -84,6 +86,8 @@ class RoleType(IntEnum):
     BUCKLE_ACCNO = 701
     REPAY_ACCNO = 702
     RETAILER_NAME = 603
+    GUAR_CERTNO = 106
+    GUAR_TEL = 209
 
 
 ROLE_TYPE_MAPPER = {
@@ -112,27 +116,31 @@ ROLE_TYPE_MAPPER = {
     RoleType.BUCKLE_ACCNO: ("buckle_accno", "划扣卡号", NodeType.PACCNO),
     RoleType.REPAY_ACCNO: ("repay_accno", "还款卡号", NodeType.PACCNO),
     RoleType.RETAILER_NAME: ("retailer_name", "门店名称", NodeType.ORGNAME),
+    RoleType.GUAR_CERTNO: ("guar_certno", "担保人身份证号", NodeType.CERTNO),
+    RoleType.GUAR_TEL: ("guar_tel", "担保人手机号", NodeType.TEL),
 }
 
 
 # %%
+# ATTENTION: Remember to update following description mapper.
 # 1. 自然人主体用身份证号，清晰、准确
 # 2. 企业主体多数未获取统一代码，则使用企业名称作为主体
 @enum.unique
 class LinkType(IntEnum):
     # 自然人主体关系
     N_SPOS = 1
-    N_CNTC = 2
-    NO_CAR = 3
-    N_COMP = 4
-    NO_TEL = 5
-    NL_TEL = 6
-    N_RESI = 7
-    N_PACC = 8
-    N_PURCH_N = 9
-    N_PURCH_M = 10
-    N_FIN_N = 11
-    N_FIN_M = 12
+    N_GUAR = 2
+    N_CNTC = 3
+    NO_CAR = 4
+    N_COMP = 5
+    NO_TEL = 6
+    NL_TEL = 7
+    N_RESI = 8
+    N_PACC = 9
+    N_PURCH_N = 10
+    N_PURCH_M = 11
+    N_FIN_N = 12
+    N_FIN_M = 13
     # 企业主体
     MO_TEL = 99
     M_ORGNO = 98
@@ -142,6 +150,7 @@ class LinkType(IntEnum):
 # 映射关联类型、关系描述
 LINK_TYPE_MAPPER = {
     LinkType.N_SPOS: [("cping", "配偶"), ("cped", "被配偶")],
+    LinkType.N_GUAR: [("guaring", "担保人"), ("guared", "被担保人")],
     LinkType.N_CNTC: [("cntcing", "联系人"), ("cntced", "被联系人")],
     LinkType.NO_CAR: [("caring", "拥有车辆"), ("cared", "所属人")],
     LinkType.N_COMP: [("comping", "工作机构"), ("comped", "机构包含")],

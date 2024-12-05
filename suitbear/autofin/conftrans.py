@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-23 09:57:58
-#   Updated: 2024-11-06 10:23:36
+#   Updated: 2024-12-05 21:18:18
 #   Description:
 # ---------------------------------------------------------
 
@@ -14,8 +14,11 @@ if TYPE_CHECKING:
     import pandas as pd
 from itertools import product
 
+import pandas as pd
 from flagbear.slp.finer import get_assets_path
 from modsbear.locale.govreg import get_chn_govrs
+
+INFOCODE_MAPPER_FILE = get_assets_path() / "autofin/infocode_mapper.xlsx"
 
 
 # %%
@@ -61,49 +64,313 @@ def appr_res_reprs(field: str = "appr_res"):
 
 
 # %%
-INFOCODE_MAPPER = {
-    "AF10005": "NLBH",
-    "AF10006": "LBH",
-    "AF10009": "NLBH",
-    "AF10018": "RELS",
-    "AF10019": "PRDR",
-    "AF10047": "SCR",
-    "AF20021": "OTH",
-    "AF20003": None,
-    "AF20020": "OTH",
-    "AF20002": None,
-    "AF100047": "",
+# 4 位分类编码
+# 1. 1st：主体
+#   A - 承租人
+#   B - 配偶
+#   C - 担保人
+#   D - 联系人
+#   E - 车辆
+#   F - 金融中介
+#   G - 交易门店
+#   H - 工作单位
+#   M - 企业申请主体
+#   Z - 其他
+# 2. 2nd：维度
+#   Application - 信贷申请记录
+#   aCcount - 信贷账户记录
+#   Overdue - 逾期记录
+#   Publication - 公共事件
+#   Indivisual - 个人信息
+#   Job - 职业、单位
+#   aDdress - 地址
+#   tElephone - 电话
+#   Relation - 主体关联关系（配合身份证号唯一第一等节点关联图谱）
+#   Score - 综合评分
+#   Tag - 其他标签
+# 3. 3rd: 数据来源
+#   X - 行内自有数据
+#   Y - 外部三方数据
+#   Z - 人行征信数据
+# 4. 4th: 位序
+APPR_CODE_CATS = {
+    "AA": (
+        "AA",
+        "承租人信贷申请记录",
+        [
+            ("AAXA", "历史申请记录_行内历史"),
+            ("AAXB", "历史申请记录_行内2年内"),
+            ("AAXC", "历史申请记录_行内1年内"),
+            ("AAXD", "历史申请记录_行内6月内"),
+            ("AAXE", "历史申请记录_行内3月内"),
+            ("AAXF", "历史申请记录_行内1月内"),
+            ("AAXG", "在途订单_行内当前在途"),
+            ("AAYA", "多头申请_三方历史"),
+            ("AAYB", "多头申请_三方2年内"),
+            ("AAYC", "多头申请_三方1年内"),
+            ("AAYD", "多头申请_三方6月内"),
+            ("AAYE", "多头申请_三方3月内"),
+            ("AAYF", "多头申请_三方1月内"),
+            ("AAZA", "多头申请_人行历史"),
+            ("AAZB", "多头申请_人行2年内"),
+            ("AAZC", "多头申请_人行1年内"),
+            ("AAZD", "多头申请_人行6月内"),
+            ("AAZE", "多头申请_人行3月内"),
+            ("AAZF", "多头申请_人行1月内"),
+        ],
+    ),
+    "AC": (
+        "AC",
+        "承租人信贷账户情况",
+        [
+            ("ACXA", "账户数量_行内"),
+            ("ACYA", "账户数量_三方"),
+            ("ACZA", "账户数量_人行"),
+            ("ACZB", "负债水平_人行"),
+            ("ACZC", "信贷记录短_人行白户"),
+        ],
+    ),
+    "AD": (
+        "AD",
+        "承租人相关地址特征",
+        [
+            ("ADXA", "申请人居住地限制"),
+            ("ADXB", "申请人身份证地限制"),
+            ("ADXC", "申请人地址关联异常_行内"),
+        ],
+    ),
+    "AE": (
+        "AE",
+        "承租人手机号特征",
+        [
+            ("AEXA", "手机号非本人所有"),
+            ("AEXB", "手机号非三大运营商"),
+            ("AEXC", "手机号在网时长短"),
+            ("AEXD", "手机号在网状态异常"),
+            ("AEXE", "手机号关联身份证异常_行内"),
+            ("AEYA", "手机号关联身份证异常_三方"),
+        ],
+    ),
+    "AI": (
+        "AI",
+        "申请人个人信息",
+        [
+            ("AIXA", "申请人年龄限制"),
+            ("AIXB", "申请人证件过期"),
+            ("AIXC", "申请人婚姻状态异常_行内"),
+        ],
+    ),
+    "AJ": (
+        "AJ",
+        "申请人职业单位信息",
+        [
+            ("AJXA", "申请人职业限制_行内"),
+            ("AJZA", "申请人职业限制_人行"),
+            ("AJYA", "申请人职业限制_三方"),
+        ],
+    ),
+    "AO": (
+        "AO",
+        "申请人历史逾期信息",
+        [
+            ("AOXA", "行内信贷逾期"),
+            ("AOYA", "三方信贷逾期"),
+            ("AOZA", "人行逾期_历史"),
+            ("AOZB", "人行逾期_2年内"),
+            ("AOZC", "人行逾期_1年内"),
+            ("AOZD", "人行逾期_6月内"),
+            ("AOZE", "人行逾期_3月内"),
+            ("AOZF", "人行逾期_当前"),
+            ("AOZG", "人行类逾期记录"),
+        ],
+    ),
+    "AP": (
+        "AP",
+        "申请人官方公开信息",
+        [
+            ("APYA", "法院被执行记录_三方"),
+            ("APYB", "法院判决记录_三方"),
+            ("APYC", "公安执法记录_三方"),
+            ("APYD", "驾照状态异常_三方"),
+            ("APYE", "公安失联名单_三方"),
+            ("APZA", "法院被执行记录_人行"),
+            ("APZB", "法院判决记录_人行"),
+            ("APZC", "行政处罚记录_人行"),
+            ("APZD", "非信贷欠费_人行"),
+            ("APZE", "低保救助_人行"),
+        ],
+    ),
+    "AR": (
+        "AR",
+        "申请人关联关系特征",
+        [
+            ("ARXA", "关联手机号异常_行内"),
+            ("ARXB", "关联配偶异常_行内"),
+            ("ARXC", "关联工作单位异常_行内"),
+            ("ARXD", "关联车辆异常_行内"),
+            ("ARYA", "关联手机号异常_三方"),
+            ("ARYB", "关联车辆异常_三方"),
+            ("ARYC", "关联高危人员_三方"),
+            ("ARZA", "关联手机号异常_人行"),
+        ],
+    ),
+    "AS": (
+        "AS",
+        "综合评分",
+        [
+            ("ASXA", "评分异常_内部"),
+            ("ASYA", "评分异常_三方"),
+        ],
+    ),
+    "AT": (
+        "AT",
+        "申请人风险标签",
+        [
+            ("ATYA", "欺诈标签_三方"),
+            ("ATYB", "仿冒伪造标签_三方"),
+            ("ATYZ", "风险标签_三方"),
+            ("ATYC", "套现标签_三方"),
+            ("ATYD", "车交易记录异常_三方"),
+        ],
+    ),
+    "BZ": (
+        "BZ",
+        "配偶异常",
+        [
+            ("BAXA", "配偶历史申请行为_行内"),
+            ("BEXE", "配偶手机号关联信息异常_行内"),
+            ("BPYA", "配偶法院被执行记录_三方"),
+            ("BEXZ", "配偶关联网络异常_行内"),
+            ("BJXA", "配偶职业限制_行内"),
+        ],
+    ),
+    "CZ": (
+        "CZ",
+        "担保人异常",
+        [
+            ("CAXA", "担保人历史申请行为_行内"),
+            ("CEXE", "担保人手机号关联信息异常_行内"),
+            ("CPYA", "配偶法院被执行记录_三方"),
+            ("CEXZ", "担保人关联网络异常_行内"),
+            ("CJXA", "担保人从业限制_行内"),
+        ],
+    ),
+    "DZ": (
+        "DZ",
+        "联系人异常",
+        [
+            ("DAXA", "联系人历史申请行为_行内"),
+            ("DEXE", "联系人手机号关联信息异常_行内"),
+            ("DPYA", "联系人法院被执行记录_三方"),
+            ("DEXZ", "联系人关联网络异常_行内"),
+            ("DJXA", "联系人从业限制_行内"),
+        ],
+    ),
+    "EZ": (
+        "EZ",
+        "车辆异常",
+        [
+            ("EIXA", "车辆融资比例异常"),
+            ("EIXB", "车辆融资额异常"),
+            ("EIXC", "车型限制"),
+            ("EIXD", "车辆品牌限制"),
+            ("EIXE", "车辆行驶里程限制"),
+            ("EIYA", "车辆评估价过高"),
+            ("ERXA", "车辆关联异常_行内"),
+            ("ERYA", "车辆关联欺诈业务、机构、人群_三方"),
+            ("ETYA", "车辆权属状态异常"),
+            ("ETYB", "车况异常"),
+            ("ETYC", "车辆维保记录异常"),
+            ("ETYD", "车辆交易过户记录、数量异常"),
+        ],
+    ),
+    "GZ": (
+        "GZ",
+        "申请门店异常",
+        [
+            ("GRXA", "申请门店关联异常"),
+        ],
+    ),
+    "HZ": (
+        "HZ",
+        "申请人单位异常",
+        [
+            ("HRXA", "工作单位关联异常"),
+            ("HEXA", "工作单位电话关联异常"),
+        ],
+    ),
+    "MI": (
+        "MI",
+        "企业申请主体申请异常",
+        [
+            ("MIXA", "企业补充记录异常"),
+            ("MIYB", "企业注册信息异常"),
+            ("MIYC", "企业经营状态异常"),
+            ("MIYD", "企业法人代表异常"),
+        ],
+    ),
+    "OTH": (
+        "OTH",
+        "其他原因",
+        [
+            ("OTHA", "业务因素异常"),
+            ("OTHC", "业务白名单"),
+            ("OTHB", "非业务因素异常"),
+            ("OTHD", "业务黑名单"),
+        ],
+    ),
 }
 
 
-def appr_code_reprs(field: str = "infocode_cats"):
-    approval_code_cats = [
-        ("manual"           , "MAN"     , "人工介入"),
-        ("apply_behav"      , "APBH"    , "多头申请"),
-        ("nloan_behav"      , "NLBH"    , "非信贷行为"),
-        ("loan_behav"       , "LBH"     , "信贷还款行为"),
-        ("score"            , "SCR"     , "综合评分"),
-        ("rel_self"         , "RELS"    , "自身关联异常"),
-        ("rel_link"         , "RELL"    , "关联人关联异常"),
-        ("rel_trade"        , "RELT"    , "交易关联异常"),
-        ("car_risk"         , "RELC"    , "车辆异常"),
-        ("comp_risk"        , "ORG"     , "公司异常"),
-        ("rule_out"         , "PRDR"    , "准入条件限制")
+def gen_appr_code_mapper_lv21() -> dict:
+    imdf = pd.read_excel(INFOCODE_MAPPER_FILE)
+    immap = dict(imdf[["code", "code_cat"]].values)
+    return immap
+
+
+def gen_appr_code_mapper_lv10() -> dict:
+    immap = {}
+    for part, (klv0, dlv0, items) in APPR_CODE_CATS.items():
+        for klv1, dlv1 in items:
+            immap[klv1] = klv0
+    return immap
+
+
+def appr_catlv1_reprs(field: str = "appr_catlv1"):
+    reprs = []
+    cats = [
+        "ACZC",
+        "AEXA",
+        "AEXB",
+        "AEXC",
+        "AEXD",
     ]
-    reprs = [(key, f'contains({field}, "{kwd}")', desc)
-             for key, kwd, desc in approval_code_cats]
-    reprs += [(None, None, None)]
+    for part, (klv0, dlv0, items) in APPR_CODE_CATS.items():
+        for klv1, dlv1 in items:
+            if klv1 in cats:
+                reprs.append((klv1, f'contains({field}, "{klv1}")', dlv1))
+    return reprs
+
+
+def appr_catlv0_reprs(field: str = "appr_catlv0"):
+    reprs = []
+    for part, (klv0, dlv0, items) in APPR_CODE_CATS.items():
+        reprs.append((klv0, f'contains({field}, "{klv0}")', dlv0))
     return reprs
 
 
 # %%
-# TODO
 def biztype_cats_reprs(field: str = "biztype"):
     biztype_cats = [
-        ("guar_newcar", [100001, 300001], "有担新车"),
-        ("guar_usdcar", [200001, 400001], "有担二手车"),
-        ("noguar_newcar", [900001, 1100001], "无担新车"),
-        ("noguar_usdcar", [800001, 1000001], "无担二手车"),
+        ("gncar", [1, 3, 100001, 300001, 300002,], "有担新车"),
+        ("gscar", [2, 4, 200001, 200003, 400001, 400002, 400003], "有担二手车"),
+        ("ngncar", [7, 9, 700001, 700002, 900001, 900002], "无担新车"),
+        ("ngscar", [8, 10, 800001, 800002, 1000001, 1000002], "无担二手车"),
+        ("gagrm", [1500001, 1600001], "农机"),
+        ("gmcar", [1800001, 1900001], "出行融"),
+        ("inloan", [5, 6, 11, 12, 500001, 600001, 1000001, 1200001], "租中监控"),
+        ("othbiz", [30, 40, 99, 3000001, 4000001, 9900001, 1300001, 1400001, 1500001],
+         "其他事件"),
     ]
     reprs = []
     for key, cats, desc in biztype_cats:
@@ -172,7 +439,8 @@ TRANS_AUTOFIN_PRETRIAL = {
         ("apply_doi"        , "day_itvl(apply_date, today)"             , None  , "申请距今日"),
         ("appr_doi"         , "day_itvl(approval_date, today)"          , None  , "决策距今日"),
         ("appr_res"         , "map(appr_res, appr_res_mapper)"          , None  , "决策结果"),
-        ("infocode_cats"    , "sep_map(appr_codes, infocode_map)"       , None  , "Infocode类型"),
+        ("appr_catlv1"     , "sep_map(appr_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
+        ("appr_catlv0"     , "list_map(appr_catlv1, appr_cats_mapper_lv10)"   , None  , "标签分类LV0"),
     ],
     # `appr_res` and `appr_codes` are added.
     "pre_trans": merge_certno_perday,
@@ -186,7 +454,8 @@ TRANS_AUTOFIN_SECTRIAL = {
         ("apply_doi"        , "day_itvl(apply_date, today)"             , None  , "申请距今日"),
         ("appr_doi"         , "day_itvl(approval_date, today)"          , None  , "决策距今日"),
         ("appr_res"         , "map(appr_res, appr_res_mapper)"          , None  , "决策结果"),
-        ("infocode_cats"    , "sep_map(appr_codes, infocode_map)"       , None  , "Infocode类型"),
+        ("appr_catlv1"     , "sep_map(appr_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
+        ("appr_catlv0"     , "list_map(appr_catlv1, appr_cats_mapper_lv10)"   , None  , "标签分率LV0"),
     ],
     # `appr_res` and `appr_codes` are added.
     "pre_trans": merge_certno_perday,
@@ -228,7 +497,8 @@ MAPPERS_CHN = {k: {kk: vv[1] for kk, vv in v.items()}
 
 TRANS_ENV = {
     "prov_code_map"                 : prov_code(),
-    "infocode_map"                  : INFOCODE_MAPPER,
+    "appr_cats_mapper_lv21"         : gen_appr_code_mapper_lv21(),
+    "appr_cats_mapper_lv10"         : gen_appr_code_mapper_lv10(),
     **MAPPERS_CODE,
 }
 

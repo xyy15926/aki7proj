@@ -3,7 +3,7 @@
 #   Name: confflat.py
 #   Author: xyy15926
 #   Created: 2024-09-28 15:24:40
-#   Updated: 2024-11-07 15:57:25
+#   Updated: 2024-12-05 17:33:47
 #   Description:
 # ---------------------------------------------------------
 
@@ -56,8 +56,16 @@ AUTOFIN_SECTRIAL = {
         ("tel"                  , None  , "VARCHAR(31)"     , "手机号"),
         ("spos_certno"          , None  , "VARCHAR(31)"     , "配偶身份证号"),
         ("spos_tel"             , None  , "VARCHAR(31)"     , "配偶手机号"),
-        ("guar_certno"          , None  , "VARCHAR(31)"     , "担保人身份证号"),
-        ("guar_tel"             , None  , "VARCHAR(31)"     , "担保人手机号"),
+        ("guar1_certno"         , None  , "VARCHAR(31)"     , "担保人身份证号"),
+        ("guar1_tel"            , None  , "VARCHAR(31)"     , "担保人手机号"),
+        ("guar2_certno"         , None  , "VARCHAR(31)"     , "担保人身份证号"),
+        ("guar2_tel"            , None  , "VARCHAR(31)"     , "担保人手机号"),
+        ("guar3_certno"         , None  , "VARCHAR(31)"     , "担保人身份证号"),
+        ("guar3_tel"            , None  , "VARCHAR(31)"     , "担保人手机号"),
+        ("guar4_certno"         , None  , "VARCHAR(31)"     , "担保人身份证号"),
+        ("guar4_tel"            , None  , "VARCHAR(31)"     , "担保人手机号"),
+        ("guar5_certno"         , None  , "VARCHAR(31)"     , "担保人身份证号"),
+        ("guar5_tel"            , None  , "VARCHAR(31)"     , "担保人手机号"),
         ("link1_certno"         , None  , "VARCHAR(31)"     , "联系人身份证号"),
         ("link1_tel"            , None  , "VARCHAR(31)"     , "联系人手机号"),
         ("link2_certno"         , None  , "VARCHAR(31)"     , "联系人身份证号"),

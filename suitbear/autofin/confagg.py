@@ -3,7 +3,7 @@
 #   Name: confagg.py
 #   Author: xyy15926
 #   Created: 2024-09-23 12:10:17
-#   Updated: 2024-11-20 18:27:43
+#   Updated: 2024-12-05 21:15:43
 #   Description:
 # ---------------------------------------------------------
 
@@ -17,7 +17,8 @@ from suitbear.dirt.crosconf import cross_aggs_and_filters
 from suitbear.autofin.conftrans import (
     acc_status,
     appr_res_reprs,
-    appr_code_reprs,
+    appr_catlv1_reprs,
+    appr_catlv0_reprs,
     biztype_cats_reprs,
 )
 
@@ -245,7 +246,8 @@ AGG_AUTOFIN_PRETRIAL = {
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
         "approval_result": appr_res_reprs("appr_res"),
-        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "apprcode_cats": (appr_catlv0_reprs("appr_catlv0")
+                          + appr_catlv1_reprs("appr_catlv1")),
         "dois": last_dois("apply_doi"),
     },
     "agg": {
@@ -256,7 +258,7 @@ AGG_AUTOFIN_PRETRIAL = {
     },
     "cros": [
         (["cnt",],
-         ["biztype_cats", "approval_result", "infocode_cats", "dois"]),
+         ["biztype_cats", "approval_result", "apprcode_cats", "dois"]),
         (["last_apply_dcnt"],
          ["biztype_cats", "approval_result"]),
     ]
@@ -274,7 +276,8 @@ AGG_AUTOFIN_SECTRIAL = {
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
         "approval_result": appr_res_reprs("appr_res"),
-        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "apprcode_cats": (appr_catlv0_reprs("appr_catlv0")
+                          + appr_catlv1_reprs("appr_catlv1")),
         "dois": last_dois("apply_doi"),
     },
     "agg": {
@@ -285,7 +288,7 @@ AGG_AUTOFIN_SECTRIAL = {
     },
     "cros": [
         (["cnt",],
-         ["biztype_cats", "approval_result", "infocode_cats", "dois"]),
+         ["biztype_cats", "approval_result", "apprcode_cats", "dois"]),
         (["last_apply_dcnt"],
          ["biztype_cats", "approval_result"]),
     ]
@@ -303,7 +306,8 @@ MASS_AUTOFIN_PRETRIAL = {
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
         "approval_result": appr_res_reprs("appr_res"),
-        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "apprcode_cats": (appr_catlv0_reprs("appr_catlv0")
+                          + appr_catlv1_reprs("appr_catlv1")),
         "dois": last_dois("apply_doi"),
     },
     "agg": {
@@ -311,7 +315,7 @@ MASS_AUTOFIN_PRETRIAL = {
     },
     "cros": [
         (["cnt"],
-         ["approval_result", "infocode_cats", "dois"]),
+         ["approval_result", "apprcode_cats", "dois"]),
     ]
 }
 
@@ -326,7 +330,8 @@ MASS_AUTOFIN_SECTRIAL = {
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
         "approval_result": appr_res_reprs("appr_res"),
-        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "apprcode_cats": (appr_catlv0_reprs("appr_catlv0")
+                          + appr_catlv1_reprs("appr_catlv1")),
         "dois": last_dois("apply_doi"),
     },
     "agg": {
@@ -334,7 +339,7 @@ MASS_AUTOFIN_SECTRIAL = {
     },
     "cros": [
         (["cnt"],
-         ["approval_result", "infocode_cats", "dois"]),
+         ["approval_result", "apprcode_cats", "dois"]),
     ]
 }
 
@@ -350,7 +355,8 @@ GROUP_AUTOFIN_PRETRIAL_TMPL = {
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
         "approval_result": appr_res_reprs("appr_res"),
-        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "apprcode_cats": (appr_catlv0_reprs("appr_catlv0")
+                          + appr_catlv1_reprs("appr_catlv1")),
         "dois": last_dois("apply_doi"),
     },
     "agg": {
@@ -358,7 +364,7 @@ GROUP_AUTOFIN_PRETRIAL_TMPL = {
     },
     "cros": [
         (["cnt"],
-         ["approval_result", "infocode_cats",]),
+         ["approval_result", "apprcode_cats",]),
     ]
 }
 
@@ -373,7 +379,8 @@ GROUP_AUTOFIN_SECTRIAL_TMPL = {
     "cond": {
         "biztype_cats": biztype_cats_reprs("biztype"),
         "approval_result": appr_res_reprs("appr_res"),
-        "infocode_cats": appr_code_reprs("infocode_cats"),
+        "apprcode_cats": (appr_catlv0_reprs("appr_catlv0")
+                          + appr_catlv1_reprs("appr_catlv1")),
         "dois": last_dois("apply_doi"),
     },
     "agg": {
@@ -381,7 +388,7 @@ GROUP_AUTOFIN_SECTRIAL_TMPL = {
     },
     "cros": [
         (["cnt"],
-         ["approval_result", "infocode_cats",]),
+         ["approval_result", "apprcode_cats",]),
     ]
 }
 

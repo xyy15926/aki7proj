@@ -3,7 +3,7 @@
 #   Name: confgraph.py
 #   Author: xyy15926
 #   Created: 2024-09-24 21:33:27
-#   Updated: 2024-11-11 11:14:10
+#   Updated: 2024-12-05 17:56:04
 #   Description:
 # ---------------------------------------------------------
 
@@ -92,6 +92,47 @@ REL_AUTOFIN_SECTRIAL = {
         "spos_tel": {
             "nattr": {"ntype": NodeType.TEL, },
             "rattr": {"role": RoleType.SPOS_TEL, },
+        },
+        # 至多 5 担保人
+        "guar1_certno": {
+            "nattr": {"ntype": NodeType.CERTNO, },
+            "rattr": {"role": RoleType.GUAR_CERTNO, },
+        },
+        "guar1_tel": {
+            "nattr": {"ntype": NodeType.TEL, },
+            "rattr": {"role": RoleType.GUAR_TEL, },
+        },
+        "guar2_certno": {
+            "nattr": {"ntype": NodeType.CERTNO, },
+            "rattr": {"role": RoleType.GUAR_CERTNO, },
+        },
+        "guar2_tel": {
+            "nattr": {"ntype": NodeType.TEL, },
+            "rattr": {"role": RoleType.GUAR_TEL, },
+        },
+        "guar3_certno": {
+            "nattr": {"ntype": NodeType.CERTNO, },
+            "rattr": {"role": RoleType.GUAR_CERTNO, },
+        },
+        "guar3_tel": {
+            "nattr": {"ntype": NodeType.TEL, },
+            "rattr": {"role": RoleType.GUAR_TEL, },
+        },
+        "guar4_certno": {
+            "nattr": {"ntype": NodeType.CERTNO, },
+            "rattr": {"role": RoleType.GUAR_CERTNO, },
+        },
+        "guar4_tel": {
+            "nattr": {"ntype": NodeType.TEL, },
+            "rattr": {"role": RoleType.GUAR_TEL, },
+        },
+        "guar5_certno": {
+            "nattr": {"ntype": NodeType.CERTNO, },
+            "rattr": {"role": RoleType.GUAR_CERTNO, },
+        },
+        "guar5_tel": {
+            "nattr": {"ntype": NodeType.TEL, },
+            "rattr": {"role": RoleType.GUAR_TEL, },
         },
         # 至多 5 联系人
         "link1_certno": {
@@ -204,6 +245,98 @@ REL_AUTOFIN_SECTRIAL = {
             "update": "apply_date",
             "rid": "order_no",
             "ltype": LinkType.NO_TEL,
+        },
+        # 担保人
+        {
+            "source": "certno",
+            "target": "guar1_certno",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.N_GUAR,
+        },{
+            "source": "guar1_certno",
+            "target": "guar1_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
+        },{
+            "source": "certno",
+            "target": "guar1_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
+        },{
+            "source": "certno",
+            "target": "guar2_certno",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.N_GUAR,
+        },{
+            "source": "guar2_certno",
+            "target": "guar2_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
+        },{
+            "source": "certno",
+            "target": "guar2_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
+        },{
+            "source": "certno",
+            "target": "guar3_certno",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.N_GUAR,
+        },{
+            "source": "guar3_certno",
+            "target": "guar3_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
+        },{
+            "source": "certno",
+            "target": "guar3_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
+        },{
+            "source": "certno",
+            "target": "guar4_certno",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.N_GUAR,
+        },{
+            "source": "guar4_certno",
+            "target": "guar4_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
+        },{
+            "source": "certno",
+            "target": "guar4_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
+        },{
+            "source": "certno",
+            "target": "guar5_certno",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.N_GUAR,
+        },{
+            "source": "guar5_certno",
+            "target": "guar5_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NO_TEL,
+        },{
+            "source": "certno",
+            "target": "guar5_tel",
+            "update": "apply_date",
+            "rid": "order_no",
+            "ltype": LinkType.NL_TEL,
         },
         # 联系人
         {
