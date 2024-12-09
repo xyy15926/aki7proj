@@ -3,7 +3,7 @@
 #   Name: pronoun.py
 #   Author: xyy15926
 #   Created: 2024-11-21 10:06:38
-#   Updated: 2024-11-21 20:22:23
+#   Updated: 2024-12-09 18:28:38
 #   Description:
 # ---------------------------------------------------------
 
@@ -133,7 +133,7 @@ def rand_certno(
     """
     # Random government region id.
     if govrid is None:
-        govrid = str(np.random.choice(get_chn_govrs(3)["id"].values))
+        govrid = str(np.random.choice(get_chn_govrs(2)["id"].values))
 
     # Random birthday.
     if age is None:
@@ -269,7 +269,7 @@ def rand_orgno() -> str:
     """Generate random unified orgnization code.
     """
     f12 = np.random.choice(["91", "92", "93"])
-    f38 = str(np.random.choice(get_chn_govrs(3)["id"].values))
+    f38 = str(np.random.choice(get_chn_govrs(2)["id"].values))
     alts = list(string.digits + "ABCDEFGHJKLMNPQRTUWXY")
     f917 = "".join(np.random.choice(alts, 9))
     orgno_p = f"{f12}{f38}{f917}"
