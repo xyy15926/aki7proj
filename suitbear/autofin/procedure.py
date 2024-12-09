@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2024-11-11 19:58:46
+#   Updated: 2024-12-07 20:01:17
 #   Description:
 # ---------------------------------------------------------
 
@@ -52,11 +52,11 @@ from suitbear.kgraph.gxgine import gagg_on_dfs
 from suitbear.kgraph.display import save_as_html
 from suitbear.dirt.exdf import agg_from_dfs, agg_from_graphdf
 from suitbear.autofin.confflat import df_flat_confs
-from suitbear.autofin.conftrans import df_trans_confs, TRANS_ENV, TRANS_CONF, MAPPERS
+from suitbear.autofin.conftrans import df_trans_confs, TRANS_CONF, MAPPERS, MAPPERS_CODE
 from suitbear.autofin.confagg import df_agg_confs, PERSONAL_CONF, MASS_CONF
 from suitbear.autofin.graphagg import df_graph_agg_confs, GRAPH_REL, GRAPH_NODE
 
-TRANS_ENV["today"] = pd.Timestamp.today()
+MAPPERS_CODE["today"] = pd.Timestamp.today()
 AUTOFIN_AGG_CONF = {**PERSONAL_CONF, **MASS_CONF}
 
 # %%
@@ -109,7 +109,7 @@ def write_autofin_confs(conf_file: str):
 def autofin_vars(
     dfs: dict[str, pd.DataFrame],
     agg_key_mark: pd.Series | set | list = None,
-    env: Mapping = TRANS_ENV,
+    env: Mapping = MAPPERS_CODE,
     envp: EnvParser = None,
 ) -> dict[str, pd.DataFrame]:
     """Calculate index from PBOC records.
@@ -164,10 +164,10 @@ def autofin_vars(
 if __name__ == "__main__":
     write_autofin_confs("autofin/autofin_confs.xlsx")
     mock_file = get_assets_path() / "autofin/autofin_mock_20241101.xlsx"
-    TRANS_ENV["today"] = pd.Timestamp("20241101")
+    MAPPERS_CODE["today"] = pd.Timestamp("20241101")
     fname = get_tmp_path() / "infocode_cats_latest.xlsx"
     df = pd.read_excel(fname)
-    TRANS_ENV["infocode_map"] = df.set_index("infocode")["cats"]
+    MAPPERS_CODE["infocode_map"] = df.set_index("infocode")["cats"]
 
     # Prepare mock data.
     flat_pconfs, flat_fconfs = df_flat_confs()

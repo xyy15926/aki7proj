@@ -3,15 +3,13 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-23 09:57:58
-#   Updated: 2024-12-05 21:18:18
+#   Updated: 2024-12-07 19:59:38
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 from __future__ import annotations
 from typing import TypeVar, TYPE_CHECKING
-if TYPE_CHECKING:
-    import pandas as pd
 from itertools import product
 
 import pandas as pd
@@ -42,7 +40,7 @@ def timetag(field: str = "apply_time"):
 # %%
 def prov_code():
     govrs = get_chn_govrs(1).set_index("id")
-    return govrs["name"].to_dict()
+    return govrs[["PinYin", "name"]].T.to_dict("list")
 
 
 # %%
@@ -324,7 +322,10 @@ APPR_CODE_CATS = {
 
 def gen_appr_code_mapper_lv21() -> dict:
     imdf = pd.read_excel(INFOCODE_MAPPER_FILE)
-    immap = dict(imdf[["code", "code_cat"]].values)
+    immap = {}
+    for code, cc, cd in imdf[["code", "code_cat", "cat_desc"]].values:
+        if pd.notna(cc):
+            immap[code] = (cc, cd)
     return immap
 
 
@@ -332,7 +333,7 @@ def gen_appr_code_mapper_lv10() -> dict:
     immap = {}
     for part, (klv0, dlv0, items) in APPR_CODE_CATS.items():
         for klv1, dlv1 in items:
-            immap[klv1] = klv0
+            immap[klv1] = (klv0, dlv0)
     return immap
 
 
@@ -439,8 +440,8 @@ TRANS_AUTOFIN_PRETRIAL = {
         ("apply_doi"        , "day_itvl(apply_date, today)"             , None  , "申请距今日"),
         ("appr_doi"         , "day_itvl(approval_date, today)"          , None  , "决策距今日"),
         ("appr_res"         , "map(appr_res, appr_res_mapper)"          , None  , "决策结果"),
-        ("appr_catlv1"     , "sep_map(appr_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
-        ("appr_catlv0"     , "list_map(appr_catlv1, appr_cats_mapper_lv10)"   , None  , "标签分类LV0"),
+        ("appr_catlv1"      , "sep_map(appr_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
+        ("appr_catlv0"      , "list_map(appr_catlv1, appr_cats_mapper_lv10)"    , None  , "标签分类LV0"),
     ],
     # `appr_res` and `appr_codes` are added.
     "pre_trans": merge_certno_perday,
@@ -454,8 +455,8 @@ TRANS_AUTOFIN_SECTRIAL = {
         ("apply_doi"        , "day_itvl(apply_date, today)"             , None  , "申请距今日"),
         ("appr_doi"         , "day_itvl(approval_date, today)"          , None  , "决策距今日"),
         ("appr_res"         , "map(appr_res, appr_res_mapper)"          , None  , "决策结果"),
-        ("appr_catlv1"     , "sep_map(appr_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
-        ("appr_catlv0"     , "list_map(appr_catlv1, appr_cats_mapper_lv10)"   , None  , "标签分率LV0"),
+        ("appr_catlv1"      , "sep_map(appr_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
+        ("appr_catlv0"      , "list_map(appr_catlv1, appr_cats_mapper_lv10)"    , None  , "标签分率LV0"),
     ],
     # `appr_res` and `appr_codes` are added.
     "pre_trans": merge_certno_perday,
@@ -488,19 +489,15 @@ MAPPERS = {
     # "approval_flag"                 : APPROVAL_FLAG,
     "loan_acc_status"               : LOAN_ACC_STATUS,
     "appr_res_mapper"               : APPR_RES_MAPPER,
+    "prov_code_map"                 : prov_code(),
+    "appr_cats_mapper_lv21"         : gen_appr_code_mapper_lv21(),
+    "appr_cats_mapper_lv10"         : gen_appr_code_mapper_lv10(),
 }
 
 MAPPERS_CODE = {k: {kk: vv[0] for kk, vv in v.items()}
                 for k, v in MAPPERS.items()}
 MAPPERS_CHN = {k: {kk: vv[1] for kk, vv in v.items()}
                for k, v in MAPPERS.items()}
-
-TRANS_ENV = {
-    "prov_code_map"                 : prov_code(),
-    "appr_cats_mapper_lv21"         : gen_appr_code_mapper_lv21(),
-    "appr_cats_mapper_lv10"         : gen_appr_code_mapper_lv10(),
-    **MAPPERS_CODE,
-}
 
 
 # %%
