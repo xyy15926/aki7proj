@@ -3,7 +3,7 @@
 #   Name: ex4df.py
 #   Author: xyy15926
 #   Created: 2024-01-24 10:30:18
-#   Updated: 2024-11-11 10:43:17
+#   Updated: 2024-12-09 10:39:45
 #   Description:
 # ---------------------------------------------------------
 
@@ -36,9 +36,9 @@ logger.info("Logging Start.")
 def trans_on_df(
     df: pd.DataFrame,
     rules: list[tuple],
+    how: str = "inplace",
     env: Mapping = None,
     envp: EnvParser = None,
-    inplace: bool = True,
 ) -> pd.DataFrame:
     """Apply transformation on DataFrame.
 
@@ -53,10 +53,13 @@ def trans_on_df(
           which should return boolean Series for filtering.
         TRANS: Execution string, passed to EnvParser, to apply
           element-granularity transformation.
+    how: How to store transformed columns.
+      inplace: Modified `df` directly.
+      new: Create a new DataFrame to store transformed columns.
+      copy: Make a copy of `df` to store transformed columns.
     env: Mapping to provide extra searching space for EnvParser.
     envp: EnvParser to execute string.
       ATTENTION: `env` will be ignored is `envp` is passed.
-    inplace: If modified the DataFrame passed in directly.
 
     Return:
     --------------------
@@ -69,8 +72,13 @@ def trans_on_df(
             envp = EnvParser(ChainMap(env, EXGINE_ENV))
     envp.bind_env(df)
 
-    if not inplace:
-        df = df.copy()
+    # Make a copy if transformation is not applied on `df`.
+    if how != "inplace":
+        new = df.copy()
+    else:
+        new = df
+    tcols = []
+
     for rule in rules:
         # Match transformation rule.
         if len(rule) == 2:
@@ -82,15 +90,20 @@ def trans_on_df(
             logger.warning(f"Invalid rule: {rule} for transformation on DataFrame.")
             continue
 
+        tcols.append(key)
         # Transform.
         if not cond:
-            df[key] = envp.bind_env(df).parse(trans)
+            new[key] = envp.bind_env(new).parse(trans)
         else:
-            cond_flags = envp.bind_env(df).parse(cond)
-            df.loc[cond_flags, key] = (envp.bind_env(df.loc[cond_flags])
-                                       .parse(trans))
+            cond_flags = envp.bind_env(new).parse(cond)
+            new.loc[cond_flags, key] = (envp.bind_env(new.loc[cond_flags])
+                                        .parse(trans))
 
-    return df
+    # Return only tranformed columns.
+    if how == "new":
+        return new.loc[:, tcols]
+    else:
+        return new
 
 
 # %%

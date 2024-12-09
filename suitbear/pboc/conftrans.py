@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-08 20:59:28
-#   Updated: 2024-12-04 14:28:18
+#   Updated: 2024-12-09 08:39:32
 #   Description:
 # ---------------------------------------------------------
 
@@ -50,6 +50,11 @@ REPAY_STATUS_SPEC = {
 }
 PBOC_ACC_REPAY_60_MONTHLY = {
     "part": "pboc_acc_repay_60_monthly",
+    "desc": "分帐户明细_近60个月还款",
+    "level": 2,
+    "prikey": ["rid", "certno", "accid", "monid"],
+    "from_": ["pboc_acc_repay_60_monthly"],
+    "joinkey": None,
     "trans": [
         ["acc_repay_status"     , "map(PD01ED01, repay_status, 0)"              , None  , "还款状态"],
         # `acc_repay_status_spec` 需要给默认值 `-1`，否则后续 `cb_min` 逻辑出错，空值赋 8
@@ -106,6 +111,11 @@ SPECIAL_TRANS_TYPE = {
 }
 PBOC_ACC_SPECIAL_TRANS = {
     "part": "pboc_acc_special_trans",
+    "desc": "分帐户明细_特殊交易",
+    "level": 2,
+    "prikey": ["rid", "certno", "accid", "acctid"],
+    "from_": ["pboc_acc_special_trans"],
+    "joinkey": None,
     "trans": [
         ["acc_special_trans_type", "map(PD01FD01, special_trans_type)",
          None  , "特殊交易类型"],
@@ -136,6 +146,11 @@ SPECIAL_ACCD_TYPE = {
 }
 PBOC_ACC_SPECIAL_ACCD = {
     "part": "pboc_acc_special_accd",
+    "desc": "分账户明细_特殊事件",
+    "level": 2,
+    "prikey": ["rid", "certno", "accid", "acctid"],
+    "from_": ["pboc_acc_special_accd"],
+    "joinkey": None,
     "trans": [
         ["acc_special_accd_type", "map(PD01GD01, special_accd_type)",
          None, "特殊事件类型"],
@@ -156,6 +171,11 @@ def special_accd(field: str = "acc_special_accd_type"):
 # %%
 PBOC_ACC_SPECIAL_INSTS = {
     "part": "pboc_acc_special_insts",
+    "desc": "分帐户明细_大额专项分期",
+    "level": 2,
+    "prikey": ["rid", "certno", "accid", "acctid"],
+    "from_": ["pboc_acc_special_insts"],
+    "joinkey": None,
     "trans": [
         ["acc_special_insts_moi_start", "mon_itvl(PD01HR01, today)",
          None, "大额分期起始距今月"],
@@ -542,6 +562,11 @@ PBOC_ACC_INFO_MIXED = [
 ]
 PBOC_ACC_INFO = {
     "part": "pboc_acc_info",
+    "desc": "分帐户明细",
+    "level": 1,
+    "prikey": ["rid", "certno", "accid"],
+    "from_": ["pboc_acc_info"],
+    "joinkey": None,
     "trans": (PBOC_ACC_INFO_BASIC
               + PBOC_ACC_INFO_LATEST
               + PBOC_ACC_INFO_MONTHLY
@@ -563,6 +588,11 @@ CREDIT_PROTOCAL_STATUS = {
 
 PBOC_CREDIT_INFO = {
     "part": "pboc_credit_info",
+    "desc": "授信协议明细",
+    "level": 1,
+    "prikey": ["rid", "certno", "recid"],
+    "from_": ["pboc_credit_info"],
+    "joinkey": None,
     "trans": [
         ["credit_org_cat", "map(PD02AD01, org_cat)", None, "授信账户管理机构类型"],
         ["credit_cat"   , "map(PD02AD02, credit_lmt_cat)", None, "授信额度类型"],
@@ -611,6 +641,11 @@ COMP_BIZ_CAT = {
 }
 PBOC_REL_INFO = {
     "part": "pboc_rel_info",
+    "desc": "相关还款责任",
+    "level": 1,
+    "prikey": ["rid", "certno", "recid"],
+    "from_": ["pboc_rel_info"],
+    "joinkey": None,
     "trans": [
         ["rel_org_cat", "map(PD03AD01, org_cat)", None, "相关还款责任管理机构类型"],
         ["rel_biz_cat", "map(PD03AD02, biz_cat)",
@@ -651,6 +686,11 @@ INQ_REASON_CAT = {
 
 PBOC_INQ_REC = {
     "part": "pboc_inq_rec",
+    "desc": "查询记录",
+    "level": 1,
+    "prikey": ["rid", "certno", "recid"],
+    "from_": ["pboc_inq_rec"],
+    "joinkey": None,
     "trans": [
         ["inq_rec_org_cat", "map(PH010D01, org_cat)", None, "查询机构类型"],
         ["inq_rec_reason_cat", "map(PH010Q03, inq_reason_cat)", None, "查询原因类型"],
@@ -673,7 +713,8 @@ def inq_rec_reason_cat(field: str = "inq_rec_reason_cat"):
         ("for_guar", f"{field} == 13", "贷前审批_担保资格审查"),
         ("for_leasing", f"{field} == 17", "贷前审批_融资审批"),
         ("for_lmt", f"{field} == 18", "贷前审批_额度审批"),
-        ("for_prev2", f"isin({field}, [11, 12, 16, 17])", "贷前审批"),
+        ("for_prev2", f"isin({field}, [11, 12, 16, 17])", "贷前审批v2"),
+        ("for_prev3", f"isin({field}, [11, 12, 17])", "贷前审批v3"),
     ]
     reprs += [(None, None, None)]
     return reprs
@@ -691,6 +732,11 @@ POSTFEE_ACC_STATUS_M = {
 
 PBOC_POSTFEE_INFO = {
     "part": "pboc_postfee_info",
+    "desc": "非信贷交易明细",
+    "level": 1,
+    "prikey": ["rid", "certno", "recid"],
+    "from_": ["pboc_postfee_info"],
+    "joinkey": None,
     "trans": [
         ["postfee_acc_cat", "map(PE01AD01, postfee_acc_cat_m)", None, "后付费账户类型"],
         ["postfee_acc_status", "map(PE01AD03, postfee_acc_status_m)", None, "账户状态"],
@@ -726,6 +772,11 @@ HOUSING_FUND_STATUS = {
 
 PBOC_HOUSING_FUND = {
     "part": "pboc_housing_fund",
+    "desc": "住房公积金参缴记录",
+    "level": 1,
+    "prikey": ["rid", "certno", "recid"],
+    "from_": ["pboc_housing_fund"],
+    "joinkey": None,
     "trans":[
         ["hf_status", "map(PF05AD01, housing_fund_status)", None, "缴交状态"],
     ],
@@ -816,6 +867,11 @@ RES_STATUS = {
 
 PBOC_ADDRESS = {
     "part": "pboc_address",
+    "desc": "居住地址",
+    "level": 1,
+    "prikey": ["rid", "certno", "recid"],
+    "from_": ["pboc_address"],
+    "joinkey": None,
     "trans": [
         ["pi_res_status", "map(PB030D01, res_status)", None, "居住状况"],
     ],
@@ -962,6 +1018,11 @@ def comp_prof_title(field: str = "pi_comp_prof_title"):
 # %%
 PBOC_COMPANY = {
     "part": "pboc_company",
+    "desc": "工作单位",
+    "level": 1,
+    "prikey": ["rid", "certno", "recid"],
+    "from_": ["pboc_company"],
+    "joinkey": None,
     "trans": [
         ["pi_comp_job", "map(PB040D01, emp_status)", None, "就业状况"],
         ["pi_comp_char", "map(PB040D02, comp_character)", None, "单位性质"],
@@ -1040,15 +1101,28 @@ TRANS_CONF = {
 
 def df_trans_confs():
     import pandas as pd
-    trans_conf = []
-    for part_name, conf in TRANS_CONF.items():
-        rules = [(part_name, key, cond, trans, desc)
-                 for key, trans, cond, desc in conf["trans"]]
-        trans_conf.extend(rules)
-    trans_conf = pd.DataFrame.from_records(
-        trans_conf, columns=["part", "key", "cond", "trans", "desc"])
 
-    return trans_conf
+    pconfs = []
+    tconfs = []
+    for part_name, pconf in TRANS_CONF.items():
+        part_name = pconf["part"]
+        pconfs.append((pconf["part"],
+                       pconf["desc"],
+                       pconf["level"],
+                       pconf["prikey"],
+                       pconf["from_"],
+                       pconf["joinkey"]))
+        rules = [(part_name, key, cond, trans, desc)
+                 for key, trans, cond, desc in pconf["trans"]]
+        tconfs.extend(rules)
+
+    pconfs = pd.DataFrame.from_records(
+        pconfs, columns=["part", "desc", "level", "prikey",
+                         "from_", "joinkey"])
+    tconfs = pd.DataFrame.from_records(
+        tconfs, columns=["part", "key", "cond", "trans", "desc"])
+
+    return pconfs, tconfs
 
 
 # %%

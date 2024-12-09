@@ -3,7 +3,7 @@
 #   Name: exdf.py
 #   Author: xyy15926
 #   Created: 2024-11-11 17:04:03
-#   Updated: 2024-11-11 18:34:48
+#   Updated: 2024-12-09 11:38:28
 #   Description:
 # ---------------------------------------------------------
 
@@ -35,7 +35,7 @@ from tqdm import tqdm
 
 from flagbear.llp.parser import EnvParser
 from modsbear.spanner.manidf import merge_dfs
-from modsbear.dflater.ex4df import agg_on_df
+from modsbear.dflater.ex4df import trans_on_df, agg_on_df
 from modsbear.dflater.exenv import EXGINE_ENV
 from suitbear.kgraph.gxgine import gagg_on_dfs, GRAPH_NODE
 
@@ -46,6 +46,113 @@ logging.basicConfig(
     force=(__name__ == "__main__"))
 logger = logging.getLogger()
 logger.info("Logging Start.")
+
+
+# %%
+def trans_from_dfs(
+    dfs: dict[str, pd.DataFrame],
+    trans_pconfs: pd.DataFrame,
+    trans_fconfs: pd.DataFrame,
+    how: str = "auto",
+    env: Mapping = None,
+    envp: EnvParser = None,
+    *,
+    trans_rets: dict = None,
+) -> dict[str, pd.DataFrame]:
+    """Apply aggregations on DataFrames.
+
+    1. `trans_pconfs` will be treated as the index to determine the order of
+      the transformations.
+    2. As the transformations are defined on the DataFrames step by step, the
+      group keys could be pre-determined at table-granularity in
+      `trans_pconfs`.
+
+    Params:
+    ------------------------
+    dfs: Dict of DataFrame.
+    trans_pconfs: Part-conf for aggregations.
+    trans_fconfs: Field-conf for aggregations.
+    how: How to store transformed columns.
+      inplace: Modified `df` directly.
+      new: Create a new DataFrame to store transformed columns.
+      copy: Make a copy of `df` to store transformed columns.
+      auto: Determine transformation type automatically.
+        `inplace`: For transformation on single DF with the same name.
+        `copy`: For transformation on single DF with the different name.
+        `new`: For transformation on multiple DFs.
+    env: Mapping to provide extra searching space for EnvParser.
+    envp: EnvParser to execute string.
+      ATTENTION: `env` will be ignored if `envp` is passed.
+    trans_rets:
+
+    Return:
+    ------------------------
+    Dict[part, DataFrame of transformation]
+    """
+    # Init EnvParser.
+    if envp is None:
+        if env is None:
+            envp = EnvParser(EXGINE_ENV)
+        else:
+            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+
+    trans_rets = {} if trans_rets is None else trans_rets
+    # Both the source DataFrames and results in process will be used as the
+    # searching space.
+    df_space = ChainMap(trans_rets, dfs)
+    # Apply transformation according to `trans_pconfs`.
+    pbar_rows = tqdm(trans_pconfs.iterrows())
+    for idx, pconf in pbar_rows:
+        part_name = pconf["part"]
+        pbar_rows.set_description(f"{part_name} transformation.")
+
+        # Determine transformation type.
+        if how == "auto":
+            if len(pconf["from_"]) == 1:
+                trans_how = ("inplace" if pconf["from_"][0] == part_name
+                             else "copy")
+            else:
+                trans_how = "new"
+        else:
+            trans_how = how
+
+        join_key = pconf["joinkey"]
+        # if join_key or len(pconf["from_"]) < 2:
+        if join_key:
+            jdfs = []
+            # Skip the aggregation if any source DataFrame is empty.
+            # TODO: this may lead to unexpected empty result if some of
+            # the fields don't rely on the empty DF.
+            for dn in pconf["from_"]:
+                if df_space[dn].empty:
+                    joined_df = pd.DataFrame()
+                    break
+                jdfs.append(df_space[dn])
+            else:
+                joined_df = merge_dfs(jdfs, hows="left", ons=join_key)
+        else:
+            joined_df = dfs[pconf["from_"][0]]
+
+        # Skip the transformation if merged DataFrame is empty.
+        if joined_df.empty:
+            trans_rets[part_name] = pd.DataFrame()
+            continue
+
+        # Transform.
+        trans_rules = trans_fconfs.loc[trans_fconfs["part"] == part_name,
+                                       ["key", "cond", "trans"]].values
+        tdf = trans_on_df(joined_df, trans_rules, how=trans_how, envp=envp)
+
+        # Concat transformation result if `new` is specified, which often ocurrs
+        # when combining transformations result from multiple DFs together.
+        if trans_how == "new" and part_name in trans_rets:
+            trans_rets[part_name] = pd.concat([trans_rets[part_name], tdf],
+                                              axis=1)
+        # Or override the original DF directly.
+        else:
+            trans_rets[part_name] = tdf
+
+    return trans_rets
 
 
 # %%
@@ -61,10 +168,9 @@ def agg_from_dfs(
     """Apply aggregations on DataFrames.
 
     1. `agg_pconfs` will be treated as the index to determine the order of the
-      transformations and aggregations.
+      aggregations.
     2. As the aggregations are defined on the DataFrames step by step, the
-      group keys could be pre-determined at table-granularity in `agg_pconfs`
-      and should be the primary key and join key for aggregations result.
+      group keys could be pre-determined at table-granularity in `agg_pconfs`.
 
     Params:
     ------------------------
@@ -75,8 +181,6 @@ def agg_from_dfs(
     envp: EnvParser to execute string.
       ATTENTION: `env` will be ignored if `envp` is passed.
     agg_rets:
-    engine:
-    table_prefix:
 
     Return:
     ------------------------
@@ -93,7 +197,8 @@ def agg_from_dfs(
     # Both the source DataFrames and results in process will be used as the
     # searching space.
     df_space = ChainMap(agg_rets, dfs)
-    # 2. Aggregate in `level`-decending order, namely bottom-up.
+    # Aggregate in `level`-decending order, namely bottom-up, so the
+    # `agg_pconfs` should be sorted manually first.
     for idx, pconf in agg_pconfs.iterrows():
         part_name = pconf["part"]
         if part_name in agg_rets:
@@ -103,6 +208,8 @@ def agg_from_dfs(
         if join_key:
             jdfs = []
             # Skip the aggregation if any source DataFrame is empty.
+            # TODO: this may lead to unexpected empty result if some of
+            # the fields don't rely on the empty DF.
             for dn in pconf["from_"]:
                 if df_space[dn].empty:
                     joined_df = pd.DataFrame()
@@ -118,7 +225,7 @@ def agg_from_dfs(
             agg_rets[part_name] = pd.DataFrame()
             continue
 
-        # 2.2 Aggregate.
+        # Aggregate.
         agg_rules = agg_fconfs.loc[agg_fconfs["part"] == part_name,
                                    ["key", "cond", "agg"]].values
         tqdm.pandas(desc=part_name)

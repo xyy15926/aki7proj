@@ -3,7 +3,7 @@
 #   Name: confagg.py
 #   Author: xyy15926
 #   Created: 2024-09-10 10:52:24
-#   Updated: 2024-11-15 09:46:07
+#   Updated: 2024-12-08 17:11:59
 #   Description:
 # ---------------------------------------------------------
 
@@ -272,7 +272,7 @@ def none_of_all():
 
 
 # %%
-def _basic_upper_aggs(lower_conf: dict, desc: str = "账户"):
+def _basic_upper_aggs(lower_conf: dict, desc: str = "各账户"):
     upper_aggs = {}
     lower_agg_conf = cross_aggs_and_filters(
         lower_conf["cros"],
@@ -311,10 +311,11 @@ def _basic_upper_aggs(lower_conf: dict, desc: str = "账户"):
 # %%
 ACC_REPAY_60M = {
     "part": "acc_repay_60m",
-    "desc": "60个月还款情况",
-    "from_": ["pboc_acc_repay_60_monthly"],
+    "desc": "账户60个月还款",
     "level": 1,
     "prikey": ["rid", "certno", "accid"],
+    "from_": ["pboc_acc_repay_60_monthly"],
+    "joinkey": None,
     "key_fmt": "acc_repay_{cond}_{agg}",
     "cond": {
         "mois": last_mois("acc_repay_moi"),
@@ -361,6 +362,7 @@ ACC_REPAY_60M = {
 # %%
 ACC_REPAY_60M_AGG_BASIC = {
     "part": "acc_repay_60m_agg_basic",
+    "desc": "报文60个月还款情况基本",
     "level": 0,
     "prikey": ["rid", "certno"],
     "from_": ["acc_repay_60m", "pboc_acc_info"],
@@ -386,6 +388,7 @@ ACC_REPAY_60M_AGG_BASIC = {
 
 ACC_REPAY_60M_AGG_ADV = {
     "part": "acc_repay_60m_agg_adv",
+    "desc": "报文60个月还款情况特化",
     "level": 0,
     "prikey": ["rid", "certno"],
     "from_": ["acc_repay_60m", "pboc_acc_info"],
@@ -414,9 +417,11 @@ ACC_REPAY_60M_AGG_ADV = {
 # %%
 ACC_SPECIAL_TRANS = {
     "part": "acc_special_trans",
-    "from_": ["pboc_acc_special_trans"],
+    "desc": "账户特殊交易",
     "level": 1,
     "prikey": ["rid", "certno", "accid"],
+    "from_": ["pboc_acc_special_trans"],
+    "joinkey": None,
     "key_fmt": "acc_special_trans_{cond}_{agg}",
     "cond": {
         "mois": last_mois("acc_special_trans_moi"),
@@ -436,6 +441,7 @@ ACC_SPECIAL_TRANS = {
 # %%
 ACC_SPECIAL_TRANS_AGG = {
     "part": "acc_special_trans_agg",
+    "desc": "报文特殊交易",
     "level": 0,
     "prikey": ["rid", "certno"],
     "from_": ["acc_special_trans", "pboc_acc_info"],
@@ -456,9 +462,11 @@ ACC_SPECIAL_TRANS_AGG = {
 # %%
 ACC_SPECIAL_ACCD = {
     "part": "acc_special_accd",
-    "from_": ["pboc_acc_special_accd"],
+    "desc": "账户特殊事件",
     "level": 1,
     "prikey": ["rid", "certno", "accid"],
+    "from_": ["pboc_acc_special_accd"],
+    "joinkey": None,
     "key_fmt": "acc_special_accd_{cond}_{agg}",
     "cond": {
         "mois": last_mois("acc_special_accd_moi"),
@@ -476,6 +484,7 @@ ACC_SPECIAL_ACCD = {
 # %%
 ACC_SPECIAL_ACCD_AGG = {
     "part": "acc_special_accd_agg",
+    "desc": "报文特殊事件",
     "level": 0,
     "prikey": ["rid", "certno"],
     "from_": ["acc_special_accd", "pboc_acc_info"],
@@ -496,9 +505,11 @@ ACC_SPECIAL_ACCD_AGG = {
 # %%
 ACC_SPECIAL_INSTS = {
     "part": "acc_special_insts",
-    "from_": ["pboc_acc_special_insts"],
+    "desc": "账户专项分期",
     "level": 1,
     "prikey": ["rid", "certno", "accid"],
+    "from_": ["pboc_acc_special_insts"],
+    "joinkey": None,
     "key_fmt": "acc_special_insts_{cond}_{agg}",
     "cond": {
         "mois_start": last_mois("acc_special_insts_moi_start"),
@@ -539,6 +550,7 @@ ACC_SPECIAL_INSTS = {
 # %%
 ACC_SPECIAL_INSTS_AGG = {
     "part": "acc_special_insts_agg",
+    "desc": "报文专项分期",
     "level": 0,
     "prikey": ["rid", "certno"],
     "from_": ["acc_special_insts", "pboc_acc_info"],
@@ -576,9 +588,11 @@ LV20_AGG_CONF = {
 # %%
 PINFO_MOBILE = {
     "part": "pinfo_mobile",
-    "from_": ["pboc_mobile"],
+    "desc": "报文手机号",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_mobile"],
+    "joinkey": None,
     "key_fmt": "pinfo_mobile_{cond}_{agg}",
     "cond": {
         "mois": last_mois("mon_itvl(PB01BR01, today)"),
@@ -595,9 +609,11 @@ PINFO_MOBILE = {
 # %%
 PINFO_RES = {
     "part": "pinfo_res",
-    "from_": ["pboc_address"],
+    "desc": "报文住址",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_address"],
+    "joinkey": None,
     "key_fmt": "pinfo_res_{cond}_{agg}",
     "cond": {
         "mois": last_mois("mon_itvl(PB030R01, today)"),
@@ -617,9 +633,11 @@ PINFO_RES = {
 # %%
 PINFO_COMP = {
     "part": "pinfo_comp",
-    "from_": ["pboc_company"],
+    "desc": "报文工作",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_company"],
+    "joinkey": None,
     "key_fmt": "pinfo_comp_{cond}_{agg}",
     "cond": {
         "mois": last_mois("mon_itvl(PB040R01, today)"),
@@ -646,9 +664,11 @@ PINFO_COMP = {
 # %%
 ACC_INFO = {
     "part": "acc_info",
-    "from_": ["pboc_acc_info"],
+    "desc": "报文账户信息",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_acc_info"],
+    "joinkey": None,
     "key_fmt": "acc_{cond}_{agg}",
     "cond": {
         "mois_start": last_mois("acc_moi_start", "开立"),
@@ -831,9 +851,11 @@ ACC_INFO = {
 # %%
 CREDIT_INFO = {
     "part": "credit_info",
-    "from_": ["pboc_credit_info"],
+    "desc": "报文授信协议",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_credit_info"],
+    "joinkey": None,
     "key_fmt": "credit_{cond}_{agg}",
     "cond": {
         "orgs": org_cat("credit_org_cat"),
@@ -871,9 +893,11 @@ CREDIT_INFO = {
 # %%
 REL_INFO = {
     "part": "rel_info",
-    "from_": ["pboc_rel_info"],
+    "desc": "报文相关还款责任",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_rel_info"],
+    "joinkey": None,
     "key_fmt": "rel_{cond}_{agg}",
     "cond": {
         "orgs": org_cat("rel_org_cat"),
@@ -929,9 +953,11 @@ REL_INFO = {
 # %%
 POSTFEE_INFO = {
     "part": "postfee_info",
-    "from_": ["pboc_postfee_info"],
+    "desc": "报文后付费信息",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_postfee_info"],
+    "joinkey": None,
     "key_fmt": "postfee_{cond}_{agg}",
     "cond": {
         "mois": last_mois("mon_itvl(PE01AR02, today)"),
@@ -953,9 +979,11 @@ POSTFEE_INFO = {
 # %%
 TAXS = {
     "part": "taxs",
-    "from_": ["pboc_taxs"],
+    "desc": "报文欠税记录",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_taxs"],
+    "joinkey": None,
     "key_fmt": "tax_{cond}_{agg}",
     "cond": {
         "mois": last_mois("mon_itvl(PF01AR01, today)")
@@ -974,9 +1002,11 @@ TAXS = {
 # %%
 LAWSUIT = {
     "part": "lawsuit",
-    "from_": ["pboc_lawsuit"],
+    "desc": "报文涉诉记录",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_lawsuit"],
+    "joinkey": None,
     "key_fmt": "lawsuit_{cond}_{agg}",
     "cond":{
         "mois": last_mois("mon_itvl(PF02AR01, today)"),
@@ -1001,9 +1031,11 @@ LAWSUIT = {
 # %%
 ENFORCEMENT = {
     "part": "enforcement",
-    "from_": ["pboc_enforcement"],
+    "desc": "报文被执行",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_enforcement"],
+    "joinkey": None,
     "key_fmt": "enforcement_{cond}_{agg}",
     "cond": {
         "mois": last_mois("mon_itvl(PF03AR01, today)"),
@@ -1030,9 +1062,11 @@ ENFORCEMENT = {
 # %%
 GOV_PUNISHMENT = {
     "part": "gov_punishment",
-    "from_": ["pboc_gov_punishment"],
+    "desc": "报文行政处罚",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_gov_punishment"],
+    "joinkey": None,
     "key_fmt": "gov_punishment_{cond}_{agg}",
     "cond": {
         "mois": last_mois("mon_itvl(PF04AR01, today)"),
@@ -1056,9 +1090,11 @@ GOV_PUNISHMENT = {
 # %%
 HOUSING_FUND = {
     "part": "housing_fund",
-    "from_": ["pboc_housing_fund"],
+    "desc": "报文住房公积金",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_housing_fund"],
+    "joinkey": None,
     "key_fmt": "housing_fund_{cond}_{agg}",
     "cond": {
         "mois_end": last_mois("mon_itvl(PF05AR03, today)", "缴交"),
@@ -1098,9 +1134,11 @@ HOUSING_FUND = {
 # %%
 SUB_ALLOWANCE = {
     "part": "sub_allowance",
-    "from_": ["pboc_sub_allowance"],
+    "desc": "报文低保",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_sub_allowance"],
+    "joinkey": None,
     "key_fmt": "allowance_{cond}_{agg}",
     "cond": {
         "mois": last_mois("mon_itvl(PF06AR01, today)")
@@ -1117,9 +1155,11 @@ SUB_ALLOWANCE = {
 # %%
 PRO_CERT = {
     "part": "pro_cert",
-    "from_": ["pboc_pro_cert"],
+    "desc": "报文职业证照",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_pro_cert"],
+    "joinkey": None,
     "key_fmt": "cert_{cond}_{agg}",
     "cond": {
         "mois": last_mois("mon_itvl(PF07AR01, today)"),
@@ -1137,9 +1177,11 @@ PRO_CERT = {
 # %%
 GOV_AWARD = {
     "part": "gov_award",
-    "from_": ["pboc_gov_award"],
+    "desc": "报文政府奖励",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_gov_award"],
+    "joinkey": None,
     "key_fmt": "award_{cond}_{agg}",
     "cond": {
         "mois": last_mois("mon_itvl(PF08AR01, today)"),
@@ -1157,9 +1199,11 @@ GOV_AWARD = {
 # %%
 INQ_REC = {
     "part": "inq_rec",
-    "from_": ["pboc_inq_rec"],
+    "desc": "报文查询",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["pboc_inq_rec"],
+    "joinkey": None,
     "key_fmt": "inq_rec_{cond}_{agg}",
     "cond": {
         "mois": last_mois("inq_rec_moi") + last_dois("inq_rec_doi"),
@@ -1216,9 +1260,10 @@ LV1_AGG_CONF = {
 # %%
 R2ACC_WITH_CDT = {
     "part": "r2acc_with_cdt",
-    "from_": ["pboc_acc_info", "pboc_credit_info"],
+    "desc": "信用卡账户与授信协议",
     "level": 1,
     "prikey": ["rid", "certno", "PD01AI04"],
+    "from_": ["pboc_acc_info", "pboc_credit_info"],
     "joinkey": [["rid", "certno", "PD01AI04"],
                 ["rid", "certno", "PD02AI03"]],
     "key_fmt": "r2acc_with_cdt_{cond}_{agg}",
@@ -1257,9 +1302,11 @@ R2ACC_WITH_CDT = {
 # %%
 R2ACC_WITH_CDT_AGG = {
     "part": "r2acc_with_cdt_agg",
-    "from_": ["r2acc_with_cdt"],
+    "desc": "报文信用卡账户与授信协议",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["r2acc_with_cdt"],
+    "joinkey": None,
     "key_fmt": "{cond}_{agg}",
     "cond": {
         "None": none_of_all(),
@@ -1275,9 +1322,11 @@ R2ACC_WITH_CDT_AGG = {
 # %%
 R2ACC_WITH_ORG = {
     "part": "r2acc_with_org",
-    "from_": ["pboc_acc_info"],
+    "desc": "信用卡账户分机构",
     "level": 1,
     "prikey": ["rid", "certno", "PD01AI02"],
+    "from_": ["pboc_acc_info"],
+    "joinkey": None,
     "key_fmt": "r2acc_with_org_{cond}_{agg}",
     "cond": {
         "fixed_cond": [(None, "isnull(PD01AI04)", "R2机构下")],
@@ -1311,9 +1360,11 @@ R2ACC_WITH_ORG = {
 # %%
 R2ACC_WIHT_ORG_AGG = {
     "part": "r2acc_with_org_agg",
-    "from_": ["r2acc_with_org"],
+    "desc": "信用卡账户分机构聚集",
     "level": 0,
     "prikey": ["rid", "certno"],
+    "from_": ["r2acc_with_org"],
+    "joinkey": None,
     "key_fmt": "{cond}_{agg}",
     "cond": {
         "None": none_of_all(),
@@ -1350,10 +1401,11 @@ def df_agg_confs(confs: dict = None):
     for pname, pconf in confs.items():
         pname = pconf["part"]
         pconfs.append((pconf["part"],
+                       pconf["desc"],
                        pconf["level"],
                        pconf["prikey"],
                        pconf["from_"],
-                       pconf.get("joinkey")))
+                       pconf["joinkey"]))
         aconf = cross_aggs_and_filters(
             pconf["cros"], pconf["agg"], pconf["cond"], pconf["key_fmt"])
         aconfs[pname] = pd.DataFrame.from_records(
@@ -1361,7 +1413,7 @@ def df_agg_confs(confs: dict = None):
 
     # Concat the confs.
     pconfs = pd.DataFrame.from_records(
-        pconfs, columns=["part", "level", "prikey", "from_", "joinkey"])
+        pconfs, columns=["part", "desc", "level", "prikey", "from_", "joinkey"])
     aconfs = pd.concat(aconfs.values(), keys=aconfs.keys()).droplevel(level=1)
     aconfs.index.set_names("part", inplace=True)
     aconfs = aconfs.reset_index()
