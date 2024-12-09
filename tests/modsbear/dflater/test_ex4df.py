@@ -3,7 +3,7 @@
 #   Name: test_ex4df.py
 #   Author: xyy15926
 #   Created: 2024-04-15 18:17:58
-#   Updated: 2024-11-11 14:27:08
+#   Updated: 2024-12-09 22:10:33
 #   Description:
 # ---------------------------------------------------------
 
@@ -100,7 +100,7 @@ def test_trans_on_df():
         ["acc_cat", "map(PD01AD01, cdr_cat)"],
         ["acc_exchange_rate", "acc_cat != 99", "map(PD01AD04, exchange_rate)"],
     ]
-    transed = trans_on_df(src, trans_rules, mapper)
+    transed = trans_on_df(src, trans_rules, env=mapper)
     assert np.all(transed.loc[transed["acc_cat"] == 99, "acc_exchange_rate"].isna())
     assert np.all(transed.loc[transed["acc_cat"] != 99, "acc_exchange_rate"].notna())
     assert ({k: v for i, k, v in transed[["PD01AD01", "acc_cat"]].itertuples()}

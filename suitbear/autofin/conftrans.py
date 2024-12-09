@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-23 09:57:58
-#   Updated: 2024-12-07 19:59:38
+#   Updated: 2024-12-09 19:29:59
 #   Description:
 # ---------------------------------------------------------
 
@@ -435,6 +435,11 @@ def merge_certno_perday(df: pd.DataFrame):
 
 TRANS_AUTOFIN_PRETRIAL = {
     "part": "autofin_pretrial",
+    "desc": "预审记录",
+    "level": 1,
+    "prikey": ["order_no", "certno"],
+    "from_": ["autofin_pretrial"],
+    "joinkey": None,
     "trans": [
         ("cert_prov"        , 'map(certno, prov_code_map, "unknown")'   , None  , "身份证省"),
         ("apply_doi"        , "day_itvl(apply_date, today)"             , None  , "申请距今日"),
@@ -451,6 +456,11 @@ TRANS_AUTOFIN_PRETRIAL = {
 # %%
 TRANS_AUTOFIN_SECTRIAL = {
     "part": "autofin_sectrial",
+    "desc": "资审记录",
+    "level": 1,
+    "prikey": ["order_no", "certno"],
+    "from_": ["autofin_sectrial"],
+    "joinkey": None,
     "trans": [
         ("apply_doi"        , "day_itvl(apply_date, today)"             , None  , "申请距今日"),
         ("appr_doi"         , "day_itvl(approval_date, today)"          , None  , "决策距今日"),
@@ -466,6 +476,11 @@ TRANS_AUTOFIN_SECTRIAL = {
 # %%
 TRANS_LOAN_ACC_INFO = {
     "part": "loan_acc_info",
+    "desc": "借贷账户信息",
+    "level": 1,
+    "prikey": ["order_no", "certno"],
+    "from_": ["loan_acc_info"],
+    "joinkey": None,
     "trans": [
         ("acc_status"       , "map(acc_status, loan_acc_status)"        , None  , "账户状态"),
         ("acc_start_moi"    , "mon_itvl(loan_date, today)"              , None  , "放款距今月"),
@@ -477,6 +492,11 @@ TRANS_LOAN_ACC_INFO = {
 # %%
 TRANS_LOAN_REPAYMENT_MONTHLY = {
     "part": "loan_repayment_monthly",
+    "desc": "还款记录",
+    "level": 2,
+    "prikey": ["order_no", "certno", "mob"],
+    "from_": ["loan_repayment_monthly"],
+    "joinkey": None,
     "trans": [
         ("duepay_moi"       , "mon_itvl(duepay_date, today)"            , None  , "应还款距今月"),
         ("repay_moi"        , "mon_itvl(repay_date, today)"             , None  , "实还款距今月"),
@@ -513,12 +533,24 @@ TRANS_CONF = {
 def df_trans_confs():
     import pandas as pd
 
-    trans_conf = []
-    for part_name, conf in TRANS_CONF.items():
+    pconfs = []
+    tconfs = []
+    for part_name, pconf in TRANS_CONF.items():
+        part_name = pconf["part"]
+        pconfs.append((pconf["part"],
+                       pconf["desc"],
+                       pconf["level"],
+                       pconf["prikey"],
+                       pconf["from_"],
+                       pconf["joinkey"]))
         rules = [(part_name, key, cond, trans, desc)
-                 for key, trans, cond, desc in conf["trans"]]
-        trans_conf.extend(rules)
-    trans_conf = pd.DataFrame.from_records(
-        trans_conf, columns=["part", "key", "cond", "trans", "desc"])
+                 for key, trans, cond, desc in pconf["trans"]]
+        tconfs.extend(rules)
 
-    return trans_conf
+    pconfs = pd.DataFrame.from_records(
+        pconfs, columns=["part", "desc", "level", "prikey",
+                         "from_", "joinkey"])
+    tconfs = pd.DataFrame.from_records(
+        tconfs, columns=["part", "key", "cond", "trans", "desc"])
+
+    return pconfs, tconfs

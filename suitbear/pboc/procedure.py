@@ -76,11 +76,11 @@ def write_pboc_confs(conf_file: str = "pboc/pboc_conf.xlsx"):
     dfs = {}
 
     flat_pconfs, flat_fconfs = df_flat_confs()
-    dfs["pboc_flat_part"] = flat_pconfs
+    dfs["pboc_flat_parts"] = flat_pconfs
     dfs["pboc_flat_fields"] = flat_fconfs
 
     trans_pconfs, trans_fconfs = df_trans_confs()
-    dfs["pboc_trans_part"] = trans_pconfs
+    dfs["pboc_trans_parts"] = trans_pconfs
     dfs["pboc_trans_fields"] = trans_fconfs
     mappers = pd.concat([pd.DataFrame(v).T for v in MAPPERS.values()],
                         axis=0,

@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2024-12-07 20:01:17
+#   Updated: 2024-12-09 22:07:17
 #   Description:
 # ---------------------------------------------------------
 
@@ -50,13 +50,13 @@ from modsbear.dflater.exenv import EXGINE_ENV
 from suitbear.kgraph.kgenum import NodeType, RoleType, df_enum_confs, ROLE_TYPE_MAPPER
 from suitbear.kgraph.gxgine import gagg_on_dfs
 from suitbear.kgraph.display import save_as_html
-from suitbear.dirt.exdf import agg_from_dfs, agg_from_graphdf
+from suitbear.dirt.exdf import trans_from_dfs, agg_from_dfs, agg_from_graphdf
 from suitbear.autofin.confflat import df_flat_confs
-from suitbear.autofin.conftrans import df_trans_confs, TRANS_CONF, MAPPERS, MAPPERS_CODE
+from suitbear.autofin.conftrans import (df_trans_confs, merge_certno_perday,
+                                        MAPPERS, MAPPERS_CODE)
 from suitbear.autofin.confagg import df_agg_confs, PERSONAL_CONF, MASS_CONF
 from suitbear.autofin.graphagg import df_graph_agg_confs, GRAPH_REL, GRAPH_NODE
 
-MAPPERS_CODE["today"] = pd.Timestamp.today()
 AUTOFIN_AGG_CONF = {**PERSONAL_CONF, **MASS_CONF}
 
 # %%
@@ -77,14 +77,16 @@ def write_autofin_confs(conf_file: str):
     dfs["autofin_flat_parts"] = flat_pconfs
     dfs["autofin_flat_fields"] = flat_fconfs
 
-    dfs["autofin_vars_trans"] = df_trans_confs()
+    trans_pconf, trans_fconf = df_trans_confs()
+    dfs["autofin_trans_parts"] = trans_pconf
+    dfs["autofin_trans_fields"] = trans_fconf
     mappers = pd.concat([pd.DataFrame(v).T for v in MAPPERS.values()], axis=0,
                         keys=MAPPERS.keys())
-    dfs["autofin_vars_maps"] = mappers
+    dfs["autofin_trans_maps"] = mappers
 
     agg_pconfs, agg_fconfs = df_agg_confs(AUTOFIN_AGG_CONF)
-    dfs["autofin_vars_parts"] = agg_pconfs
-    dfs["autofin_vars_aggs"] = agg_fconfs
+    dfs["autofin_agg_parts"] = agg_pconfs
+    dfs["autofin_agg_fields"] = agg_fconfs
 
     dfs["graph_enum_types"] = df_enum_confs()
 
@@ -131,24 +133,18 @@ def autofin_vars(
             envp = EnvParser(ChainMap(env, EXGINE_ENV))
 
     # 1. Apply transformation on DataFrames in `dfs`.
-    for part_name, conf in TRANS_CONF.items():
-        trans_rules = [(key, cond, trans) for key, trans, cond, desc
-                       in conf["trans"]]
-        df = dfs[part_name]
-
-        # Prepare dataframe before transformation.
-        pre_trans = conf.get("pre_trans")
-        if pre_trans is not None:
-            df = pre_trans(df)
-
-        if not df.empty:
-            dfs[part_name] = trans_on_df(df, trans_rules, envp=envp)
+    # Transfrom with `auto` or `inplace` will be all fine, as the `from_`s in
+    # `trans_pconfs` are all len-1 list.
+    tpconfs, tfconfs = df_trans_confs()
+    trans_from_dfs(dfs, tpconfs, tfconfs, how="auto", envp=envp)
 
     # 2. Construct and apply aggregation config.
     agg_rets = {}
     agg_pconfs, agg_fconfs = df_agg_confs(AUTOFIN_AGG_CONF)
     if agg_key_mark is not None:
         agg_fconfs = agg_fconfs[agg_fconfs["key"].isin(agg_key_mark)]
+    # Only transformed parts will be registered in `trans_ret`, so the original
+    # `dfs` with transformed parts will be used.
     agg_from_dfs(dfs, agg_pconfs, agg_fconfs, envp=envp, agg_rets=agg_rets)
 
     # 3. Construct and apply graph aggregations.
@@ -162,14 +158,12 @@ def autofin_vars(
 
 # %%
 if __name__ == "__main__":
-    write_autofin_confs("autofin/autofin_confs.xlsx")
-    mock_file = get_assets_path() / "autofin/autofin_mock_20241101.xlsx"
-    MAPPERS_CODE["today"] = pd.Timestamp("20241101")
-    fname = get_tmp_path() / "infocode_cats_latest.xlsx"
-    df = pd.read_excel(fname)
-    MAPPERS_CODE["infocode_map"] = df.set_index("infocode")["cats"]
+    from flagbear.slp.pdsl import save_with_pickle, load_from_pickle
+
+    write_autofin_confs("autofin/autofin_conf.xlsx")
 
     # Prepare mock data.
+    mock_file = get_assets_path() / "autofin/autofin_mock_20241101.xlsx"
     flat_pconfs, flat_fconfs = df_flat_confs()
     xlr = pd.ExcelFile(mock_file)
     dfs = {}
@@ -178,6 +172,8 @@ if __name__ == "__main__":
         if "biztype" in df:
             df["biztype"] = df["biztype"].astype(str)
         dfs[shname] = df
+
+    # Build graph DF.
     afrel_df, afnode_df = afrels.build_graph_df(dfs)
     pbrel_df, pbnode_df = pbocrels.build_graph_df(dfs)
     rel_df = (pd.concat([afrel_df, pbrel_df])
@@ -190,8 +186,16 @@ if __name__ == "__main__":
     for ele in NodeType:
         dfs[ele.value] = node_df
 
-    dfs, agg_rets = autofin_vars(dfs)
+    # Merge records first.
+    dfs["autofin_pretrial"] = merge_certno_perday(dfs["autofin_pretrial"])
+    dfs["autofin_sectrial"] = merge_certno_perday(dfs["autofin_sectrial"])
 
-    save_with_excel(agg_rets, "autofin/agg_rets.xlsx")
-    save_with_excel(dfs, "autofin/dfs.xlsx")
+    # Set `today` with the date in the `mock_file`.
+    MAPPERS_CODE["today"] = pd.Timestamp("20241101")
+    dfs, agg_rets = autofin_vars(dfs, None, env=MAPPERS_CODE)
+    # save_with_pickle(agg_rets, "autofin/agg_dfs")
+    # agg_rets = load_from_pickle("autofin/agg_dfs")
+
+    save_with_excel(agg_rets, "autofin/autofin_aggs.xlsx")
+    save_with_excel(dfs, "autofin/autofin_flats.xlsx")
     save_as_html(rel_df, node_df, "autofin/autofin_graph.xlsx")
