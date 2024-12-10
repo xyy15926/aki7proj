@@ -3,7 +3,7 @@
 #   Name: exdf.py
 #   Author: xyy15926
 #   Created: 2024-11-11 17:04:03
-#   Updated: 2024-12-09 11:38:28
+#   Updated: 2024-12-10 22:35:55
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,17 +18,19 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from modsbear.dflater import ex2df, ex4df, exenv
+    from modsbear.dflater import ex2df, ex4df, exenv, exoptim
     from modsbear.spanner import manidf
     from suitbear.pboc import confflat, confagg, conftrans
     reload(ex2df)
     reload(ex4df)
     reload(exenv)
+    reload(exoptim)
     reload(manidf)
     reload(confflat)
     reload(conftrans)
     reload(confagg)
 
+from itertools import chain
 from collections import ChainMap
 from tqdm import tqdm
 # from IPython.core.debugger import set_trace
@@ -37,6 +39,7 @@ from flagbear.llp.parser import EnvParser
 from modsbear.spanner.manidf import merge_dfs
 from modsbear.dflater.ex4df import trans_on_df, agg_on_df
 from modsbear.dflater.exenv import EXGINE_ENV
+from modsbear.dflater.exoptim import compile_deps
 from suitbear.kgraph.gxgine import gagg_on_dfs, GRAPH_NODE
 
 # %%
@@ -117,7 +120,6 @@ def trans_from_dfs(
             trans_how = how
 
         join_key = pconf["joinkey"]
-        # if join_key or len(pconf["from_"]) < 2:
         if join_key:
             jdfs = []
             # Skip the aggregation if any source DataFrame is empty.
@@ -291,3 +293,39 @@ def agg_from_graphdf(
         agg_rets[part_name] = agg_ret
 
     return agg_rets
+
+
+# %%
+def dep_from_fconfs(
+    targets: list[str],
+    fconfs: pd.DataFrame,
+    envp: EnvParser = None,
+) -> pd.DataFrame:
+    """Get the dependences for the targets.
+
+    Params:
+    ---------------------------
+    target: Target keys.
+    fconfs: Field confs of condition, aggregation and transformation, with
+      columns[key, cond, trans, agg].
+    envp: EnvParser to compile condition, aggregation and transformation to
+      determine the dependences.
+
+    Return:
+    ---------------------------
+    Field confs of dependences.
+    """
+    envp = EnvParser() if envp is None else envp
+
+    dep_keys = set(targets)
+    # Loop until no more dependences updates.
+    while len(targets):
+        rule_df = fconfs.loc[fconfs["key"].isin(targets)]
+        rules = rule_df[["key", "cond", "trans", "agg"]].values
+        dep_dict = compile_deps(rules, envp=envp)
+        targets = list(chain.from_iterable(dep_dict.values()))
+        targets = set(targets) - dep_keys
+        dep_keys.update(targets)
+
+    fconfs = fconfs[fconfs["key"].isin(dep_keys)]
+    return fconfs

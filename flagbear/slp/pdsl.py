@@ -3,7 +3,7 @@
 #   Name: pdsl.py
 #   Author: xyy15926
 #   Created: 2024-11-11 10:30:14
-#   Updated: 2024-11-11 10:41:04
+#   Updated: 2024-12-10 14:15:21
 #   Description:
 # ---------------------------------------------------------
 
@@ -62,6 +62,7 @@ def save_with_excel(
     dfs: dict[str, pd.DataFrame] | pd.DataFrame,
     fname: str,
     with_pickle: bool = False,
+    hidden: bool = True,
 ) -> Path:
     """Write dict of DataFrame into Excel.
 
@@ -76,6 +77,7 @@ def save_with_excel(
     fname: The identical part of the Excel file name relative the TMP dir.
     with_pickle: If save the DataFrames with pickle for the convenience to
       recover the whole dict later.
+    hidden: Skip items with key starting with `_`.
 
     Return:
     ----------------------
@@ -96,7 +98,7 @@ def save_with_excel(
     # Save the DataFrames with Excel.
     xlw = pd.ExcelWriter(tfname)
     for part, df in dfs.items():
-        if df.empty:
+        if df.empty or part.startswith("_"):
             continue
         elif df.shape[1] <= EXCEL_COLUMN_MAX:
             # In case the sheetname may not be str type.

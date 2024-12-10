@@ -154,7 +154,7 @@ _MARKS_INFO = [
 
 _MARKS_INFO_TMPL = {
     pname: {
-        "part": f"pboc_info_marks_{pname}",
+        "part": f"_pboc_info_marks_{pname}",
         "desc": f"人行基本信息{pname}",
         "level": 0,
         "prikey": ["rid", "certno"],

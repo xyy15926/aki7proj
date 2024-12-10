@@ -3,7 +3,7 @@
 #   Name: confagg.py
 #   Author: xyy15926
 #   Created: 2024-09-10 10:52:24
-#   Updated: 2024-12-08 17:11:59
+#   Updated: 2024-12-10 09:44:58
 #   Description:
 # ---------------------------------------------------------
 
@@ -1409,7 +1409,7 @@ def df_agg_confs(confs: dict = None):
         aconf = cross_aggs_and_filters(
             pconf["cros"], pconf["agg"], pconf["cond"], pconf["key_fmt"])
         aconfs[pname] = pd.DataFrame.from_records(
-            aconf, columns=["key", "cond", "agg", "cmt"])
+            aconf, columns=["key", "cond", "agg", "desc"])
 
     # Concat the confs.
     pconfs = pd.DataFrame.from_records(
