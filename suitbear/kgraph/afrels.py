@@ -3,7 +3,7 @@
 #   Name: confgraph.py
 #   Author: xyy15926
 #   Created: 2024-09-24 21:33:27
-#   Updated: 2024-12-05 17:56:04
+#   Updated: 2024-12-11 19:22:11
 #   Description:
 # ---------------------------------------------------------
 
@@ -550,7 +550,7 @@ REL_AUTOFIN_RETAIL = {
             "nattr": {"ntype": NodeType.ORGNO, },
             "rattr": {"role": RoleType.RETAILER_ORGNO, },
         },
-        "orgname": {
+        "org_name": {
             "nattr": {"ntype": NodeType.ORGNAME, },
             "rattr": {"role": RoleType.RETAILER_NAME, },
         },
@@ -562,7 +562,7 @@ REL_AUTOFIN_RETAIL = {
     "rels": [
         {
             "source": "rep_certno",
-            "target": "orgname",
+            "target": "org_name",
             "update": "apply_date",
             "rid": "order_no",
             "ltype": LinkType.N_COMP,
@@ -573,13 +573,13 @@ REL_AUTOFIN_RETAIL = {
             "rid": "order_no",
             "ltype": LinkType.NO_TEL,
         },{
-            "source": "orgname",
+            "source": "org_name",
             "target": "org_addr",
             "update": "apply_date",
             "rid": "order_no",
             "ltype": LinkType.M_RESI,
         },{
-            "source": "orgname",
+            "source": "org_name",
             "target": "orgno",
             "update": "apply_date",
             "rid": "order_no",

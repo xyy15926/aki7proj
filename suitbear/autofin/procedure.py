@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2024-12-09 22:07:17
+#   Updated: 2024-12-11 20:54:58
 #   Description:
 # ---------------------------------------------------------
 
@@ -19,17 +19,20 @@ import pandas as pd
 if __name__ == "__main__":
     from importlib import reload
     from modsbear.dflater import ex2df, ex4df, exenv
-    from suitbear.dirt import crosconf
+    from suitbear.dirt import crosconf, exdf
     from suitbear.autofin import confflat, conftrans, confagg
+    from suitbear.pboc import confflat as pboc_confflat
     from suitbear.kgraph import kgenum, afrels, pbocrels, display, gxgine
     from suitbear.autofin import graphagg
     reload(ex2df)
     reload(ex4df)
     reload(exenv)
     reload(crosconf)
+    reload(exdf)
     reload(confflat)
     reload(conftrans)
     reload(confagg)
+    reload(pboc_confflat)
     reload(kgenum)
     reload(afrels)
     reload(pbocrels)
@@ -50,8 +53,10 @@ from modsbear.dflater.exenv import EXGINE_ENV
 from suitbear.kgraph.kgenum import NodeType, RoleType, df_enum_confs, ROLE_TYPE_MAPPER
 from suitbear.kgraph.gxgine import gagg_on_dfs
 from suitbear.kgraph.display import save_as_html
-from suitbear.dirt.exdf import trans_from_dfs, agg_from_dfs, agg_from_graphdf
-from suitbear.autofin.confflat import df_flat_confs
+from suitbear.dirt.exdf import (flat_ft_dfs, trans_from_dfs,
+                                agg_from_dfs, agg_from_graphdf)
+from suitbear.autofin.confflat import df_flat_confs as af_flat_confs
+from suitbear.pboc.confflat import df_flat_confs as pboc_flat_confs
 from suitbear.autofin.conftrans import (df_trans_confs, merge_certno_perday,
                                         MAPPERS, MAPPERS_CODE)
 from suitbear.autofin.confagg import df_agg_confs, PERSONAL_CONF, MASS_CONF
@@ -73,7 +78,7 @@ def write_autofin_confs(conf_file: str):
     """Write AutoFin parsing confs to Excel.
     """
     dfs = {}
-    flat_pconfs, flat_fconfs = df_flat_confs()
+    flat_pconfs, flat_fconfs = af_flat_confs()
     dfs["autofin_flat_parts"] = flat_pconfs
     dfs["autofin_flat_fields"] = flat_fconfs
 
@@ -164,14 +169,16 @@ if __name__ == "__main__":
 
     # Prepare mock data.
     mock_file = get_assets_path() / "autofin/autofin_mock_20241101.xlsx"
-    flat_pconfs, flat_fconfs = df_flat_confs()
+    af_flat_pconfs, af_flat_fconfs = af_flat_confs()
+    pboc_flat_pconfs, pboc_flat_fconfs = pboc_flat_confs()
+    flat_pconfs = pd.concat([af_flat_pconfs, pboc_flat_pconfs], axis=0)
+    flat_fconfs = pd.concat([af_flat_fconfs, pboc_flat_fconfs], axis=0)
     xlr = pd.ExcelFile(mock_file)
     dfs = {}
     for shname in xlr.sheet_names:
         df = pd.read_excel(xlr, sheet_name=shname)
-        if "biztype" in df:
-            df["biztype"] = df["biztype"].astype(str)
         dfs[shname] = df
+    flat_rets = flat_ft_dfs(dfs, flat_pconfs, flat_fconfs)
 
     # Build graph DF.
     afrel_df, afnode_df = afrels.build_graph_df(dfs)

@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-12-10 22:31:27
+#   Updated: 2024-12-11 20:49:25
 #   Description:
 # ---------------------------------------------------------
 
@@ -48,7 +48,8 @@ from modsbear.spanner.manidf import merge_dfs
 from modsbear.dflater.ex2df import compress_hierarchy, flat_records
 from modsbear.dflater.ex4df import trans_on_df, agg_on_df
 from modsbear.dflater.exenv import EXGINE_ENV
-from suitbear.dirt.exdf import trans_from_dfs, agg_from_dfs, dep_from_fconfs
+from suitbear.dirt.exdf import (flat_ft_dfs, trans_from_dfs,
+                                agg_from_dfs, dep_from_fconfs)
 from suitbear.pboc.confflat import PBOC_PARTS, df_flat_confs
 from suitbear.pboc.conftrans import MAPPERS, MAPPERS_CODE, df_trans_confs
 from suitbear.pboc.confagg import df_agg_confs, LV2_AGG_CONF, LV20_AGG_CONF, LV1_AGG_CONF
@@ -57,8 +58,6 @@ from suitbear.pboc.confmark import df_mark_confs
 # MAPPERS_CODE["today"] = pd.Timestamp.today()
 PBOC_AGG_CONF = {**LV2_AGG_CONF, **LV20_AGG_CONF,
                  **LV1_AGG_CONF}
-# agg_pconfs, agg_aconfs = agg_confs()
-# flat_parts, flat_fields = flat_confs()
 
 
 # %%
@@ -106,52 +105,6 @@ def write_pboc_confs(conf_file: str = "pboc/pboc_conf.xlsx"):
     dfs["pboc_nece_fields"] = ncconfs
 
     save_with_excel(dfs, conf_file)
-
-
-# %%
-def flat_fields(
-    src: pd.Series,
-    today: str = "report",
-) -> dict[str, pd.DataFrame]:
-    """Extract fields from PBOC records.
-
-    Params:
-    ---------------------------
-    src: Series of PBOC records.
-
-    Return:
-    ---------------------------
-    Dict[part-name, DataFrame of values of parts]
-    """
-    # Read fields extraction config and addup some default settings.
-
-    # Extract fields.
-    dfs = {}
-    for pconf in PBOC_PARTS.values():
-        psrc = compress_hierarchy(src, pconf["steps"])
-        fconf = []
-        for key, step, dtype, desc in pconf["fields"]:
-            # Set the default values to get the proper dtype for DataFrame
-            # constructed in `flat_records` automatically.
-            if dtype in REGEX_TOKEN_SPECS:
-                fconf.append((key, None, step, dtype,
-                              REGEX_TOKEN_SPECS[dtype][-1]))
-            else:
-                fconf.append((key, step))
-        ret = flat_records(psrc, fconf)
-        dfs[pconf["part"]] = ret
-
-    if today == "report":
-        basic_info = dfs["pboc_basic_info"]
-        report_dates = basic_info.set_index("PA01AI01")["PA01AR01"].rename("today")
-        for part_name, df in dfs.items():
-            if part_name == "pboc_basic_info" or df.empty:
-                continue
-            df = pd.merge(df, report_dates, how="left",
-                          left_on="rid", right_index=True)
-            dfs[part_name] = df
-
-    return dfs
 
 
 # %%
@@ -228,13 +181,19 @@ if __name__ == "__main__":
 
     # Read and flatten reports.
     files = list((get_assets_path() / "pboc_reports").iterdir())
-    report_recs = {}
-    for file in files:
-        report = open(file, "r").read()
-        report_id = extract_field(report, "PRH:PA01:PA01A:PA01AI01")
-        report_recs[report_id] = report
-    today = "report"
-    dfs = flat_fields(pd.Series(report_recs), today)
+    report_recs = [open(file, "r").read() for file in files]
+    flat_pconfs, flat_fconfs = df_flat_confs()
+    dfs = flat_ft_dfs(report_recs, flat_pconfs, flat_fconfs)
+
+    basic_info = dfs["pboc_basic_info"]
+    report_dates = basic_info.set_index("PA01AI01")["PA01AR01"].rename("today")
+    for part_name, df in dfs.items():
+        if part_name == "pboc_basic_info" or df.empty:
+            continue
+        df = pd.merge(df, report_dates, how="left",
+                      left_on="rid", right_index=True)
+        dfs[part_name] = df
+
     # save_with_pickle(dfs, "pboc/flat_dfs")
     # dfs = load_from_pickle("pboc/flat_dfs")
 

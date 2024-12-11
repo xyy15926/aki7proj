@@ -1460,6 +1460,6 @@ def df_flat_confs():
         pboc_fields.extend([[val["part"], *ele] for ele in val["fields"]])
     pboc_parts = pd.DataFrame(pboc_parts)
     pboc_fields = pd.DataFrame.from_records(
-        pboc_fields, columns=["part", "field", "step", "dtype", "desc"])
+        pboc_fields, columns=["part", "key", "step", "dtype", "desc"])
 
     return pboc_parts, pboc_fields

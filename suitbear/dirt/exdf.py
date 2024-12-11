@@ -3,13 +3,13 @@
 #   Name: exdf.py
 #   Author: xyy15926
 #   Created: 2024-11-11 17:04:03
-#   Updated: 2024-12-10 22:35:55
+#   Updated: 2024-12-11 20:54:25
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 from __future__ import annotations
-from typing import List, Tuple
+from typing import List, Tuple, Any
 from collections.abc import Mapping
 import logging
 
@@ -35,8 +35,10 @@ from collections import ChainMap
 from tqdm import tqdm
 # from IPython.core.debugger import set_trace
 
+from flagbear.llp.patterns import REGEX_TOKEN_SPECS
 from flagbear.llp.parser import EnvParser
 from modsbear.spanner.manidf import merge_dfs
+from modsbear.dflater.ex2df import compress_hierarchy, flat_records
 from modsbear.dflater.ex4df import trans_on_df, agg_on_df
 from modsbear.dflater.exenv import EXGINE_ENV
 from modsbear.dflater.exoptim import compile_deps
@@ -49,6 +51,119 @@ logging.basicConfig(
     force=(__name__ == "__main__"))
 logger = logging.getLogger()
 logger.info("Logging Start.")
+
+
+# %%
+# TODO: Replace `REGEX_TOKEN_SPECS`.
+def stype_spec(
+    dtype: str,
+    spec: str = "regex",
+) -> Any:
+    """Get specifications for string conversion.
+    """
+    dtype = dtype.upper()
+    np_types = {
+        "FLOAT": "float",
+        "DATE": "M8[s]",
+        "INT": "int",
+    }
+    if spec == "regex":
+        ret = REGEX_TOKEN_SPECS[dtype][0]
+    elif spec == "converter":
+        ret = REGEX_TOKEN_SPECS[dtype][1]
+    elif spec == "default":
+        ret = REGEX_TOKEN_SPECS[dtype][2]
+    elif spec == "nptype":
+        ret = np_types.get(dtype, "string")
+
+    return ret
+
+
+# %%
+# TODO: Empty DataFrames.
+def flat_ft_dfs(
+    src: list | pd.Series | dict[str, pd.DataFrame],
+    flat_pconfs: pd.DataFrame,
+    flat_fconfs: pd.DataFrame,
+    how: str = "inplace",
+    env: Mapping = None,
+    envp: EnvParser = None,
+) -> dict[str, pd.DataFrame]:
+    """Flat from or to DFs.
+
+    Params:
+    ------------------------------
+    src: Data source.
+      1. Series or list of records to be flattened.
+      2. Dict of DataFrames for dtype checking.
+    flat_pconfs: Part-conf for flation.
+    flat_fconfs: Field-conf for flation.
+    how: How to store modified columns.
+      inplace: Modified `df` directly.
+      copy: Make a copy of `df` to store transformed columns.
+    env: Mapping to provide extra searching space for EnvParser.
+    envp: EnvParser to execute string.
+      ATTENTION: `env` will be ignored if `envp` is passed.
+
+    Return:
+    ---------------------------
+    Dict[part-name, DataFrame of values of parts]
+    """
+    # Init EnvParser.
+    if envp is None:
+        if env is None:
+            envp = EnvParser(EXGINE_ENV)
+        else:
+            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+
+    # Unify list to pd.Series for flation.
+    if isinstance(src, list):
+        src = pd.Series(src)
+
+    # Flat unstructured and convert dtypes for pd.Series.
+    if isinstance(src, pd.Series):
+        # Unify dtypes and defaults for `rebuild_rec2df`.
+        fconfs = flat_fconfs.copy()
+        fconfs["from_"] = None
+        valid_dtypes = {dtype: dtype for dtype, spec
+                        in REGEX_TOKEN_SPECS.items()}
+        dtype_default = {dtype: spec[2] for dtype, spec
+                         in REGEX_TOKEN_SPECS.items()}
+        fconfs["dtype"] = fconfs["dtype"].map(valid_dtypes).fillna("")
+        fconfs["default"] = fconfs["dtype"].map(dtype_default).fillna("")
+
+        # Compress hierarchy and then extract fields.
+        flat_rets = {}
+        for idx, pconf in flat_pconfs.iterrows():
+            part_name = pconf["part"]
+            psrc = compress_hierarchy(src, pconf["steps"])
+            fconfs_ = fconfs.loc[fconfs["part"] == part_name,
+                                 ["key", "from_", "step", "dtype", "default"]]
+            flat_rets[pconf["part"]] = flat_records(psrc, fconfs_.values)
+    # Check and covert dtype for columns in DFs.
+    elif isinstance(src, dict):
+        flat_rets = {}
+        for idx, pconf in flat_pconfs.iterrows():
+            part_name = pconf["part"]
+            if part_name not in src:
+                logger.info(f"{part_name} can't be found in DataFrames.")
+                continue
+            # Copy if not to covnert dtypes inplace.
+            df = (src[part_name] if how == "inplace"
+                  else src["part_name"].copy())
+            fconfs_ = flat_fconfs.loc[flat_fconfs["part"] == part_name]
+            for idx, fconf in fconfs_.iterrows():
+                field_name = fconf["key"]
+                dtype = fconf["dtype"]
+                nptype = stype_spec(dtype, "nptype")
+                if field_name not in df:
+                    logger.info(f"{field_name} can't be found in `{part_name}`.")
+                    continue
+                df[field_name] = df[field_name].astype(nptype)
+
+            flat_rets[part_name] = df
+
+    return flat_rets
 
 
 # %%
@@ -290,7 +405,8 @@ def agg_from_graphdf(
         # Apply `gagg_on_dfs` for each selected node.
         agg_ret = nodes.progress_apply(gagg_on_dfs, dfs=dfs, rules=agg_rules,
                                        envp=envp)
-        agg_rets[part_name] = agg_ret
+        # Set node-id as index.
+        agg_rets[part_name] = agg_ret.set_index("nid", drop=True)
 
     return agg_rets
 

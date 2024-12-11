@@ -137,7 +137,7 @@ LOAN_REPAYMENT_MONTHLY = {
         # 应还
         ("duepay_amt"           , None  , "FLOAT"           , "应还金额"),
         ("duepay_pri"           , None  , "FLOAT"           , "应还本金"),
-        ("duepay_date"          , None  , "FLOAT"           , "应还日期"),
+        ("duepay_date"          , None  , "DATE"            , "应还日期"),
         # 实还
         ("repay_amt"            , None  , "FLOAT"           , "实还金额"),
         ("repay_date"           , None  , "DATE"            , "实还日期"),
@@ -215,6 +215,6 @@ def df_flat_confs():
         af_fields.extend([[val["part"], *ele] for ele in val["fields"]])
     af_parts = pd.DataFrame(af_parts)
     af_fields = pd.DataFrame.from_records(
-        af_fields, columns=["part", "field", "step", "dtype", "desc"])
+        af_fields, columns=["part", "key", "step", "dtype", "desc"])
 
     return af_parts, af_fields
