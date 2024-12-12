@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-12-11 20:49:25
+#   Updated: 2024-12-12 19:53:28
 #   Description:
 # ---------------------------------------------------------
 
@@ -39,7 +39,6 @@ import sqlalchemy as sa
 from tqdm import tqdm
 from IPython.core.debugger import set_trace
 
-from flagbear.llp.patterns import REGEX_TOKEN_SPECS
 from flagbear.llp.parser import EnvParser
 from flagbear.str2.fliper import extract_field
 from flagbear.slp.finer import get_assets_path, get_tmp_path
@@ -205,7 +204,11 @@ if __name__ == "__main__":
     dfs, trans_ret, agg_ret, mark_ret = pboc_vars(dfs, key_mark)
     assert len(trans_ret.keys() - dfs.keys()) == 0
     # save_with_pickle(agg_ret, "pboc/agg_dfs")
-    # agg_ret = load_from_pickle("pboc/agg_dfs")
+    # old_agg_ret = load_from_pickle("pboc/agg_dfs")
+    # for key in agg_ret:
+    #     ndf = agg_ret[key]
+    #     odf = old_agg_ret[key]
+    #     assert np.all(np.isclose(ndf.values, odf.values, equal_nan=True))
 
     flats_file = f"pboc/pboc_flats_{key_mark}.xlsx"
     aggs_file = f"pboc/pboc_aggs_{key_mark}.xlsx"

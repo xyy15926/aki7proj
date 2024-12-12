@@ -3,7 +3,7 @@
 #   Name: ex2df.py
 #   Author: xyy15926
 #   Created: 2024-11-10 19:49:31
-#   Updated: 2024-11-11 10:42:41
+#   Updated: 2024-12-12 15:40:58
 #   Description:
 # ---------------------------------------------------------
 
@@ -19,7 +19,6 @@ import numpy as np
 import pandas as pd
 # from IPython.core.debugger import set_trace
 
-from flagbear.llp.patterns import REGEX_TOKEN_SPECS
 from flagbear.llp.parser import EnvParser
 from flagbear.str2.fliper import rebuild_dict
 from modsbear.dflater.exenv import EXGINE_ENV
@@ -42,7 +41,6 @@ def rebuild_rec2df(
     envp: EnvParser = None,
     explode: bool = False,
     range_index: str = None,
-    regex_specs: Mapping = REGEX_TOKEN_SPECS,
 ) -> pd.DataFrame:
     """Parse fields from record to construct DataFrame.
 
@@ -86,8 +84,6 @@ def rebuild_rec2df(
       set.
     range_index: True value represents to add RangeIndex named with
       `range_index`.
-    regex_specs: Mapping[dtype, (regex, convert-function, default,...)]
-      Mapping storing the dtype name and the handler.
 
     Return:
     -------------------------
@@ -115,7 +111,7 @@ def rebuild_rec2df(
                 logger.warning(f"Invalid JSON string: {rec}.")
                 return pd.DataFrame()
 
-        val_dict = rebuild_dict(rec, val_rules, envp, regex_specs)
+        val_dict = rebuild_dict(rec, val_rules, extended=True, envp=envp)
 
     # In case that no valid values extracted.
     if not val_dict:
@@ -130,7 +126,7 @@ def rebuild_rec2df(
     index_arrays = []
     index_names = []
     if index_rules:
-        index_dict = rebuild_dict(rec, index_rules, envp, regex_specs)
+        index_dict = rebuild_dict(rec, index_rules, extended=True, envp=envp)
         index_names = list(index_dict.keys())
         # Convert `index_dict` into MultiIndex.
         for ival in index_dict.values():
@@ -261,7 +257,6 @@ def flat_records(
     env: Mapping = None,
     envp: EnvParser = None,
     drop_rid: bool = True,
-    regex_specs: Mapping = REGEX_TOKEN_SPECS,
 ) -> pd.DataFrame:
     """Flat Series of records into DataFrame.
 
@@ -296,8 +291,6 @@ def flat_records(
       ATTENTION: `env` will be ignored if `envp` is passed.
     drop_rid: If to drop the meaningless last level of index created by
       `rebuild_rec2df` with `explode`.
-    regex_specs: Mapping[dtype, (regex, convert-function, default,...)]
-      Mapping storing the dtype name and the handler.
 
     Return:
     ------------------
@@ -314,8 +307,7 @@ def flat_records(
     ret = src.apply(rebuild_rec2df,
                     val_rules=confs,
                     envp=envp,
-                    explode=True,
-                    regex_specs=regex_specs)
+                    explode=True)
 
     # In case empty result that doesn't support `pd.concat`.
     if ret.empty:

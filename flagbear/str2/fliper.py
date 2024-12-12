@@ -15,8 +15,7 @@ import json
 from collections import deque
 
 from flagbear.llp.parser import EnvParser
-from flagbear.llp.patterns import REGEX_TOKEN_SPECS
-from flagbear.str2.dtyper import str_caster
+from flagbear.str2.dtyper import stype_spec, str_caster
 from IPython.core.debugger import set_trace
 
 # %%
@@ -34,10 +33,10 @@ def extract_field(
     steps: str,
     envp: EnvParser | None = None,
     dtype: str = None,
+    extended: bool = False,
     *,
-    dforced: bool = False,
     dfill: Any = None,
-    regex_specs: Mapping = REGEX_TOKEN_SPECS,
+    dforced: bool = False,
 ) -> Any:
     """Extract field from dict.
 
@@ -57,8 +56,8 @@ def extract_field(
       other dtype, and nothing will be done if the value can't be converted
       properly unless `dforced` is set.
 
-    Attention: `dtype` in `REGEX_TOKEN_SPECS` is necessary. Namely `dfill`
-    should be used as some kind of hanlder for any DIY dtype.
+    Attention: `dfill` will be used as the return if `deforced` is set and the
+    `dtype` is not defined in in `stype_spec`.
 
     Example:
     ----------------
@@ -85,17 +84,16 @@ def extract_field(
       EvnParser with default arguments will be used as default.
     dtype: str | AUTO | None
       AUTO: Call `regex_caster` to cast string to any proper dtype.
-      str: Casting string to indicating dtype in `REGEX_TOKEN_SPECS`(default)
+      str: Cast string to dtype defined in `stype_spec` by call `str_caster`.
         INT:
         FLOAT:
-        TIME:
         DATE:
-    dforced: If to rollback to used `dfill` if converters in
-      `REGEX_TOKEN_SPECS` fails.
+        DATETIME:
+    extended: Import numpy or some other modules for convinience or
+      representation string compatiability for dtype conversion.
     dfill: The default value after dtype casting fails.
-      This will override the default values in `regex_specs` if not None.
-    regex_specs: Mapping[dtype, (regex, convert-function, default,...)]
-      Mapping storing the dtype name and the handler.
+      This will override the default values for the dtype if not None.
+    dforced: If to rollback to used `dfill` if caster in `stype_spec` fails.
 
     Return:
     ----------------
@@ -126,8 +124,7 @@ def extract_field(
                 cur_obj = cur_obj.values()
             for obj_ in cur_obj:
                 ret = extract_field(obj_, steps[idx + 1:], envp, dtype,
-                                    dforced=dforced, dfill=dfill,
-                                    regex_specs=regex_specs)
+                                    dforced=dforced, dfill=dfill)
                 rets.append(ret)
             agg_expr = step[1:-1]
             if agg_expr:
@@ -144,18 +141,22 @@ def extract_field(
             cur_obj = (cur_obj.get(dest, None) if isinstance(cur_obj, dict)
                        else None)
 
-    # Try type casting iff `dtype` is provided to cast dtype from `str`.
-    if isinstance(cur_obj, str) and dtype:
-        try:
-            cur_obj = str_caster(cur_obj,
-                                 dtype=dtype,
-                                 dforced=dforced,
-                                 dfill=dfill,
-                                 regex_specs=regex_specs)
-        except ValueError:
-            logger.warning(f"Can't cast to target dtype {dtype}.")
-    elif cur_obj is None and dforced:
-        cur_obj = dfill
+    # Try type casting iff `dtype` is provided.
+    if dtype:
+        # Call `str_caster` to cast dtype from str.
+        if isinstance(cur_obj, str):
+            try:
+                cur_obj = str_caster(cur_obj,
+                                     dtype=dtype,
+                                     extended=extended,
+                                     dfill=dfill,
+                                     dforced=dforced)
+            except ValueError:
+                logger.warning(f"Can't cast to target dtype {dtype}.")
+        # Set with default value if dtype is specified and dtype unfication
+        # is forced.
+        elif cur_obj is None and dforced:
+            cur_obj = stype_spec(dtype, "default") if dfill is None else dfill
 
     return cur_obj
 
@@ -253,8 +254,8 @@ def reset_field(
 def rebuild_dict(
     obj: dict | str,
     rules: list,
+    extended: bool = False,
     envp: EnvParser | None = None,
-    regex_specs: Mapping = REGEX_TOKEN_SPECS,
 ) -> dict:
     """Rebuild dict after extracting fields.
 
@@ -270,16 +271,19 @@ def rebuild_dict(
       3-Tuple: [key, steps, dtype]
       4-Tuple: [key, from_, steps, dtype]
       5-Tuple: [key, from_, steps, dtype, default]
+      6-Tuple: [key, from_, steps, dtype, forced, default]
         key: Key in the new dict.
         from_: Dependency and source from which get the value and will be
           passed to `extract_field` as `obj.`
         steps: Steps passed to `extract_field` as `steps`.
         dtype: Dtype passed to `extract_field` as `dtype`.
         default: Default value passed to `extract_field` as `dfill`.
+        forced: Forced-dtype conversion flag passed to `extract_field` as
+          dforced.
+    extended: Import numpy or some other modules for convinience or
+      representation string compatiability for dtype conversion.
     envp: EvnParser to execute the conditions and the aggragation.
       EvnParser with default arguments will be used as default.
-    regex_specs: Mapping[dtype, (regex, convert-function, default,...)]
-      Mapping storing the dtype name and the handler.
 
     Return:
     ----------------
@@ -323,8 +327,8 @@ def rebuild_dict(
                 cur_obj = rets[from_]
 
         # Extract fields.
-        rets[key] = extract_field(cur_obj, steps, envp, dtype,
-                                  dforced=dforced, dfill=dfill,
-                                  regex_specs=regex_specs)
+        rets[key] = extract_field(cur_obj, steps, envp, dtype, extended,
+                                  dfill=dfill,
+                                  dforced=dforced)
 
     return rets

@@ -3,7 +3,7 @@
 #   Name: test_fliper.py
 #   Author: xyy15926
 #   Created: 2023-12-18 19:42:15
-#   Updated: 2024-11-21 20:01:05
+#   Updated: 2024-12-12 15:33:41
 #   Description:
 # ---------------------------------------------------------
 
@@ -13,18 +13,19 @@ if __name__ == "__main__":
     from importlib import reload
     from flagbear.tree import tree
     from flagbear.llp import lex, syntax, parser, patterns, graph
-    from flagbear.str2 import fliper
+    from flagbear.str2 import dtyper, fliper
     reload(tree)
     reload(graph)
     reload(patterns)
     reload(lex)
     reload(syntax)
     reload(parser)
+    reload(dtyper)
     reload(fliper)
 
 import numpy as np
 from datetime import date, time
-from flagbear.llp.patterns import REGEX_TOKEN_SPECS, LEX_ENDFLAG
+from flagbear.llp.patterns import LEX_ENDFLAG
 from flagbear.llp.lex import Lexer
 from flagbear.llp.parser import EnvParser
 from flagbear.str2.fliper import extract_field, rebuild_dict
@@ -133,10 +134,9 @@ def test_extract_field_with_forced_dtype():
                          dfill=1234) == 1234
     assert extract_field(env, "c:ca", dtype="INT2", dforced=True) == "ca2"
 
-    regex_specs = REGEX_TOKEN_SPECS.copy()
-    regex_specs["INT"] = regex_specs["INT"][:2] + (1234,)
-    assert extract_field(env, "c:ca", dtype="INT", dforced=True,
-                         regex_specs=regex_specs) == 1234
+    assert extract_field(env, "c:ca", dtype="INT",
+                         dforced=True,
+                         dfill=1234) == 1234
 
 
 # %%
@@ -180,9 +180,9 @@ def test_rebuild_dict():
         ("ccba"         , None      , "c:cc:ccb:[]:ccba"            , "INT"),
         ("ccbca"        , None      , "c:cc:ccb:[]:ccbc:[]:ccbca"   , "INT"),
     ]
-    rets = rebuild_dict(env, rules)
+    rets = rebuild_dict(env, rules, True)
     envp = EnvParser()
-    rets_p = rebuild_dict(env, rules, envp)
+    rets_p = rebuild_dict(env, rules, envp=envp)
     assert rets == rets_p
 
     rules = [
@@ -192,9 +192,9 @@ def test_rebuild_dict():
         ("ccba"         , None      , "[_]:c:cc:ccb:[]:ccba"            , "INT"),
         ("ccbca"        , None      , "[_]:c:cc:ccb:[]:ccbc:[]:ccbca"   , "INT"),
     ]
-    rets = rebuild_dict([env, env], rules)
+    rets = rebuild_dict([env, env], rules, True)
     envp = EnvParser()
-    rets_p = rebuild_dict([env, env], rules, envp)
+    rets_p = rebuild_dict([env, env], rules, envp=envp)
     assert rets == rets_p
 
 

@@ -3,7 +3,7 @@
 #   Name: exdf.py
 #   Author: xyy15926
 #   Created: 2024-11-11 17:04:03
-#   Updated: 2024-12-11 20:54:25
+#   Updated: 2024-12-12 18:15:51
 #   Description:
 # ---------------------------------------------------------
 
@@ -35,8 +35,8 @@ from collections import ChainMap
 from tqdm import tqdm
 # from IPython.core.debugger import set_trace
 
-from flagbear.llp.patterns import REGEX_TOKEN_SPECS
 from flagbear.llp.parser import EnvParser
+from flagbear.str2.dtyper import stype_spec
 from modsbear.spanner.manidf import merge_dfs
 from modsbear.dflater.ex2df import compress_hierarchy, flat_records
 from modsbear.dflater.ex4df import trans_on_df, agg_on_df
@@ -51,32 +51,6 @@ logging.basicConfig(
     force=(__name__ == "__main__"))
 logger = logging.getLogger()
 logger.info("Logging Start.")
-
-
-# %%
-# TODO: Replace `REGEX_TOKEN_SPECS`.
-def stype_spec(
-    dtype: str,
-    spec: str = "regex",
-) -> Any:
-    """Get specifications for string conversion.
-    """
-    dtype = dtype.upper()
-    np_types = {
-        "FLOAT": "float",
-        "DATE": "M8[s]",
-        "INT": "int",
-    }
-    if spec == "regex":
-        ret = REGEX_TOKEN_SPECS[dtype][0]
-    elif spec == "converter":
-        ret = REGEX_TOKEN_SPECS[dtype][1]
-    elif spec == "default":
-        ret = REGEX_TOKEN_SPECS[dtype][2]
-    elif spec == "nptype":
-        ret = np_types.get(dtype, "string")
-
-    return ret
 
 
 # %%
@@ -125,21 +99,20 @@ def flat_ft_dfs(
         # Unify dtypes and defaults for `rebuild_rec2df`.
         fconfs = flat_fconfs.copy()
         fconfs["from_"] = None
-        valid_dtypes = {dtype: dtype for dtype, spec
-                        in REGEX_TOKEN_SPECS.items()}
-        dtype_default = {dtype: spec[2] for dtype, spec
-                         in REGEX_TOKEN_SPECS.items()}
-        fconfs["dtype"] = fconfs["dtype"].map(valid_dtypes).fillna("")
-        fconfs["default"] = fconfs["dtype"].map(dtype_default).fillna("")
+        fconfs["dforced"] = True
+        if "default" not in fconfs:
+            fconfs["default"] = None
 
         # Compress hierarchy and then extract fields.
         flat_rets = {}
         for idx, pconf in flat_pconfs.iterrows():
             part_name = pconf["part"]
             psrc = compress_hierarchy(src, pconf["steps"])
-            fconfs_ = fconfs.loc[fconfs["part"] == part_name,
-                                 ["key", "from_", "step", "dtype", "default"]]
-            flat_rets[pconf["part"]] = flat_records(psrc, fconfs_.values)
+            fconfs_ = fconfs.loc[
+                fconfs["part"] == part_name,
+                ["key", "from_", "step", "dtype", "default", "dforced"]]
+            flat_ret = flat_records(psrc, fconfs_.values)
+            flat_rets[pconf["part"]] = flat_ret
     # Check and covert dtype for columns in DFs.
     elif isinstance(src, dict):
         flat_rets = {}

@@ -3,7 +3,7 @@
 #   Name: test_dtyper.py
 #   Author: xyy15926
 #   Created: 2024-11-11 11:56:24
-#   Updated: 2024-11-11 11:58:01
+#   Updated: 2024-12-12 14:20:21
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,11 +18,62 @@ if __name__ == "__main__":
     reload(dtyper)
 
 import numpy as np
-from datetime import date, time
+from datetime import datetime
+import re
 
-from flagbear.llp.patterns import REGEX_TOKEN_SPECS, LEX_ENDFLAG
+from flagbear.llp.patterns import LEX_ENDFLAG
 from flagbear.llp.lex import Lexer
-from flagbear.str2.dtyper import regex_caster, str_caster
+from flagbear.str2.dtyper import stype_spec, regex_caster, str_caster
+
+
+# %%
+def test_stype_spec():
+    regex = stype_spec("INT", "regex")
+    assert re.fullmatch(regex, "23424")
+    assert not re.fullmatch(regex, "234d24")
+    caster = stype_spec("INT", "caster")
+    assert caster("23424") == 23424
+
+    regex = stype_spec("FLOAT", "regex")
+    assert re.fullmatch(regex, "23424.2")
+    assert re.fullmatch(regex, "+23424.2")
+    assert re.fullmatch(regex, "-23424.2")
+    assert re.fullmatch(regex, "23424.0")
+    assert not re.fullmatch(regex, "23424")
+    assert not re.fullmatch(regex, "234d24")
+    caster = stype_spec("FLOAT", "caster")
+    assert caster("-23424.0") == -23424
+
+    regex = stype_spec("DATE", "regex")
+    assert re.fullmatch(regex, "2020-10-10")
+    assert re.fullmatch(regex, "2020-02-29")
+    assert re.fullmatch(regex, "2021-02-29")
+    assert not re.fullmatch(regex, "2021-10-10T")
+    assert not re.fullmatch(regex, "2021-10-10T10:12:12")
+    caster = stype_spec("DATE", "caster")
+    # DATE and DATETIME caster are the same for convinience, right now.
+    assert (caster("2023-01-01T10:12:12")
+            == datetime.fromisoformat("2023-01-01T10:12:12"))
+
+    regex = stype_spec("DATETIME", "regex")
+    assert not re.fullmatch(regex, "2020-10-10")
+    assert not re.fullmatch(regex, "2020-02-29")
+    assert not re.fullmatch(regex, "2021-02-29")
+    assert not re.fullmatch(regex, "2021-10-10T")
+    assert re.fullmatch(regex, "2021-10-10T10:12:12")
+    caster = stype_spec("DATETIME", "caster")
+    assert (caster("2023-01-01T10:12:12")
+            == datetime.fromisoformat("2023-01-01D10:12:12"))
+    # `datetime.fromisoformat` accept any seperator besides `T`,
+    # while `np.datetime64` only accept standard `T`.
+    with pytest.raises(ValueError):
+        assert (caster("2023-01-01D10:12:12")
+                == datetime.fromisoformat("2023-01-01D10:12:12"))
+    caster = stype_spec("DATETIME", "caster", False)
+    assert (caster("2023-01-01T10:12:12")
+            == datetime.fromisoformat("2023-01-01D10:12:12"))
+    assert (caster("2023-01-01D10:12:12")
+            == datetime.fromisoformat("2023-01-01D10:12:12"))
 
 
 # %%
@@ -35,24 +86,29 @@ def test_regex_caster():
     assert regex_caster("2,342", match_ratio=0.6) == (342, "INT")
     assert regex_caster("2,342", match_ratio=0.1) == (2, "INT")
 
-    lexer = Lexer(REGEX_TOKEN_SPECS, {}, set(), LEX_ENDFLAG)
+    token_types = ["DATE", "FLOAT", "INT"]
+    token_specs = {tt: (stype_spec(tt, "regex"), stype_spec(tt, "caster"))
+                   for tt in token_types}
+    lexer = Lexer(token_specs, {}, set(), LEX_ENDFLAG)
 
     assert regex_caster("2342.23", lexer) == (2342.23, "FLOAT")
     assert regex_caster("-2342.23") == (-2342.23, "FLOAT")
     assert regex_caster("+2342.23") == (2342.23, "FLOAT")
     assert regex_caster("2,342.2323") == (342.2323, "FLOAT")
 
-    assert regex_caster("2023-01-01", lexer) == (date.fromisoformat("2023-01-01"), "DATE")
-    assert regex_caster("2023-01-01d") == (date.fromisoformat("2023-01-01"), "DATE")
-    assert regex_caster("d2023-01-01") == (date.fromisoformat("2023-01-01"), "DATE")
-
-    assert regex_caster("2023/01/01", lexer) == (date.fromisoformat("2023-01-01"), "DATE")
-    assert regex_caster("2023/01/01d") == (date.fromisoformat("2023-01-01"), "DATE")
-    assert regex_caster("d2023/01/01") == (date.fromisoformat("2023-01-01"), "DATE")
-
-    assert regex_caster("12:12:12", lexer) == (time.fromisoformat("12:12:12"), "TIME")
-    assert regex_caster("T12:12:12") == (time.fromisoformat("12:12:12"), "TIME")
-    assert regex_caster("12:12:12T") == (time.fromisoformat("12:12:12"), "TIME")
+    # DATETIME is not included in `lexer`.
+    assert regex_caster("2023-01-01T11:11:11", lexer) is None
+    assert (regex_caster("2023-01-01T11:11:11")
+            == (datetime.fromisoformat("2023-01-01T11:11:11"), "DATETIME"))
+    assert (regex_caster("2023-01-01T11:11:11")
+            == (datetime.fromisoformat("2023-01-01D11:11:11"), "DATETIME"))
+    assert (regex_caster("2023/01/01T11:11:11")
+            == (datetime.fromisoformat("2023-01-01D11:11:11"), "DATETIME"))
+    assert regex_caster("2023-01-01d") == (datetime.fromisoformat("2023-01-01"), "DATE")
+    assert regex_caster("d2023-01-01") == (datetime.fromisoformat("2023-01-01"), "DATE")
+    assert regex_caster("2023/01/01") == (datetime.fromisoformat("2023-01-01"), "DATE")
+    assert regex_caster("2023/01/01d") == (datetime.fromisoformat("2023-01-01"), "DATE")
+    assert regex_caster("d2023/01/01") == (datetime.fromisoformat("2023-01-01"), "DATE")
 
 
 # %%

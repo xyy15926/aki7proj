@@ -29,7 +29,6 @@ from flagbear.llp.patterns import (
     LEX_SKIPS,
     LEX_RESERVEDS,
     LEX_ENDFLAG,
-    REGEX_TOKEN_SPECS,
     SYN_STARTSYM,
     SYN_ARITH_PRODS,
     SYN_EXPR_PRODS,

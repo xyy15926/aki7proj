@@ -74,22 +74,6 @@ REGEXS = {
 
 
 # %%
-def _datetime64(x: str):
-    if "/" in x:
-        x = x.replace("/", "-")
-    if len(x) == 10 + 8:
-        x = x[:10] + " " + x[10:]
-    return np.datetime64(x)
-
-
-REGEX_TOKEN_SPECS = {
-    "FLOAT"         : (REGEXS["sfloat"]                 , float         , np.nan),
-    "DATE"          : (REGEXS["date"]                   , lambda x: _datetime64(x)                      ,np.datetime64("NaT")),
-    "TIME"          : (REGEXS["time"]                   , lambda x: time.fromisoformat(x)               , np.datetime64("NaT")),
-    "INT"           : (REGEXS["sint"]                   , int           , np.nan),
-}
-
-# %%
 LEX_ENDFLAG = "$END"
 
 LEX_RESERVEDS = {
@@ -106,6 +90,8 @@ LEX_SKIPS = {"NL", "SEMI", "BLANK"}
 
 # `dict` is ordered after Py36. So following token specifications could be
 # configured with `dict` instead of list or tuple.
+# ATTENTION: Unsigned instead of signed int and float pattern are used for
+#   default Lexer token specifications.
 LEX_TOKEN_SPECS = {
     "STRING"        : (r"\"\w*\""                       , lambda x: x[1:-1]),
     "ID"            : r"[A-Za-z_]+[A-Za-z_0-9]*",
