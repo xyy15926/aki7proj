@@ -98,7 +98,7 @@ def save_with_excel(
     # Save the DataFrames with Excel.
     xlw = pd.ExcelWriter(tfname)
     for part, df in dfs.items():
-        if df.empty or part.startswith("_"):
+        if df.empty or (isinstance(part, str) and part.startswith("_")):
             continue
         elif df.shape[1] <= EXCEL_COLUMN_MAX:
             # In case the sheetname may not be str type.
