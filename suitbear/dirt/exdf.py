@@ -3,7 +3,7 @@
 #   Name: exdf.py
 #   Author: xyy15926
 #   Created: 2024-11-11 17:04:03
-#   Updated: 2024-12-12 18:15:51
+#   Updated: 2024-12-13 17:43:29
 #   Description:
 # ---------------------------------------------------------
 
@@ -54,7 +54,6 @@ logger.info("Logging Start.")
 
 
 # %%
-# TODO: Empty DataFrames.
 def flat_ft_dfs(
     src: list | pd.Series | dict[str, pd.DataFrame],
     flat_pconfs: pd.DataFrame,
@@ -209,17 +208,20 @@ def trans_from_dfs(
 
         join_key = pconf["joinkey"]
         if join_key:
-            jdfs = []
-            # Skip the aggregation if any source DataFrame is empty.
-            # TODO: this may lead to unexpected empty result if some of
-            # the fields don't rely on the empty DF.
+            # Join key may be the index, which can't be set for empty DF.
+            # So to merge the no-empty DF first and then add columns from the
+            # empty DF to retain the whole columns.
+            edfs, jdfs = [], []
             for dn in pconf["from_"]:
-                if df_space[dn].empty:
-                    joined_df = pd.DataFrame()
-                    break
-                jdfs.append(df_space[dn])
-            else:
-                joined_df = merge_dfs(jdfs, hows="left", ons=join_key)
+                from_df = df_space[dn]
+                if from_df.empty:
+                    edfs.append(from_df)
+                else:
+                    jdfs.append(from_df)
+            joined_df = merge_dfs(jdfs, hows="left", ons=join_key)
+            # Add columns from empty DF.
+            for from_df in edfs:
+                joined_df[from_df.columns] = np.nan
         else:
             joined_df = dfs[pconf["from_"][0]]
 
@@ -296,17 +298,20 @@ def agg_from_dfs(
         prikey = pconf["prikey"]
         join_key = pconf["joinkey"]
         if join_key:
-            jdfs = []
-            # Skip the aggregation if any source DataFrame is empty.
-            # TODO: this may lead to unexpected empty result if some of
-            # the fields don't rely on the empty DF.
+            # Join key may be the index, which can't be set for empty DF.
+            # So to merge the no-empty DF first and then add columns from the
+            # empty DF to retain the whole columns.
+            edfs, jdfs = [], []
             for dn in pconf["from_"]:
-                if df_space[dn].empty:
-                    joined_df = pd.DataFrame()
-                    break
-                jdfs.append(df_space[dn])
-            else:
-                joined_df = merge_dfs(jdfs, hows="left", ons=join_key)
+                from_df = df_space[dn]
+                if from_df.empty:
+                    edfs.append(from_df)
+                else:
+                    jdfs.append(from_df)
+            joined_df = merge_dfs(jdfs, hows="left", ons=join_key)
+            # Add columns from empty DF.
+            for from_df in edfs:
+                joined_df[from_df.columns] = np.nan
         else:
             joined_df = dfs[pconf["from_"][0]]
 

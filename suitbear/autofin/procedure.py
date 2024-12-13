@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2024-12-11 20:54:58
+#   Updated: 2024-12-13 18:06:56
 #   Description:
 # ---------------------------------------------------------
 
@@ -201,7 +201,11 @@ if __name__ == "__main__":
     MAPPERS_CODE["today"] = pd.Timestamp("20241101")
     dfs, agg_rets = autofin_vars(dfs, None, env=MAPPERS_CODE)
     # save_with_pickle(agg_rets, "autofin/agg_dfs")
-    # agg_rets = load_from_pickle("autofin/agg_dfs")
+    # old_agg_rets = load_from_pickle("autofin/agg_dfs")
+    # for key in agg_rets:
+    #     ndf = agg_rets[key]
+    #     odf = old_agg_rets[key]
+    #     assert np.all(np.isclose(ndf.values, odf.values, equal_nan=True))
 
     save_with_excel(agg_rets, "autofin/autofin_aggs.xlsx")
     save_with_excel(dfs, "autofin/autofin_flats.xlsx")

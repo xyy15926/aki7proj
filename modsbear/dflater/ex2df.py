@@ -3,7 +3,7 @@
 #   Name: ex2df.py
 #   Author: xyy15926
 #   Created: 2024-11-10 19:49:31
-#   Updated: 2024-12-12 15:40:58
+#   Updated: 2024-12-13 17:19:55
 #   Description:
 # ---------------------------------------------------------
 
@@ -57,18 +57,21 @@ def rebuild_rec2df(
     Params:
     -------------------------
     rec: Record.
-    val_rules: List of 2/3/4/5-Tuple of rules for value extraction.
+    val_rules: List of 2/3/4/5/6-Tuple of rules for value extraction.
       Extractions will be used as the value of the returned DataFrame.
       2-Tuple: [key, steps]
       3-Tuple: [key, steps, dtype]
       4-Tuple: [key, from_, steps, dtype]
       5-Tuple: [key, from_, steps, dtype, default]
+      6-Tuple: [key, from_, steps, dtype, default, forced]
         key: Key in the new dict.
         from_: Dependency and source from which get the value and will be
           passed to `extract_field` as `obj.`
         steps: Steps passed to `extract_field` as `steps`.
         dtype: Dtype passed to `extract_field` as `dtype`.
         default: Default value passed to `extract_field` as `dfill`.
+        forced: Forced-dtype conversion flag passed to `extract_field` as
+          dforced.
       None: Keep original value.
     index_rules: List of 2/4/5-Tuple of rules for value extraction.
       Each of the extractions could be a scalar or a list with the same length
@@ -96,36 +99,43 @@ def rebuild_rec2df(
         else:
             envp = EnvParser(ChainMap(env, EXGINE_ENV))
 
-    # Extract some fields as index while keeping the record untouched.
-    if val_rules is None or len(val_rules) == 0:
-        val_dict = {0: rec}
-        if index_rules is None or len(index_rules) == 0:
-            logger.warning("Neither value-rules nor index-rules are specified, "
-                           "empty DataFrame will be returned.")
-            return pd.DataFrame()
-    else:
-        if isinstance(rec, str):
-            try:
-                rec = json.loads(rec)
-            except json.JSONDecodeError:
-                logger.warning(f"Invalid JSON string: {rec}.")
-                return pd.DataFrame()
+    # Return totally empty DF if no valid index-rule nor value-rule.
+    if ((val_rules is None or len(val_rules) == 0)
+            and (index_rules is None or len(index_rules) == 0)):
+        logger.warning("Neither value-rules nor index-rules are specified, "
+                       "empty DataFrame will be returned.")
+        return pd.DataFrame()
 
-        val_dict = rebuild_dict(rec, val_rules, extended=True, envp=envp)
+    # Check if `rec` can't be deserialized to dict.
+    if isinstance(rec, str):
+        try:
+            rec = json.loads(rec)
+        except json.JSONDecodeError:
+            logger.error(f"Invalid JSON string: {rec}.")
+            rec = {}
 
-    # In case that no valid values extracted.
+    # Extract values from `rec`.
+    val_dict = (rebuild_dict(rec, val_rules, extended=True, envp=envp)
+                if val_rules is not None and len(val_rules) > 0
+                else {0: rec})
+
+    # Construct DF with columns specifed by `val_rules`.
+    # `vals` will always have the same columns, though in some cases that
+    # no valid values extracted.
     if not val_dict:
         vals = pd.DataFrame(columns=[i[0] for i in val_rules])
-    # Convert extracted values to DataFrame.
+    # Convert extracted values to muliple rows DataFrame.
+    # Annotation: All values in `val_dict` must be list.
     elif explode and isinstance(next(iter(val_dict.values())), list):
-        # Annotation: All values in `val_dict` must be list.
         vals = pd.DataFrame(val_dict)
+    # Convert extracted values to 1-row DataFrame.
     else:
         vals = pd.DataFrame.from_records([val_dict])
 
     index_arrays = []
     index_names = []
-    if index_rules:
+    # Extract index from `rec`.
+    if index_rules is not None and len(index_rules) > 0:
         index_dict = rebuild_dict(rec, index_rules, extended=True, envp=envp)
         index_names = list(index_dict.keys())
         # Convert `index_dict` into MultiIndex.
@@ -141,10 +151,9 @@ def rebuild_rec2df(
         index_arrays.append(np.arange(len(vals), dtype=np.int_))
         index_names.append(range_index)
 
-    # In case that no valid values extracted.
+    # In case that no valid index values extracted.
     if index_arrays:
-        index_ = pd.MultiIndex.from_arrays(index_arrays,
-                                           names=index_names)
+        index_ = pd.MultiIndex.from_arrays(index_arrays, names=index_names)
         vals.index = index_
 
     return vals
@@ -201,13 +210,13 @@ def compress_hierarchy(
     REC2DF_COL = None
     range_index = False
     for step in confs:
-        # Value rule.
+        # Value rules.
         content_step = step.get("content")
         if content_step is not None:
             val_rules = [(REC2DF_COL, content_step)]
         else:
             val_rules = None
-        # Key rule.
+        # Index rules.
         index_rules = []
         for kname, kstep in step.get("key", []):
             if kstep == "RANGEINDEX":
@@ -275,17 +284,20 @@ def flat_records(
     ------------------
     src: Series[INDEX, JSON-STRING]
       Each item represents a record.
-    confs: List of 2/3/4/5-Tuple of rules for value extraction.
+    confs: List of 2/3/4/5/6-Tuple of rules for value extraction.
       2-Tuple: [key, steps]
       3-Tuple: [key, steps, dtype]
       4-Tuple: [key, from_, steps, dtype]
       5-Tuple: [key, from_, steps, dtype, default]
+      6-Tuple: [key, from_, steps, dtype, default, forced]
         key: Key in the new dict.
         from_: Dependency and source from which get the value and will be
           passed to `extract_field` as `obj.`
         steps: Steps passed to `extract_field` as `steps`.
         dtype: Dtype passed to `extract_field` as `dtype`.
         default: Default value passed to `extract_field` as `dfill`.
+        forced: Forced-dtype conversion flag passed to `extract_field` as
+          dforced.
     env: Mapping to provide extra searching space for EnvParser.
     envp: EnvParser to execute string.
       ATTENTION: `env` will be ignored if `envp` is passed.
@@ -311,7 +323,7 @@ def flat_records(
 
     # In case empty result that doesn't support `pd.concat`.
     if ret.empty:
-        ret = pd.DataFrame()
+        ret = pd.DataFrame(columns=[i[0] for i in confs])
     else:
         ret = pd.concat(ret.values, keys=src.index)
         if drop_rid:

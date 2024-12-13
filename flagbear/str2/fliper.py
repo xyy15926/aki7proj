@@ -58,6 +58,7 @@ def extract_field(
 
     Attention: `dfill` will be used as the return if `deforced` is set and the
     `dtype` is not defined in in `stype_spec`.
+    Attention: Only str and None will be applied with dtyper conversion.
 
     Example:
     ----------------
@@ -142,6 +143,7 @@ def extract_field(
                        else None)
 
     # Try type casting iff `dtype` is provided.
+    # ATTENTION: Only str and None will be applied with dtyper conversion.
     if dtype:
         # Call `str_caster` to cast dtype from str.
         if isinstance(cur_obj, str):
@@ -266,12 +268,12 @@ def rebuild_dict(
     obj: Dict from which to get the value according to the rules.
       dict: Dict where fields will be found.
       str: JSON string, from which dict will loaded.
-    rules: [(key, from_, steps, dtype), ...]
+    rules: [(key, from_, steps, dtype, default, forced), ...]
       2-Tuple: [key, steps]
       3-Tuple: [key, steps, dtype]
       4-Tuple: [key, from_, steps, dtype]
       5-Tuple: [key, from_, steps, dtype, default]
-      6-Tuple: [key, from_, steps, dtype, forced, default]
+      6-Tuple: [key, from_, steps, dtype, default, forced]
         key: Key in the new dict.
         from_: Dependency and source from which get the value and will be
           passed to `extract_field` as `obj.`
@@ -287,8 +289,9 @@ def rebuild_dict(
 
     Return:
     ----------------
-    rets: dict
-      Dict with new structure.
+    rets: Dict with new structure.
+      NOTE: None or nan will be returned at all cases, namely all the keys
+      in the `rules` will be set in `rets`.
     """
     envp = EnvParser() if envp is None else envp
     rets = {}
@@ -311,6 +314,7 @@ def rebuild_dict(
         elif len(rule) == 6:
             key, from_, steps, dtype, dfill, dforced = rule
         else:
+            logger.warning(f"Invalid rule `{rule}` for rebuilding dict.")
             continue
 
         # Set `obj` as default data source.

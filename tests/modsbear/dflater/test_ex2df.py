@@ -3,7 +3,7 @@
 #   Name: test_ex2df.py
 #   Author: xyy15926
 #   Created: 2024-11-11 14:17:07
-#   Updated: 2024-11-11 14:22:21
+#   Updated: 2024-12-13 17:05:15
 #   Description:
 # ---------------------------------------------------------
 
@@ -158,6 +158,7 @@ def test_rebuild_rec2df_null_fields():
     nrec = rebuild_rec2df(rec, val_rules, index_rules, explode=False)
     assert len(nrec) == 1
     assert np.all(nrec.columns == [i[0] for i in val_rules])
+    assert np.all(nrec.index.names == [i[0] for i in index_rules])
 
 
 # %%
@@ -298,18 +299,36 @@ def test_flat_record():
         ["PD01AR02", "PD01AR02", "DATE", "基本信息_到期日期"],
     ]
 
+    # Flat with 2-Tuple confs.
     tuple2_fields = [ele[:2] for ele in acc_info_fields]
     acc_info_vals = flat_records(acc_info_psrc, tuple2_fields)
     assert np.all(acc_info_vals.index.names == acc_info_psrc.index.names)
     assert len(acc_info_vals) == len(acc_info_psrc)
     assert np.all(acc_info_vals.dtypes == "object")
 
+    # Flat with 2-Tuple null confs.
+    tuple2_fields = [[a, b + "ccc"] for a, b, *c in acc_info_fields]
+    acc_info_vals = flat_records(acc_info_psrc, tuple2_fields)
+    assert np.all(acc_info_vals.index.names == acc_info_psrc.index.names)
+    assert len(acc_info_vals) == len(acc_info_psrc)
+    assert np.all(acc_info_vals.dtypes == "object")
+
+    # Flat with 2-Tuple confs with null data source.
+    tuple2_fields = [ele[:2] for ele in acc_info_fields]
+    acc_info_psrc_null = pd.Series(index=acc_info_psrc.index, dtype=object)
+    acc_info_vals = flat_records(acc_info_psrc_null, tuple2_fields)
+    assert np.all(acc_info_vals.index.names == acc_info_psrc.index.names)
+    assert len(acc_info_vals) == len(acc_info_psrc)
+    assert np.all(acc_info_vals.dtypes == "object")
+
+    # Flat with 3-Tuple confs.
     tuple3_fields = [ele[:3] for ele in acc_info_fields]
     acc_info_vals = flat_records(acc_info_psrc, tuple3_fields)
     assert np.all(acc_info_vals.index.names == acc_info_psrc.index.names)
     assert len(acc_info_vals) == len(acc_info_psrc)
     assert np.sum(acc_info_vals.dtypes != "object") == 1
 
+    # Flat with 5-Tuple confs.
     mixed_fields = []
     for key, step, dtype, desc in acc_info_fields:
         if dtype == "DATE":
