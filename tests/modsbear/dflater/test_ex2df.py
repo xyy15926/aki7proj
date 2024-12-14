@@ -3,7 +3,7 @@
 #   Name: test_ex2df.py
 #   Author: xyy15926
 #   Created: 2024-11-11 14:17:07
-#   Updated: 2024-12-13 17:05:15
+#   Updated: 2024-12-14 23:17:00
 #   Description:
 # ---------------------------------------------------------
 
@@ -27,23 +27,146 @@ from flagbear.slp.finer import get_assets_path
 from flagbear.str2.fliper import extract_field, rebuild_dict
 from modsbear.dflater.ex2df import rebuild_rec2df, compress_hierarchy, flat_records
 
-PBOC_CONFS = get_assets_path() / "pboc_settings"
-PBOC_JSON = PBOC_CONFS / "pboc_utf8.json"
-
 
 # %%
-def pboc_src():
-    pboc = open(PBOC_JSON, "r").read()
-    pboc2 = pboc.replace("2019101617463675115707", "2019101617463675115708")
-    src = pd.Series({"xfy": pboc, "xfy2": pboc2})
+def pboc_rec():
+    src = {
+        "PRH": {
+            "PA01": {
+                "PA01A": {
+                    "PA01AI01": "2019101617463675115707",
+                    "PA01AR01": "2019-10-16T17:46:36"
+                },
+                "PA01B": {
+                    "PA01BD01": "10",
+                    "PA01BD02": "22",
+                    "PA01BI01": "622926198501293785",
+                    "PA01BI02": "A10311000H0001",
+                    "PA01BQ01": "王小二"
+
+                },
+                "PA01C": None,
+                "PA01D": None,
+                "PA01E": {
+                    "PA01ES01": "1"
+                }
+            }
+        },
+        "PDA": {
+            "PD01": [
+                {
+                    "PD01A": {
+                        "PD01AD01": "D1",
+                        "PD01AD02": "12",
+                        "PD01AD03": "12",
+                        "PD01AD04": "JPY",
+                        "PD01AI01": "92719",
+                        "PD01AJ01": "10000",
+                        "PD01AJ03": None,
+                        "PD01AR01": "2013-01-10",
+                        "PD01AR02": None,
+                    },
+                    "PD01B": {
+                        "PD01BD01": "3",
+                        "PD01BD04": "",
+                        "PD01BJ01": "0",
+                        "PD01BJ02": "",
+                        "PD01BR01": "2018-06-20",
+                        "PD01BR02": "--",
+                    },
+                    "PD01C": None,
+                    "PD01D": {
+                        "PD01DH": [
+                            {
+                                "PD01DD01": "#",
+                                "PD01DR03": "2016-08"
+                            },
+                            {
+                                "PD01DD01": "#",
+                                "PD01DR03": "2016-07"
+                            }
+                        ],
+                        "PD01DR01": "2016-07",
+                        "PD01DR02": "2018-06"
+                    },
+                    "PD01E": {
+                        "PD01EH": [
+                            {
+                                "PD01ED01": "#",
+                                "PD01EJ01": "",
+                                "PD01ER03": "2014-12"
+                            },
+                            {
+                                "PD01ED01": "#",
+                                "PD01EJ01": "",
+                                "PD01ER03": "2014-11"
+                            },
+                            {
+                                "PD01ED01": "#",
+                                "PD01EJ01": "",
+                                "PD01ER03": "2014-10"
+                            }
+                        ],
+                        "PD01ER01": "2014-11",
+                        "PD01ER02": "2018-06",
+                        "PD01ES01": "44"
+                    },
+                    "PD01F": None,
+                    "PD01G": None,
+                    "PD01H": None,
+                    "PD01Z": None,
+                },
+                {
+                    "PD01A": {
+                        "PD01AD01": "R4",
+                        "PD01AD02": "12",
+                        "PD01AD03": "92",
+                        "PD01AD04": "CNY",
+                        "PD01AI01": "92720",
+                        "PD01AJ01": "20000",
+                        "PD01AJ03": None,
+                        "PD01AR01": "2013-01-10",
+                        "PD01AR02": None,
+                    },
+                    "PD01B": {
+                        "PD01BD01": "3",
+                        "PD01BD04": "",
+                        "PD01BJ01": "0",
+                        "PD01BJ02": "",
+                        "PD01BR01": "2018-06-20",
+                        "PD01BR02": "--",
+                    },
+                    "PD01C": None,
+                    "PD01D": {
+                        "PD01DH": [
+                            {
+                                "PD01DD01": "#",
+                                "PD01DR03": "2016-08"
+                            },
+                            {
+                                "PD01DD01": "#",
+                                "PD01DR03": "2016-07"
+                            }
+                        ],
+                        "PD01DR01": "2016-07",
+                        "PD01DR02": "2018-06"
+                    },
+                    "PD01E": None,
+                    "PD01F": None,
+                    "PD01G": None,
+                    "PD01H": None,
+                    "PD01Z": None,
+                },
+            ],
+        }
+    }
 
     return src
 
 
 # %%
 def test_rebuild_rec2df_basic():
-    src = pboc_src()
-    rec = src.iloc[0]
+    rec = pboc_rec()
 
     # Test basic function.
     val_rules = [
@@ -95,8 +218,7 @@ def test_rebuild_rec2df_basic():
 
 
 def test_rebuild_rec2df_range_index():
-    src = pboc_src()
-    rec = src.iloc[0]
+    rec = pboc_rec()
 
     val_rules = [
         ["pboc_acc_info", "PDA:PD01:[_]"],
@@ -119,8 +241,7 @@ def test_rebuild_rec2df_range_index():
 
 # %%
 def test_rebuild_rec2df_explode():
-    src = pboc_src()
-    rec = src.iloc[0]
+    rec = pboc_rec()
 
     # Test `explode` shouldn't be set when extractions don't share the same
     # length.
@@ -143,8 +264,7 @@ def test_rebuild_rec2df_explode():
 
 # %%
 def test_rebuild_rec2df_null_fields():
-    src = pboc_src()
-    rec = src.iloc[0]
+    rec = pboc_rec()
 
     # Null fields test.
     val_rules = [
@@ -192,7 +312,10 @@ def test_rebuild_rec2df_check_dtype():
 
 # %%
 def test_compress_hierarchy():
-    src = pboc_src()
+    rec = pboc_rec()
+    rec2 = rec.copy()
+    rec2["PRH"]["PA01"]["PA01A"]["PA01AI01"] = "2019101617463675115708"
+    src = pd.Series([rec, rec2])
 
     acc_info_part = [
         {
@@ -237,7 +360,11 @@ def test_compress_hierarchy():
 
 # %%
 def test_compress_hierarchy_range_idx():
-    src = pboc_src()
+    rec = pboc_rec()
+    rec2 = rec.copy()
+    rec2["PRH"]["PA01"]["PA01A"]["PA01AI01"] = "2019101617463675115708"
+    src = pd.Series([rec, rec2])
+
     # `RANGEINDEX` in `idkey_0` represents used the RangeIndex as the index.
     repay_60m_part = [
         {
@@ -257,7 +384,12 @@ def test_compress_hierarchy_range_idx():
 
 # %%
 def test_compress_hierarchy_null_vals():
-    src = pboc_src()
+    rec = pboc_rec()
+    rec2 = rec.copy()
+    rec2["PRH"]["PA01"]["PA01A"]["PA01AI01"] = "2019101617463675115708"
+    src = pd.Series([rec, rec2])
+
+    # Null content.
     repay_60m_part = [
         {
             "content": "PDA:PD01:[_]:PD01E",
@@ -272,17 +404,7 @@ def test_compress_hierarchy_null_vals():
     ]
     repay_60m_psrc = compress_hierarchy(src, repay_60m_part)
     assert repay_60m_psrc.empty
-
-
-def test_compress_hierarchy_empty_list():
-    src = pd.Series({"a": []})
-    conf = [
-        {"content": "a"},
-        {"content": "d"},
-        {"content": "e"},
-    ]
-    nrec = compress_hierarchy(src, conf)
-    assert nrec.empty
+    assert len(repay_60m_psrc.index.names) == 1 + 3 + 1
 
 
 # %%

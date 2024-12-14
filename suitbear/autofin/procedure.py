@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2024-12-13 18:06:56
+#   Updated: 2024-12-14 19:17:44
 #   Description:
 # ---------------------------------------------------------
 
@@ -48,10 +48,8 @@ from IPython.core.debugger import set_trace
 from flagbear.llp.parser import EnvParser
 from flagbear.slp.finer import get_tmp_path, get_assets_path
 from flagbear.slp.pdsl import save_with_excel
-from modsbear.dflater.ex4df import agg_on_df, trans_on_df
 from modsbear.dflater.exenv import EXGINE_ENV
-from suitbear.kgraph.kgenum import NodeType, RoleType, df_enum_confs, ROLE_TYPE_MAPPER
-from suitbear.kgraph.gxgine import gagg_on_dfs
+from suitbear.kgraph.kgenum import NodeType, df_enum_confs
 from suitbear.kgraph.display import save_as_html
 from suitbear.dirt.exdf import (flat_ft_dfs, trans_from_dfs,
                                 agg_from_dfs, agg_from_graphdf)
@@ -188,8 +186,8 @@ if __name__ == "__main__":
               .drop_duplicates(subset=["source", "target"], keep="last"))
     node_df = (pd.concat([afnode_df, pbnode_df])
                .drop_duplicates())
-    dfs["GRAPH_REL"] = rel_df
-    dfs["GRAPH_NODE"] = node_df
+    dfs[GRAPH_REL] = rel_df
+    dfs[GRAPH_NODE] = node_df
     for ele in NodeType:
         dfs[ele.value] = node_df
 

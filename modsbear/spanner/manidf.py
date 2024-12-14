@@ -3,7 +3,7 @@
 #   Name: manidf.py
 #   Author: xyy15926
 #   Created: 2024-06-06 11:17:46
-#   Updated: 2024-11-19 17:38:49
+#   Updated: 2024-12-14 22:52:12
 #   Description:
 # ---------------------------------------------------------
 
@@ -65,7 +65,8 @@ def merge_dfs(
     ------------------------
     Merged DataFrame
     """
-    dfs = list(filter(lambda df: not df.empty, dfs))
+    # TODO: I forget why to filter empty DataFrame out, but no longer filter.
+    # dfs = list(filter(lambda df: not df.empty, dfs))
     if len(dfs) == 1:
         logger.warning("Only 1 no-empty DataFrame passed.")
         return dfs[0]

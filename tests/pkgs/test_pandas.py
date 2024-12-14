@@ -3,7 +3,7 @@
 #   Name: test_pandas.py
 #   Author: xyy15926
 #   Created: 2024-05-06 14:44:03
-#   Updated: 2024-09-20 20:31:56
+#   Updated: 2024-12-14 21:41:16
 #   Description:
 # ---------------------------------------------------------
 
@@ -172,3 +172,34 @@ def test_zero_divide():
     assert isinstance(df.iloc[0, 0], int)
     with pytest.raises(ZeroDivisionError):
         div_ret = df[1] / df[0]
+
+
+# %%
+@pytest.mark.pkgs
+@pytest.mark.pandas
+def test_concat_nan_index():
+    ser = pd.Series([1, 2, 3])
+    sers = [ser, ser]
+
+    df = pd.concat(sers, keys=[np.nan, np.nan])
+    # `np.nan` can't be in MultiIndex in `pd.concat`.
+    with pytest.raises(ValueError):
+        df = pd.concat(sers, keys=[(np.nan, np.nan), (np.nan, np.nan)])
+    with pytest.raises(ValueError):
+        df = pd.concat(sers, keys=[(1, np.nan), (1, np.nan)])
+    with pytest.raises(ValueError):
+        df = pd.concat(sers, keys=[(np.nan,), (np.nan,)])
+    with pytest.raises(ValueError):
+        df = pd.concat(sers, keys=[(np.nan,), (1,)])
+
+    # But it's legal to construct `pd.MultiIndex` with `np.nan`.
+    idxs = []
+    for ser in sers:
+        for idx in ser.index:
+            if np.isscalar(idx):
+                idxs.append((np.nan, idx))
+            else:
+                idxs.append((np.nan, *idx))
+    mindex = pd.MultiIndex.from_tuples(idxs)
+    df = pd.concat(sers)
+    df.index = mindex

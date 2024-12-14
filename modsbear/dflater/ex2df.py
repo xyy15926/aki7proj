@@ -3,7 +3,7 @@
 #   Name: ex2df.py
 #   Author: xyy15926
 #   Created: 2024-11-10 19:49:31
-#   Updated: 2024-12-13 17:19:55
+#   Updated: 2024-12-14 22:09:02
 #   Description:
 # ---------------------------------------------------------
 
@@ -181,6 +181,9 @@ def compress_hierarchy(
       of the values. And if no index is specified, the index for the level will
       the RangeIndex by default.
 
+    ATTENTION: The `key` in `confs` shouldn't be None or np.nan, or ValueError
+      will be raised when concatenating the pd.Series.
+
     Params:
     --------------------
     src: Series[INDEX, JSON-STRING | dict]
@@ -244,13 +247,17 @@ def compress_hierarchy(
         # the Index names.
         ori_index_names = src.index.names
         if len(valid_values):
+            # ATTENTION: The `key` in `confs` shouldn't be None or np.nan,
+            # or ValueError will be raised when concatenating the pd.Series.
             src = pd.concat(valid_values, keys=valid_index)
             # Update the index names with the result of `rebuild_rec2df`.
             ori_index_names += src.index.names[len(ori_index_names):]
             # Recover the Index names.
             src.index.set_names(ori_index_names, inplace=True)
         else:
-            src = pd.Series(dtype=object)
+            # Use `pd.MultiIndex` to retain the index names.
+            mindex = pd.MultiIndex.from_tuples([], names=ori_index_names)
+            src = pd.Series(index=mindex, dtype=object)
             return src
 
         if dropna:
@@ -323,7 +330,9 @@ def flat_records(
 
     # In case empty result that doesn't support `pd.concat`.
     if ret.empty:
-        ret = pd.DataFrame(columns=[i[0] for i in confs])
+        # Retain the columns and index names.
+        ret = pd.DataFrame(columns=[i[0] for i in confs],
+                           index=src.index[0:0])
     else:
         ret = pd.concat(ret.values, keys=src.index)
         if drop_rid:

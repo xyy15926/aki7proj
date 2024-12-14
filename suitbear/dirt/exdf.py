@@ -3,7 +3,7 @@
 #   Name: exdf.py
 #   Author: xyy15926
 #   Created: 2024-11-11 17:04:03
-#   Updated: 2024-12-13 17:43:29
+#   Updated: 2024-12-14 23:08:05
 #   Description:
 # ---------------------------------------------------------
 
@@ -208,27 +208,14 @@ def trans_from_dfs(
 
         join_key = pconf["joinkey"]
         if join_key:
-            # Join key may be the index, which can't be set for empty DF.
-            # So to merge the no-empty DF first and then add columns from the
-            # empty DF to retain the whole columns.
-            edfs, jdfs = [], []
-            for dn in pconf["from_"]:
-                from_df = df_space[dn]
-                if from_df.empty:
-                    edfs.append(from_df)
-                else:
-                    jdfs.append(from_df)
-            joined_df = merge_dfs(jdfs, hows="left", ons=join_key)
-            # Add columns from empty DF.
-            for from_df in edfs:
-                joined_df[from_df.columns] = np.nan
+            # All the index's names and columns are set properly from flation
+            # to transformation, so the join keys will be always exist and
+            # `merge_dfs` could be called directly and empty dataframes are
+            # no longer problems.
+            joined_df = merge_dfs([df_space[dn] for dn in pconf["from_"]],
+                                  hows="left", ons=join_key)
         else:
             joined_df = dfs[pconf["from_"][0]]
-
-        # Skip the transformation if merged DataFrame is empty.
-        if joined_df.empty:
-            trans_rets[part_name] = pd.DataFrame()
-            continue
 
         # Transform.
         trans_rules = trans_fconfs.loc[trans_fconfs["part"] == part_name,
@@ -298,27 +285,14 @@ def agg_from_dfs(
         prikey = pconf["prikey"]
         join_key = pconf["joinkey"]
         if join_key:
-            # Join key may be the index, which can't be set for empty DF.
-            # So to merge the no-empty DF first and then add columns from the
-            # empty DF to retain the whole columns.
-            edfs, jdfs = [], []
-            for dn in pconf["from_"]:
-                from_df = df_space[dn]
-                if from_df.empty:
-                    edfs.append(from_df)
-                else:
-                    jdfs.append(from_df)
-            joined_df = merge_dfs(jdfs, hows="left", ons=join_key)
-            # Add columns from empty DF.
-            for from_df in edfs:
-                joined_df[from_df.columns] = np.nan
+            # All the index's names and columns are set properly from flation
+            # to transformation, so the join keys will be always exist and
+            # `merge_dfs` could be called directly and empty dataframes are
+            # no longer problems.
+            joined_df = merge_dfs([df_space[dn] for dn in pconf["from_"]],
+                                  hows="left", ons=join_key)
         else:
             joined_df = dfs[pconf["from_"][0]]
-
-        # Skip the aggregation if merged DataFrame is empty.
-        if joined_df.empty:
-            agg_rets[part_name] = pd.DataFrame()
-            continue
 
         # Aggregate.
         agg_rules = agg_fconfs.loc[agg_fconfs["part"] == part_name,
