@@ -3,7 +3,7 @@
 #   Name: test_dtyper.py
 #   Author: xyy15926
 #   Created: 2024-11-11 11:56:24
-#   Updated: 2024-12-12 14:20:21
+#   Updated: 2024-12-16 22:14:51
 #   Description:
 # ---------------------------------------------------------
 
@@ -61,14 +61,16 @@ def test_stype_spec():
     assert not re.fullmatch(regex, "2021-02-29")
     assert not re.fullmatch(regex, "2021-10-10T")
     assert re.fullmatch(regex, "2021-10-10T10:12:12")
+    assert re.fullmatch(regex, "2021-10-10TT10:12:12")
+    assert re.fullmatch(regex, "2021-10-1010:12:12")
+    assert not re.fullmatch(regex, "2021-10-10TTT10:12:12")
     caster = stype_spec("DATETIME", "caster")
     assert (caster("2023-01-01T10:12:12")
             == datetime.fromisoformat("2023-01-01D10:12:12"))
     # `datetime.fromisoformat` accept any seperator besides `T`,
     # while `np.datetime64` only accept standard `T`.
-    with pytest.raises(ValueError):
-        assert (caster("2023-01-01D10:12:12")
-                == datetime.fromisoformat("2023-01-01D10:12:12"))
+    assert (caster("2023-01-01D10:12:12")
+            == datetime.fromisoformat("2023-01-01D10:12:12"))
     caster = stype_spec("DATETIME", "caster", False)
     assert (caster("2023-01-01T10:12:12")
             == datetime.fromisoformat("2023-01-01D10:12:12"))
@@ -101,6 +103,10 @@ def test_regex_caster():
     assert (regex_caster("2023-01-01T11:11:11")
             == (datetime.fromisoformat("2023-01-01T11:11:11"), "DATETIME"))
     assert (regex_caster("2023-01-01T11:11:11")
+            == (datetime.fromisoformat("2023-01-01D11:11:11"), "DATETIME"))
+    assert (regex_caster("2023-01-01TT11:11:11")
+            == (datetime.fromisoformat("2023-01-01D11:11:11"), "DATETIME"))
+    assert (regex_caster("2023-01-0111:11:11")
             == (datetime.fromisoformat("2023-01-01D11:11:11"), "DATETIME"))
     assert (regex_caster("2023/01/01T11:11:11")
             == (datetime.fromisoformat("2023-01-01D11:11:11"), "DATETIME"))

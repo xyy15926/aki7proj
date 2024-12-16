@@ -3,7 +3,7 @@
 #   Name: dtyper.py
 #   Author: xyy15926
 #   Created: 2024-11-11 09:18:28
-#   Updated: 2024-12-12 19:00:42
+#   Updated: 2024-12-16 22:23:03
 #   Description:
 # ---------------------------------------------------------
 
@@ -56,8 +56,8 @@ def stype_spec(
 
         def datetime64(x):
             x = x.replace("/", "-")
-            if len(x) == 10 + 8:
-                x = x[:10] + " " + x[10:]
+            if len(x) > 10:
+                x = x[:10] + " " + x[-8:]
             return np.datetime64(x, "s")
     else:
         from datetime import datetime
@@ -66,8 +66,8 @@ def stype_spec(
 
         def datetime64(x):
             x = x.replace("/", "-")
-            if len(x) == 10 + 8:
-                x = x[:10] + " " + x[10:]
+            if len(x) > 10:
+                x = x[:10] + " " + x[-8:]
             return datetime.fromisoformat(x)
 
     DTYPE_SPECS = {
@@ -94,7 +94,7 @@ def stype_spec(
         },
         "DATETIME": {
             "dtype": "DATETIME",
-            "regex": REGEXS["date"] + ".*" + REGEXS["time"],
+            "regex": REGEXS["date"] + ".{0,2}" + REGEXS["time"],
             "caster": datetime64,
             "default": nat,
             "nptype": "M8[s]",
