@@ -92,6 +92,7 @@ LEX_SKIPS = {"NL", "SEMI", "BLANK"}
 # configured with `dict` instead of list or tuple.
 # ATTENTION: Unsigned instead of signed int and float pattern are used for
 #   default Lexer token specifications.
+# ATTENTION: `\w` in `STRING` doesn't contains chars such as `.`, `*`, etc.
 LEX_TOKEN_SPECS = {
     "STRING"        : (r"\"\w*\""                       , lambda x: x[1:-1]),
     "ID"            : r"[A-Za-z_]+[A-Za-z_0-9]*",

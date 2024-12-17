@@ -3,7 +3,7 @@
 #   Name: test_pdframe.py
 #   Author: xyy15926
 #   Created: 2024-08-24 18:37:53
-#   Updated: 2024-11-11 14:27:46
+#   Updated: 2024-12-17 10:06:57
 #   Description:
 # ---------------------------------------------------------
 
@@ -24,7 +24,7 @@ from modsbear.docer.pdframe import extract_tables, format_table
 
 # %%
 def test_format_table():
-    file = get_assets_path() / "cashflow/wechat_cashflow_demo.pdf"
+    file = get_assets_path() / "cashflow/weixin_001.pdf"
     table = extract_tables(file)[0]
 
     columns = {
@@ -39,7 +39,7 @@ def test_format_table():
     }
     columns = list(columns.keys())
     dtypes = {
-        "金额(元)": ("FLOAT", True, 0),
+        "金额(元)": "FLOAT",
         "交易时间": "DATE",
     }
 
@@ -49,5 +49,3 @@ def test_format_table():
     assert np.all(ftable.columns == columns)
     assert ftable["金额(元)"].dtype == "float64"
     assert ftable["交易时间"].dtype == "datetime64[ns]"
-
-

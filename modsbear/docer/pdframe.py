@@ -3,7 +3,7 @@
 #   Name: pdframe.py
 #   Author: xyy15926
 #   Created: 2024-08-24 16:07:38
-#   Updated: 2024-11-11 14:30:08
+#   Updated: 2024-12-17 17:08:30
 #   Description:
 #     Ref: <https://github.com/jsvine/pdfplumber>
 # ---------------------------------------------------------
@@ -52,7 +52,7 @@ def extract_tables(
 
     Return:
     ---------------------
-    [DataFrame with RangeIndex as Index and Column].
+    [DataFrame, with different widths, with RangeIndex as Index and Column].
     """
     table_D = {}
     with pdfplumber.open(file) as pdf:
@@ -76,6 +76,10 @@ def format_table(
 ) -> (pd.DataFrame, pd.DataFrame):
     """Format the table extracted from PDF file.
 
+    1. Find and reset the header of the table.
+    2. Drop invalid chars, blank by default, in the cells.
+    3. Apply dtype casting.
+
     Params:
     ------------------------------
     table: Dataframe extracted by `extract_tables` with
@@ -95,11 +99,18 @@ def format_table(
     table: DataFrame of the main content.
     """
     desc = None
+    # Remove invalid chars for display only.
+    if drop_chars is not None:
+        ptn = re.compile("|".join(list(drop_chars)))
+        if isinstance(drop_chars, str):
+            table = table.applymap(lambda x: re.sub(ptn, "", x)
+                                   if isinstance(x, str) else x)
+
     # Find the rows the head of the column.
     if columns is not None:
         col_head_idxs = []
         columns = tuple(columns)
-        for idx, row in enumerate(table.iloc[:3].itertuples(index=False)):
+        for idx, row in enumerate(table.iloc[:30].itertuples(index=False)):
             if row == columns:
                 col_head_idxs.append(idx)
         # Reset the head the of the columns if ColumnHeadRows exists.
@@ -109,6 +120,7 @@ def format_table(
         #   description of the table.
         if len(col_head_idxs) == 0:
             logger.warning("Can't find the head of the columns in the table.")
+            return table
         else:
             _first, *_rest = col_head_idxs
             desc = table.iloc[:_first].copy()
@@ -116,25 +128,9 @@ def format_table(
                      .reset_index(drop=True))
             table.columns = columns
 
-    # Remove invalid chars for display only.
-    if drop_chars is not None:
-        ptn = re.compile("|".join(list(drop_chars)))
-        if isinstance(drop_chars, str):
-            table = table.applymap(lambda x: re.sub(ptn, "", x)
-                                   if isinstance(x, str) else x)
-
     # Apply dtype transformation.
     if dtypes is not None:
         for col, _dtype in dtypes.items():
-            if np.isscalar(_dtype):
-                table[col] = table[col].apply(lambda x: str_caster(x, _dtype))
-            else:
-                table[col] = table[col].apply(lambda x: str_caster(x, *_dtype))
-
+            table[col] = table[col].apply(
+                lambda x: str_caster(x, _dtype, extended=True, dforced=True))
     return table, desc
-
-
-
-
-
-

@@ -3,7 +3,7 @@
 #   Name: exenv.py
 #   Author: xyy15926
 #   Created: 2024-11-10 19:33:40
-#   Updated: 2024-12-05 20:30:09
+#   Updated: 2024-12-17 11:13:01
 #   Description:
 # ---------------------------------------------------------
 
@@ -249,4 +249,5 @@ EXGINE_ENV = {
     "sep_map"   : _sep_map,
     "list_map"  : _list_map,
     "any_contains": _any_contains,
+    "get_hour"  : lambda x: x.dt.hour,
 }
