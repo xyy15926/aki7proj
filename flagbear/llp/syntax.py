@@ -3,11 +3,10 @@
 #   Name: syntax.py
 #   Author: xyy15926
 #   Created: 2023-11-29 20:20:12
-#   Updated: 2024-11-11 10:38:52
+#   Updated: 2025-01-04 19:17:18
 #   Description:
-#
-#    Refers to: <https://dl.acm.org/doi/pdf/10.1145/69622.357187> for more
-#    detail of Lookahead caclulation.
+#     PLY Ref: <https://github.com/dabeaz/ply>
+#     Lookahead Caculation Ref: <https://dl.acm.org/doi/pdf/10.1145/69622.357187>
 # -----------------------------------------------------------------------------
 
 # %%
@@ -19,7 +18,7 @@ except ImportError:
     from typing_extensions import NamedTuple, Self
 from collections.abc import Iterator, Callable
 
-from IPython.core.debugger import set_trace
+# from IPython.core.debugger import set_trace
 
 import copy
 import logging
@@ -57,11 +56,6 @@ class Production(NamedTuple):
                             # The order to compute items in `rp` when producing
 
 
-# class ASTNode(NamedTuple):
-#     type: str | Production
-#     children: list
-
-
 class LRItem:
     """LR item derived from productions.
 
@@ -78,8 +72,6 @@ class LRItem:
       Left part, `Production.lp`.
     rp: tuple[str]
       Right part, `Production.rp`.
-    len: int
-      Length of right part.
     cur: int
       Current position of the LRItem, representing the parse stage of the
       production.
@@ -94,7 +86,7 @@ class LRItem:
       Recording the current LRItem and other LRItem derived from the same
       production in the order of the `cur`.
     start: int
-      The index of first LRItem derived from the production in `store`.
+      The index of first LRItem, derived from the same production, in `store`.
     index: int.
       The index of current LRItem in `store`. And `start + cur == index`
       should always be true.
@@ -121,7 +113,6 @@ class LRItem:
         self.production = production
         self.lp = production.lp
         self.rp = production.rp
-        self.len = len(self.rp)
 
         # These attributes should be modified after `clone` in most time.
         self.cur = cur
@@ -150,7 +141,7 @@ class LRItem:
         # Shallow copy works fine for most attributes.
         next_lr = copy.copy(self)
         next_lr.cur += 1
-        if next_lr.cur > next_lr.len:
+        if next_lr.cur > len(next_lr.rp):
             raise Exception(f"End of the production {self}.")
         next_lr.index += 1
         next_lr.nsym = next_lr._next_sym()
@@ -185,7 +176,7 @@ class LRItem:
         lr_list.append(self)
 
         # Register the following LRItems.
-        for i in range(self.len):
+        for i in range(len(self.rp)):
             self = self.clone_next()
             lr_list.append(self)
 
@@ -198,7 +189,7 @@ class LRItem:
           str: rp[cur] if cur < len
           None: if cur == len
         """
-        if self.cur == self.len:
+        if self.cur == len(self.rp):
             return None
         return self.rp[self.cur]
 
@@ -216,7 +207,7 @@ class LRItem:
         """
         if self.store is None:
             raise StopIteration
-        return iter(self.store[self.index : self.start + self.len + 1])
+        return iter(self.store[self.index : self.start + len(self.rp) + 1])
 
     def __next__(self) -> Self | None:
         """Get next LRItem.
@@ -233,11 +224,11 @@ class LRItem:
         """
         if self.store is None:
             return None
-        if self.cur == self.len:
+        if self.cur == len(self.rp):
             return None
         return self.store[self.index + 1]
 
-    def __eq__(self, rhs) -> bool:
+    def __eq__(self, rhs:Self) -> bool:
         """Equal comparison.
 
         There are two different comparison logics for LRItems registered and
@@ -263,8 +254,36 @@ class LRItem:
         1. `index` is used as the hash value as it can't be replicated.
         """
         if self.store is None:
-            raise TypeError(f"unhashable type: unregistered {self.__class__}")
+            raise TypeError(f"Unhashable type: unregistered {self.__class__}")
         return self.index
+
+    @staticmethod
+    def prefer(lhs: Self, rhs:Self):
+        """Get the prefered LRItem in conflict.
+
+        1. Prefer larger precedence.
+        2. Prefer reduction if production after shift is left-associated.
+
+        Params:
+        -----------------
+        lhs, rhs: LRItems to be checked which one is prefered in GOTOs.
+
+        Return:
+        -----------------
+        Prefered LRItem.
+        """
+        prec1, assoc1 = lhs.production.prec, lhs.production.assoc
+        prec2, assoc2 = rhs.production.prec, rhs.production.assoc
+        if prec1 > prec2:
+            return lhs
+        elif prec2 > prec1:
+            return rhs
+        # Reduction first when the preferences are the same and the production
+        # after shift is left-associated.
+        elif rhs.nsym is None and lhs.nsym is not None and assoc1 == "L":
+            return rhs
+        else:
+            return lhs
 
 
 # %%
@@ -273,11 +292,13 @@ class LRState:
 
     Attrs:
     -------------------
-    syntaxer: Syntaxer
-      Syntaxer the LRState belongs to.
-    cores: tuple[LRItem]
-      List of core LRItems, from which all LRItems in LRState are derived.
+    cores: Tuple[LRItem]
+      Tuple of core LRItems, from which all LRItems in LRState are derived.
       This must tuple instead of list to be hashable.
+    ext_lris: Dict[str, List[LRItem]]
+      Dict of the non-terminals and their first LR0_Item derived from their
+      productions, namely extended LRItems.
+      This will be used to calculate the LR0_closure for the `cores`.
     closure: List[LRItem]
       List of all LRItems derived from `cores`.
     store: List[LRState]
@@ -285,41 +306,88 @@ class LRState:
     index: int
       The index of current LRState in `store`.
     """
-    def __init__(self, syntaxer: Syntaxer, cores: list | tuple):
+    def __init__(self, cores: list[LRItem] | tuple[LRItem],
+                 ext_lris: dict[str, list[LRItem]] = None):
         """Init LRState for only syntaxer and cores.
 
-        Only necessary attributes are set here. Because LRState shouldn't be
-        replicated but LRState do need to be instantized to check if already
-        existing. So some attributes will be set later, especially those may
-        lead to unrevertable impact.
+        Only necessary attributes are set here:
+        1. LRState shouldn't be replicated but LRState do need to be
+          instantized to check if already existing. So some attributes will
+          be set later, especially those may lead to unrevertable impact.
+        2. Replicated LRState instance will be dropped instantly, so the
+          unnecessary attributes, `closure` for example, may also be set later
+          to reduce overhead.
 
         Params:
         -----------------------
-        syntaxer: Syntaxer
-          Syntaxer the LRState belongs to.
-        cores: tuple[LRItem]
-          List of core LRItems, from which all LRItems in LRState are derived.
+        cores: Tuple or list of core LRItems for current LRState.
+        ext_lris: Dict of the non-terminals and their first LR0_Item derived
+          from their productions, namely extended LRItems.
         """
-        self.syntaxer = syntaxer
         self.cores = tuple(cores)
-        self.closure = None
-        self.store = None
+        self.hash_value = hash(self.cores)
+        self.ext_lris = ext_lris
+        if self.ext_lris:
+            self.closure = self.LR0_closure()
         self.index = None
+        self.store = None
 
     # This `init` method be seperated from `__init__`, or `self`
     # will be append to `state_store` to early.
-    def init(self):
+    def register_this(self, store: list[Self],
+                      ext_lris: dict[str, list[LRItem]] = None):
         """Init LRState for rest of the attributes.
 
-        Set the rest of the attributs.
-        1. Self will be add to `syntaxer.states`, and `index`, `store` will be
-          set responsibly.
-        2. State closure will be calculated.
+        Register this in `store` and set the rest of the attributs.
+        1. Self will be add to `store`.
+        2. `index`, `store` will be set responsibly.
+
+        Params:
+        -----------------------
+        store: List to store all the states.
         """
-        self.store = self.syntaxer.states
+        self.store = store
+        if ext_lris is not None:
+            self.ext_lris = ext_lris
+            self.closure = self.LR0_closure()
         self.index = len(self.store)
         self.store.append(self)
-        self.closure = self.syntaxer.LR0_closure(self.cores)
+
+    def LR0_closure(self) -> list[LRItem]:
+        """Extend cores LRItems to a closure.
+
+        If the extended LRItems is None, the closure can't be calculated and
+        None will be return directly:
+        1. Extended LRItems: The first LRItem derived from the productions
+          producing the next symbol of LRItem.
+        2. Closure: LRItems and all their extended LRItems.
+
+        In process:
+        1. A set is used to record symbols already processed.
+        2. No check will be done directly on LRItem while appending new LRItem
+          to closure, and LRItem will be replicated if called repeatedly.
+
+        Return:
+        -----------------------
+        LR0 Closure for the cores of the LRState.
+        """
+        closure = list(self.cores)
+        ext_lris = self.ext_lris
+        if ext_lris is None:
+            return None
+        nsym_Q = deque([lri.nsym for lri in closure])
+        nsym_recs = set()               # Record handled symbols
+
+        while nsym_Q:
+            next_sym = nsym_Q.popleft()
+            if next_sym in nsym_recs:
+                continue
+            nsym_recs.add(next_sym)
+            sym_lris = ext_lris.get(next_sym, [])
+            closure.extend(sym_lris)
+            nsym_Q.extend([lri.nsym for lri in sym_lris])
+
+        return closure
 
     def __repr__(self):
         """Representation."""
@@ -346,26 +414,31 @@ class LRState:
     def __eq__(self, rhs:Self) -> bool:
         """Equal comparison.
 
+        `__eq__` is implemented to check if current state is replicated, along
+        with `__hash__`.
         There are two different comparison logics for LRStates fully inited
         and partially inited.
-        1. For fully inited LRStates, comparing `index`s is enough and faster.
-        2. For partially inited LRStates, the whole `cores` must be compared.
+        1. For registered(fully-inited) LRStates, comparing `index` is enough
+          and faster.
+        2. For partially-inited LRStates, the whole `cores` must be compared.
         """
         return (
             isinstance(rhs, self.__class__)
-            and self.syntaxer is rhs.syntaxer
-            and ((self.index is not None and self.index == rhs.index)
+            and ((self.store is not None
+                  and self.store is rhs.store
+                  and self.index == rhs.index)
                  or self.cores == rhs.cores)
         )
 
     def __hash__(self):
-        """Hash.
+        """Hash function.
 
-        `cores` instead of `index` is used to calculated hash value because
-        LRState do need to be checked if already existing before fully
-        initialized.
+        `__hash__` is implemented to check if current state is replicated.
+        ATTENTION: `cores` instead of `index` is used to calculated hash value
+        because LRState do need to be checked if already existing before
+        registered.
         """
-        return hash(self.cores)
+        return self.hash_value
 
 
 # %%
@@ -437,25 +510,26 @@ class Syntaxer:
         """
         self.start = start_sym
         self.end = end_flag
-        self.productions = []                   # [Production, ]
-        self.lr_items = []                      # [LRItem, ]
-        self.terminals = set()                  # {terminal, }
-        self.nonterms = {}                      # {nonterm: [first LRItem of production, ]}
-        self.symbols = {}                       # {symbol: [LRItem containing symbol, ]}
+        self.productions = []           # [Production, ]
+        self.lr_items = []              # [LRItem, ]
+        self.terminals = set()          # {terminal, }
+        self.nonterms = {}              # {nonterm: [first LRItem of production, ]}
+        self.symbols = {}               # {symbol: [LRItem containing symbol, ]}
+        # Init the attributes above.
         self.init_productions(productions)
-        self.nullables = set()                  # {nullable nonterm, }
 
-        # These will be set properly with its methods later.
+        # Following attributes will be inited in their responsible method in
+        # `init_gotos`.
+        self.nullables = set()          # {nullable nonterm, }
         self.start_state = None
-        self.firsts = {}            # {symbol: [term, ]}
-        self.follows = {}           # {LRItem: [term, ]}
-        self.lalrs = {}             # {LRItem: [term, ]}
-        self.states = []            # [LRState, ]
-        self.gotos = {}             # {(LRState, term): LRItem | LRState}
-                                    # LRItem for reduction
-                                    # LRState for transition
-        self.conflicts = {}         # {(LRState, term): [LRItem, ]}
-                                    # Both Reduce-Reduce and Reduce-shift conflicts 
+        self.firsts = {}                # {symbol: [term, ]}
+        self.follows = {}               # {LRItem: [term, ]}
+        self.lalrs = {}                 # {LRItem: [term, ]}
+        self.states = []                # [LRState, ]
+        self.gotos = {}                 # {(LRState, term): LRItem | LRState}
+                                        # LRItem for reduction LRState for transition.
+        self.conflicts = {}             # {(LRState, term): [LRItem, ]}
+                                        # Both Reduce-Reduce and Reduce-shift conflicts.
 
     def init_productions(self, prods: list[Production | tuple]):
         """Parse productions.
@@ -483,9 +557,6 @@ class Syntaxer:
             productions.append(prod)
             lp = prod.lp
             lri_fst = LRItem(prod)
-            # TODO: Remove following 2 lines.
-            # `copy.copy` is needed to keep this attribute.
-            # lri_fst.prod_idx = len(productions)
             # Register all LRItems derived from the same production in Syntaxer.
             lri_fst.register_all(lr_items)
             # Build index of symbols in LRItems.
@@ -522,7 +593,7 @@ class Syntaxer:
         for sym, lris in nonterms.items():
             # set_trace()
             for lri in lris:
-                if lri.len == 0:
+                if len(lri.rp) == 0:
                     nullables.add(sym)
                     break
 
@@ -645,76 +716,6 @@ class Syntaxer:
                     follows,
                 )
 
-    def lookahead(self):
-        lr_items = self.lr_items
-        follows = self.follows
-        lalrs = self.lalrs
-
-        for lri in lr_items:
-            if lri.cur + 1 == lri.len:
-                lalrs.setdefault(next(lri), set()).update(follows[lri])
-        # lalrs.update(self.firsts)
-
-    def prefer(self, lri1: LRItem, lri2:LRItem) -> LRItem:
-        """Get the prefered LRItem in conflict.
-
-        1. Prefer larger precedence.
-        2. Prefer reduction if production after shift is left-associated.
-
-        Params:
-        -----------------
-        lri1, lri2: LRItems to be checked which one is prefered in GOTOs.
-
-        Return:
-        -----------------
-        Prefered LRItem.
-        """
-        prec1, assoc1 = lri1.production.prec, lri1.production.assoc
-        prec2, assoc2 = lri2.production.prec, lri2.production.assoc
-        if prec1 > prec2:
-            return lri1
-        elif prec2 > prec1:
-            return lri2
-        # Reduction first when the preferences are the same and the production
-        # after shift is left-associated.
-        elif lri2.nsym is None and lri1.nsym is not None and assoc1 == "L":
-            return lri2
-        else:
-            return lri1
-
-    # TODO
-    # Deprecated: Remove this since production has its own precedence.
-    def get_prec(self, lri: LRItem) -> tuple[int, str]:
-        """Get the precedence of the LRItem.
-
-        There may be conflicts for certain LRState and lookahead terminal.
-        Namely there are two or more transitions or reductions, which can also
-        be represented by the LRItem that will be perfermed. So it's necessary
-        to check the precedences when encountering conflicts.
-        1. The LRItems' precedences should be the precedence of its production
-          or rightmost terminals.
-
-        Params:
-        -------------------
-        lri: LRItem
-          Get precedence for this LRItem.
-
-        Return:
-        -------------------
-        precedence: int
-        association preference: str of "L", "R"
-          "L" for left: Associating with the left part first, namely reduction
-            first.
-          "R" for right: Shift first.
-        """
-        precedences = self.precedences
-        for item in [lri.production, *lri.rp[::-1]]:
-            prec = precedences.get(item, None)
-            if prec is not None:
-                return prec
-        # Shift first for `R`, known as rightmost, in `LR`.
-        return -1, "R"
-
     def LALR_states_and_gotos(self):
         """Init LALR(1) LRStates and GOTOs.
 
@@ -727,99 +728,84 @@ class Syntaxer:
         follows = self.follows
         gotos = self.gotos
         conflicts = self.conflicts
+        states = self.states
 
-        start_state = LRState(self, nonterms[self.start])
-        start_state.init()
+        start_state = LRState(nonterms[self.start], nonterms)
+        start_state.register_this(states)
         self.start_state = start_state
         states_Q = deque([start_state,])
-        states_D = {}       # {state: state}: for hashing comparing
+        states_D = {}       # {LRState: LRState}: Store all registered LRState
+                            # to get the registered LRState with only cores.
 
         while states_Q:
             state = states_Q.popleft()
             closure = state.closure
-            core_lris = {}  # {sym: effective lr-items in LR(0) transition}
-            goto_lris = {}  # {term: effective lr-item in LALR(0) transition}
+            # This will be closed as the LRState build the LR(0) DFA.
+            # {sym: [core LRItems of next LRState with `sym` shift-in]}
+            core_lris = {}
+            # This records the acceptable terminals and responsible most
+            # prefered LRItem, specifying how to shift or reduce, when the
+            # terminal is the next symbol
+            # In fact, as the FOLLOW are calcuated for each LRItem seperately,
+            # this `goto` are LR(1) GOTO in some way, which will be merged for
+            # within each LRState.
+            # {term: [LRItems of current LRState with `term` as one of their FOLLOW]}
+            prefered_lris = {}
 
             # Check LRItems in state to get the pair of LRItems and terminals
             # so to determine the GOTOs.
             for lri in closure:
-                # Prepare cores of next LRStates.
+                # Prepare cores of next LRStates with `nsym` shift-in.
                 nsym = lri.nsym
                 if nsym is not None:
                     core_lris.setdefault(nsym, []).append(next(lri))
 
-                # Check and record reduce-reduce and ruduce-shift conficts.
-                # Precedences are not taken into consideration here.
-                LAs = [nsym] if nsym is not None else follows[lri]
-                for term in LAs:
-                    goto_lri = goto_lris.setdefault(term, lri)
-                    if (goto_lri.nsym != lri.nsym
-                        or (goto_lri.nsym is None
-                            and lri.nsym is None
-                            and goto_lri is not lri)):
+                # 1. Check and record reduce-reduce and ruduce-shift conficts.
+                # 2. Calculate most-prefered LRItem for lookahead symbol,
+                #   namemly next acceptable terminals.
+                # ATTENTION: Reduction-LRItem and shift-LRItem will all be
+                # checked here to calculate the most-prefered LRItem for
+                # each lookahead terminal, but it's effective only when
+                # reduction-LRItem is the most-prefered LRItem.
+                # So it's doesn't matter that non-terminal will be set in
+                # `prefered_lris`, as non-terminals are not in `follows`.
+                las = [nsym] if nsym is not None else follows[lri]
+                for term in las:
+                    plri = prefered_lris.setdefault(term, lri)
+                    if (plri.nsym != lri.nsym
+                        or (plri.nsym is None and lri.nsym is None
+                            and plri is not lri)):
                         cf = conflicts.setdefault((state, term), set())
-                        cf.update([goto_lri, lri])
-                        goto_lris[term] = self.prefer(goto_lri, lri)
+                        cf.update([plri, lri])
+                        # Precedences are taken into consideration to choose
+                        # from the LRItems with any same terminals as a FOLLOW
+                        # for shift or reduction so to resolve the conflicts.
+                        prefered_lris[term] = LRItem.prefer(plri, lri)
+                # TODO: TRUE conflicts
+                # TODO: Pretty prints
 
-            # Check the pair of LRItem and terminal to init new LRStates or
-            # get existing states.
+            # Transit along the LR(0) DFA to init LRStates with cores from
+            # `core_lris` to construct the LR(0) DFA.
+            # Only shift transition will be set here in GOTO.
             for sym, cores in core_lris.items():
-                new_state = LRState(self, cores)
+                new_state = LRState(cores)
                 # `new_state` has been assigned with the inited states.
                 if new_state in states_D:
                     new_state = states_D[new_state]
                 # Add new state if not exists.
                 else:
-                    new_state.init()
+                    new_state.register_this(states, nonterms)
                     states_Q.append(new_state)
                     states_D[new_state] = new_state
                 core_lris[sym] = new_state
-                # Set gotos for nonterms here.
-                if sym in nonterms:
-                    gotos[(state, sym)] = new_state
+                # Set GOTOs for symbols here.
+                gotos[(state, sym)] = new_state
 
-            # Update global `gotos`.
-            for term, lri in goto_lris.items():
-                nsym = lri.nsym
-                # Transition LRItem.
-                if nsym is not None:
-                    gotos[(state, term)] = core_lris[nsym]
-                # Reduction LRItem.
-                else:
+            # Update reduction transition in GOTO if the reduction-LRItem
+            # is prefered for the terminal.
+            for term, lri in prefered_lris.items():
+                if lri.nsym is None:
                     gotos[(state, term)] = lri
-
-    def LR0_closure(self, lr_items: list[LRItem]) -> list[LRItem]:
-        """Extend cores LRItems to a closure.
-
-        Extended LRItems: The first LRItem derived from the productions
-          producing the next symbol of LRItem.
-        Closure: LRItems and all theirs extended LRItems.
-        1. A set is used to record symbols already processed.
-        2. No check will be done directly on LRItem while appending new LRItem
-          to closure, and LRItem will be replicated if called repeatedly.
-
-        Params:
-        ---------------------
-        lr_items: Core LRItems for a clousre.
-
-        Return:
-        Closure of LRItems.
-        """
-        nonterms = self.nonterms
-        closure = [*lr_items, ]
-        nsym_Q = deque([lri.nsym for lri in closure])
-        nsym_S = set()          # Record handled symbols
-
-        while nsym_Q:
-            next_sym = nsym_Q.popleft()
-            if next_sym in nsym_S:
-                continue
-            nsym_S.add(next_sym)
-            sym_lris = nonterms.get(next_sym, [])
-            closure.extend(sym_lris)
-            nsym_Q.extend([lri.nsym for lri in sym_lris])
-
-        return closure
 
     # TODO: Error handlers for invalid token stream.
     def reduce_tokens(
@@ -832,7 +818,7 @@ class Syntaxer:
         ------------------------
         tokens: Tokens to be reduced.
           Tokens should have `type` attribute.
-        reudce_F: Reduce tokens.
+        reudce_F: Callabe to reduce tokens of syntax-sub-tree.
           The default ASTNode will reduce the tokens into a AST.
 
         Raise:
@@ -877,7 +863,7 @@ class Syntaxer:
 
         Params:
         ------------------------
-        tokens: Tokens to be reduced.
+        tokens: Tokens to be parsed.
           Tokens should have `type` and `val` attribute.
 
         Return:

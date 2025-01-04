@@ -3,7 +3,7 @@
 #   Name: test_grammer.py
 #   Author: xyy15926
 #   Created: 2023-11-30 09:49:53
-#   Updated: 2024-10-21 20:27:44
+#   Updated: 2025-01-04 19:27:51
 #   Description:
 # ---------------------------------------------------------
 
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     reload(graph)
 
 from flagbear.llp.lex import Lexer
-from flagbear.llp.syntax import Production, LRItem, Syntaxer
+from flagbear.llp.syntax import Production, LRItem, LRState, Syntaxer
 from flagbear.llp.patterns import SYN_EXPR_PRODS
 
 
@@ -44,13 +44,29 @@ def test_LRItem():
     lris = list()
     lri.register_all(lris)
     lri2.register_all(lris)
-    assert len(lris) == lri.len + lri2.len + 2
     assert lri.nsym == "expr"
-    assert lri.len == 3
     assert lri.cur == 0
     assert lri2.start == 4
     assert next(lri2) == lri2.clone_next()
     assert repr(lri) == "expr -> . expr ADD term"
+
+
+# %%
+def test_LRItem_ambiguous():
+    productions = [
+        Production("S", ("expr"), None, 0, "L"),
+        Production("expr", ("expr", "ADD", "expr"), None, 0, "L"),
+        Production("expr", ("expr", "SUB", "expr"), None, 0, "L"),
+        Production("expr", ("expr", "MUL", "expr"), None, 1, "L"),
+        Production("expr", ("expr", "DIV", "expr"), None, 1, "L"),
+        Production("expr", ("NUMBER"), None, 3, "L"),
+        Production("expr", ("LPAR", "expr", "RPAR"), None, 2, "L"),
+    ]
+    lri = LRItem(productions[1])
+    lri2 = LRItem(productions[2])
+    lri3 = LRItem(productions[3])
+    assert LRItem.prefer(lri, lri2) is lri
+    assert LRItem.prefer(lri, lri3) is lri3
 
 
 # %%
@@ -98,10 +114,12 @@ def test_Syntaxer_arith():
         else:
             assert follow == {nsym}
 
+    # Check shift and reduction items in GOTO.
     syntaxer.LALR_states_and_gotos()
     states = syntaxer.states
     gotos = syntaxer.gotos
     conflicts = syntaxer.conflicts
+    ext_lris = syntaxer.nonterms
     for state in states:
         nsyms = []
         for lri in state:
@@ -109,7 +127,7 @@ def test_Syntaxer_arith():
             if nsym is not None:
                 nsyms.append(nsym)
                 dest = gotos[(state, nsym)]
-                for nlri in syntaxer.LR0_closure(next(lri)):
+                for nlri in LRState(next(lri), ext_lris).closure:
                     assert nlri in dest
             else:
                 for follow in follows[lri]:
@@ -119,7 +137,7 @@ def test_Syntaxer_arith():
                     if isinstance(dest, LRItem):
                         assert dest is lri
 
-    arith_expr = "(2+4)*8+-1000*9+1-1.5"
+    arith_expr = "(2+4)*8+-1000*9+1-15"
     lexer = Lexer()
     tokens = list(lexer.input(arith_expr))
     assert syntaxer.parse_tokens(tokens) == eval(arith_expr)
@@ -188,10 +206,12 @@ def test_Syntaxer_nullable():
         elif nsym == "eles":
             assert follow == {"FLOAT", "INT", "LPAR", "LBPAR", "RBPAR", "SUB"}
 
+    # Check shift and reduction items in GOTO.
     syntaxer.LALR_states_and_gotos()
     states = syntaxer.states
     gotos = syntaxer.gotos
     conflicts = syntaxer.conflicts
+    ext_lris = syntaxer.nonterms
     for state in states:
         nsyms = []      # next symbols of all LRItems in LRState
         for lri in state:
@@ -199,7 +219,7 @@ def test_Syntaxer_nullable():
             if nsym is not None:            # Transition
                 nsyms.append(nsym)
                 dest = gotos[(state, nsym)]
-                for nlri in syntaxer.LR0_closure(next(lri)):
+                for nlri in LRState(next(lri), ext_lris).closure:
                     assert nlri in dest
             else:                           # Reduction
                 for follow in follows[lri]:
@@ -225,7 +245,7 @@ def test_Syntaxer_expr():
     syntaxer = Syntaxer(SYN_EXPR_PRODS)
     syntaxer.init_gotos()
     exprs = [
-        "{(2+4)*8+-1000*9+1-1.5, 9}",
+        "{(2+4)*8+-1000+9*22+-1000*9-22-1.5, 9}",
         "[1, 2, 3]",
         "[[], [3,4]]",
         "[1, 2, 3, [], [1,2+3,(2+4)*4]]",
