@@ -3,7 +3,7 @@
 #   Name: test_finarr.py
 #   Author: xyy15926
 #   Created: 2024-04-11 09:11:58
-#   Updated: 2024-06-04 20:20:17
+#   Updated: 2025-01-05 23:05:14
 #   Description:
 # ---------------------------------------------------------
 
@@ -73,18 +73,17 @@ def test_month_date():
 
     fixed_date = month_date(due_date, 1, True)
     assert np.all(fixed_date > due_date)
-    fixed_date_ = fixed_date - np.timedelta64(30, "D")
-    assert np.all(fixed_date_ - fixed_date_.astype("M8[M]")
+    assert np.all(fixed_date - fixed_date.astype("M8[M]")
                   == np.timedelta64(0, "D"))
 
 
 # %%
 def test_ovdd_from_duepay_records():
     recs = pd.DataFrame([
-        ("2021-12-11"   , None  , 0     , 2200),
-        ("2022-01-11"   , 0     , 0     , 2200),
+        ("2021-12-11"   , None  , 0     , 2300),
+        ("2022-01-11"   , 23    , 100   , 2200),
         # Repay date overpassing the observation date within the next duepay date.
-        ("2022-02-11"   , 23    , 100   , 2100),
+        ("2022-02-11"   , 0     , 100   , 2100),
         # Repay date overpassing the next duepay date.
         ("2022-03-11"   , 37    , 100   , 2000),
         # 37 - 31 = 6 > 4: Invalid overdue days.
@@ -153,9 +152,10 @@ def test_ovdd_from_duepay_records():
     ob_date = month_date(due_date, "monthend")
     check(ob_date)
 
-    # ob-dates must be strictly later than due-dates.
+    # The due-amounts and rem-amounts are tricky in some ways and the
+    # `ob_check` can't check.
     with pytest.raises(AssertionError):
-        ob_date = month_date(due_date, 11)
+        ob_date = month_date(due_date, 11, False)
         check(ob_date)
 
     ob_date = np.array(["2099-12"] * len(recs), dtype="datetime64[M]")

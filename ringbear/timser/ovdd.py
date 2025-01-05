@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2024-06-04 20:16:22
+#   Updated: 2025-01-05 23:06:20
 #   Description:
 # ---------------------------------------------------------
 
@@ -53,8 +53,10 @@ def ovdd_from_duepay_records(
       That will be easy to get the day past due for each duepayment, but not
       convenient to get the overdue days at some specific time point, A.K.A.
       observation point.
-      Here, `due_date`, with other arrays, is assumed to be sorted in ascending
-      order.
+      1.1 Here, `due_date`, along with other arrays, is assumed to be sorted
+        in ascending order.
+      1.2 The `overdue_days` are the day-delta between the duepayment dates
+        and the repayment dates.
 
     2. There are 2 kind of overdue days for a period of time:
 
@@ -92,7 +94,8 @@ def ovdd_from_duepay_records(
       3.2 The gaps between repayments and the gaps between the observations
         should be (independently) close to equal. Or if the overdue periods
         overlap partly, the oldest period may not be the longest.
-      3.3 The duepay amount and the remaining amount 
+      3.3 The duepay amount and the remaining amount are calculated for the
+        very point of the `ever` instead of the `ob_date`.
 
     4. Take the following timeline as a example:
 
@@ -138,6 +141,11 @@ def ovdd_from_duepay_records(
     ob_date: Sequence of observation date for each duepayment point.
       If no argument passed, this will be the `due_date` after shifting
       out the first duepay date and including a faraway date.
+      ATTENTION: The `ob_date` should be strictly later than the `due_date` or
+        the `duea` and `rema` will be hard to check.
+      ATTENTION: As the repayment date is determined only after the day pasted,
+        namely the next day and ', the `ob_date` should be defered for 1 day from the
+        DDL, the 1st day for the month-end for example.
     due_amt: Sequence of duepay amount.
     rem_amt: Sequence of remaining amount.
 
@@ -209,7 +217,7 @@ def ovdd_from_duepay_records(
                 stop_ovdp[idx] = 1 if stop_ovdd[idx] > 0 else 0
 
                 ever_duea[idx] = duea if ovdd > 0 else 0
-                stop_duea[idx] = 0 if ovdd == OTD else duea
+                stop_duea[idx] = duea if ovdd > 0 else 0
                 ever_rema[idx] = rema + ever_duea[idx]
                 stop_rema[idx] = rema + stop_duea[idx]
         else:
@@ -218,7 +226,8 @@ def ovdd_from_duepay_records(
                 logger.warning(f"Invalid overdue day in records at {dued}.")
 
             if last_repd > obd:
-                ovd_Q.append((dued, repd, duea, rema))
+                if obd > dued:
+                    ovd_Q.append((dued, repd, duea, rema))
 
                 ever_ovdd[idx] = obd - last_dued
                 stop_ovdd[idx] = obd - last_dued
@@ -234,6 +243,9 @@ def ovdd_from_duepay_records(
                 # Else the perception of remain amount isn't defined well.
                 ever_rema[idx] = last_rema + last_duea
                 stop_rema[idx] = last_rema + last_duea
+
+                if obd == dued:
+                    ovd_Q.append((dued, repd, duea, rema))
             else:
                 # `ever_ovdd` is assigned directly here only under the
                 # assumption that both the gaps between repayments and the gaps
@@ -251,7 +263,7 @@ def ovdd_from_duepay_records(
                     ever_ovdp[idx] = len(ovd_Q)
                     ever_duea[idx] = sum([ele[2] for ele in ovd_Q])
 
-                if repd > obd:
+                if repd > obd and obd > dued:
                     ovd_Q.append((dued, repd, duea, rema))
 
                 while len(ovd_Q) > 0:
@@ -269,6 +281,9 @@ def ovdd_from_duepay_records(
                     stop_ovdp[idx] = 0
                     stop_duea[idx] = 0
                     stop_rema[idx] = rema
+
+                if repd > obd and obd == dued:
+                    ovd_Q.append((dued, repd, duea, rema))
 
     return (np.asarray(ever_ovdd), np.asarray(stop_ovdd),
             np.asarray(ever_ovdp), np.asarray(stop_ovdp),
@@ -296,7 +311,7 @@ def month_date(
       nextdue_noend: Ditto, but the last observation date will be 2099-12-31.
       monthend: The end of month for each due date.
       int: The fixed date of month for each due date.
-    forced: If to moved 30 days forward to ensure all the dates in result
+    forced: If to moved 1 month forward to ensure all the dates in result
       succeed the corresponding given dates.
 
     Return:
@@ -318,11 +333,11 @@ def month_date(
     elif isinstance(rule , int) and 1 <= rule <= 28:
         ob_date = due_date.astype("M8[M]") + np.timedelta64(rule - 1, "D")
         if np.any(ob_date < due_date):
-            invalid = due_date[ob_date < due_date]
-            logger.warning(
-                f"Result dates {invalid} may precedes the given dates.")
             if forced:
-                ob_date += np.timedelta64(30, "D")
+                logger.info("Another month move forward to ensure the result "
+                            "succeed the given dates.")
+                ob_date = (due_date.astype("M8[M]") + np.timedelta64(1, "M")
+                           + np.timedelta64(rule - 1, "D"))
     else:
         raise ValueError(f"Invalid observeration date setting: {rule}.")
 
