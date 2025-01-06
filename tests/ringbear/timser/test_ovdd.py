@@ -3,7 +3,7 @@
 #   Name: test_finarr.py
 #   Author: xyy15926
 #   Created: 2024-04-11 09:11:58
-#   Updated: 2025-01-05 23:05:14
+#   Updated: 2025-01-06 21:47:42
 #   Description:
 # ---------------------------------------------------------
 
@@ -112,8 +112,8 @@ def test_ovdd_from_duepay_records():
     rem_amt = recs["rem_amt"]
 
     def check(ob_date):
-        (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp,
-         ever_duea, stop_duea, ever_rema, stop_rema) = ovdd_from_duepay_records(
+        (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp, ever_ovda, stop_ovda,
+         ever_rema, stop_rema, ever_duea, stop_duea) = ovdd_from_duepay_records(
             due_date, ovd_days, ob_date, due_amt, rem_amt)
         assert np.all(ever_ovdd >= stop_ovdd)
         assert ever_ovdd.max() == ovd_days.max()
@@ -123,46 +123,62 @@ def test_ovdd_from_duepay_records():
                       [(ob_date - due_date) <= np.timedelta64(31, "D")])
         assert np.all(((stop_ovdd + 30) // 31 == stop_ovdp)
                       [(ob_date - due_date) <= np.timedelta64(31, "D")])
-        assert np.all((ever_ovdp * 100) == ever_duea)
-        assert np.all((stop_ovdp * 100) == stop_duea)
-
-        repay_date = due_date + ovd_days
-        oidx = np.concatenate([[False], (repay_date > ob_date)[:-1]
-                              & (repay_date[:-1] <= due_date[1:])])
-        assert np.all(((ever_rema - ever_duea) == rem_amt)[~oidx])
-        assert np.all(((ever_rema - ever_duea) == rem_amt + 100)[oidx])
-        assert np.all((stop_rema - stop_duea) == rem_amt)
-
-        recs_b = recs.copy()
-        recs_b["repay_date"] = due_date + ovd_days
-        # recs_b["ob_date"] = ob_date
-        recs_b["ever_ovdd"] = ever_ovdd
-        recs_b["ever_ovdp"] = ever_ovdp
-        recs_b["ever_duea"] = ever_duea
-        recs_b["ever_rema"] = ever_rema
-        # recs_b["rem-due"] = ever_rema - ever_duea
+        assert np.all((ever_ovdp * 100) == ever_ovda)
+        assert np.all((stop_ovdp * 100) == stop_ovda)
+        assert np.all(ever_duea >= ever_ovda)
 
         return (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp,
+                ever_ovda, stop_ovda,
                 ever_duea, stop_duea, ever_rema, stop_rema)
 
+    repay_date = due_date + ovd_days
     ob_date = month_date(due_date, "nextdue_noend")
-    check(ob_date)
+    (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp, ever_ovda, stop_ovda,
+     ever_duea, stop_duea, ever_rema, stop_rema) = check(ob_date)
+    assert np.all((ever_rema - ever_duea) == rem_amt)
+    assert np.all((stop_rema - stop_duea) == rem_amt)
 
     # assert check(ob_date) == check(None)
+
     ob_date = month_date(due_date, "monthend")
-    check(ob_date)
+    (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp, ever_ovda, stop_ovda,
+     ever_duea, stop_duea, ever_rema, stop_rema) = check(ob_date)
+    # The last overdue overpass last obdate but not current duedate.
+    oidx = np.concatenate([[False], (repay_date > ob_date)[:-1]
+                          & (repay_date[:-1] < due_date[1:])])
+    assert np.all(((ever_rema - ever_duea) == rem_amt)[~oidx])
+    assert np.all(((ever_rema - ever_duea) == rem_amt + 100)[oidx])
+    assert np.all((stop_rema - stop_duea) == rem_amt)
 
     # The due-amounts and rem-amounts are tricky in some ways and the
     # `ob_check` can't check.
-    with pytest.raises(AssertionError):
-        ob_date = month_date(due_date, 11, False)
-        check(ob_date)
+    ob_date = month_date(due_date, 11, False)
+    (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp, ever_ovda, stop_ovda,
+     ever_duea, stop_duea, ever_rema, stop_rema) = check(ob_date)
+    oidx = (ever_duea != ever_ovda)
+    oidx[0] = True
+    assert np.all(((ever_rema - ever_duea) == rem_amt)[oidx])
+    assert np.all(((ever_rema - ever_duea) == rem_amt + 100)[~oidx])
+    oidx = (stop_duea == stop_ovda) & (stop_duea != 0)
+    oidx[0] = False
+    assert np.all(((stop_rema - stop_duea) == rem_amt)[~oidx])
+    assert np.all(((stop_rema - stop_duea) == rem_amt + 100)[oidx])
 
     ob_date = np.array(["2099-12"] * len(recs), dtype="datetime64[M]")
-    (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp,
-     ever_duea, stop_duea, ever_rema, stop_rema) = ovdd_from_duepay_records(
-        due_date, ovd_days, ob_date, due_amt, rem_amt)
-    check(ob_date)
+    (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp, ever_ovda, stop_ovda,
+     ever_duea, stop_duea, ever_rema, stop_rema) = check(ob_date)
     assert np.all(ever_ovdd == np.asarray(ovd_days, "timedelta64[D]"))
     assert np.all(stop_ovdd == np.timedelta64(0, "D"))
     assert np.all((ever_ovdd >= stop_ovdd)[stop_ovdd > np.timedelta64(0, "D")])
+
+    recs_b = recs.copy()
+    recs_b["repay_date"] = due_date + ovd_days
+    recs_b["ob_date"] = ob_date
+    recs_b["stop_ovdd"] = stop_ovdd
+    recs_b["stop_ovdp"] = stop_ovdp
+    recs_b["stop_duea"] = stop_duea
+    recs_b["stop_rema"] = stop_rema
+    recs_b["stop_ovda"] = stop_ovda
+    recs_b["rem-due"] = stop_rema - stop_duea
+    recs_b["oidx"] = oidx
+    recs_b.to_clipboard()

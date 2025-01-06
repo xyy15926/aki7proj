@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2024-05-27 17:08:05
+#   Updated: 2025-01-06 22:00:38
 #   Description:
 # ---------------------------------------------------------
 
@@ -100,7 +100,7 @@ def addup_ob_records(
     # set_trace()
 
     # Calculate overdue index.
-    (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp,
+    (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp, ever_ovda, stop_ovda,
      ever_duea, stop_duea, ever_rema, stop_rema) = ovdd_from_duepay_records(
         due_date, ovd_days, ob_date, due_amt, rem_amt)
 
@@ -125,6 +125,8 @@ def addup_ob_records(
         "stop_ovdd": stop_ovdd,
         "ever_ovdp": ever_ovdp,
         "stop_ovdp": stop_ovdp,
+        "ever_ovda": ever_ovda,
+        "stop_ovda": stop_ovda,
         "ever_duea": ever_duea,
         "stop_duea": stop_duea,
         "ever_rema": ever_rema,
