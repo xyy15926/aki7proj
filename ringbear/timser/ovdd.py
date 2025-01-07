@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-01-06 22:09:51
+#   Updated: 2025-01-07 19:26:56
 #   Description:
 # ---------------------------------------------------------
 
@@ -321,7 +321,8 @@ def ovdd_from_duepay_records(
                 if repd > obd and obd == dued:
                     ovd_Q.append((dued, repd, duea, rema))
 
-    return (np.asarray(ever_ovdd), np.asarray(stop_ovdd),
+    return (np.asarray(ever_ovdd).astype(np.int_),
+            np.asarray(stop_ovdd).astype(np.int_),
             np.asarray(ever_ovdp), np.asarray(stop_ovdp),
             np.asarray(ever_ovda), np.asarray(stop_ovda),
             np.asarray(ever_rema), np.asarray(stop_rema),
