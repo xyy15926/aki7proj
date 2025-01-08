@@ -3,7 +3,7 @@
 #   Name: test_pandas.py
 #   Author: xyy15926
 #   Created: 2024-05-06 14:44:03
-#   Updated: 2024-12-14 21:41:16
+#   Updated: 2025-01-08 20:11:05
 #   Description:
 # ---------------------------------------------------------
 
@@ -58,16 +58,22 @@ def test_groupby_apply_index():
 
     NN = 1000
     data = repeat_df(NN).set_index("GPKey3Rand")
+    ridata = data.reset_index(drop=True)
 
     index_added = data.groupby("GPKey3", group_keys=True).apply(func_reset_index)
     assert index_added.index.nlevels == data.index.nlevels + 1
 
     # No additional index will be added if the index value are not changed
-    # in `apply`, while the original Index will be sorted in a hash way.
+    # in `apply` with **one by one comparision**, while the original Index will
+    # be sorted in a hash way, even though `group_keys` is set.
     kret = data.groupby("GPKey3", group_keys=True).apply(func_keep_index)
     assert kret.index.nlevels == data.index.nlevels
+    nkret = data.groupby("GPKey3", group_keys=False).apply(func_keep_index)
+    assert np.all(kret == nkret)
 
     # Ditto.
+    rkret = ridata.groupby("GPKey3", group_keys=True).apply(func_keep_index)
+    assert rkret.index.nlevels == ridata.index.nlevels
     kret = data.groupby("GPKey3", group_keys=True).apply(func_circle_index)
     assert kret.index.nlevels == data.index.nlevels
 
@@ -81,17 +87,19 @@ def test_groupby_apply_index():
 
 
 # %%
-# 2. BUG alog with the former:
+# 2. BUG along with the former:
 # If DF returned by callable applied keep the index unchanged, the duplicates
-# in the index and the group-key will slow down the process of concatenation.
+# in the (index and the group-key) will slow down the process of concatenation.
 # And the more duplicated the index is, the lower efficiency the concatenator
 # after application act with.
 # Problem:
 # 1. It seems that the bug results from the sortation but can't be controlled
-#   by the parameter `sort`.
+#   by the parameter `sort` and it may be hard to sort duplicates. As the
+#   traceback always stop at `libops.scalar_compare` of `Concatenator`.
 # Solution:
-# 1. Reset index.
-# 2. Pre-sort group-key.
+# 1. Reset index in apply function.
+# 2. Pre-sort group-key may also be useful. I found that the apply progress
+#   may also be much more time-consuming in larger scale of test cases.
 @pytest.mark.skipif(pd.__version__ == '1.4.4',
                     reason="Efficiency demo")
 @pytest.mark.pkgs
@@ -106,6 +114,9 @@ def test_groupby_apply_efficiency():
         df = df.copy()
         index = df.index.to_list()
         df.index = index
+        return df
+
+    def func_ori_index(df):
         return df
 
     def func_dup_index(df):
@@ -124,33 +135,52 @@ def test_groupby_apply_efficiency():
 
     NN = 10000
     # data = repeat_df(NN).set_index("GPKey4")
-    data = repeat_df(NN).set_index("GPKey4Rand")
+    ridata = repeat_df(NN)
+    ui = np.arange(len(ridata))
+    np.random.shuffle(ui)
+    uidata = ridata.set_axis(ui, axis=0)
+    r4data = ridata.set_index("GPKey4Rand")
+    r3data = ridata.set_index("GPKey3Rand")
+    o5data = ridata.set_index("GPKey5")
+    o2data = ridata.set_index("GPKey2")
     # data = repeat_df(NN).set_index("GPKey3Rand")
 
-    # For group by `GPKey4` and `GPKey4Rand`.
-    # Time: 10s -> Many groups, no duplicates.
-    ret = data.groupby("GPKey1", sort=False).progress_apply(func_keep_index)
-    # Time: 10s -> Many groups, no duplicates
-    ret = data.groupby("GPKey1", sort=False).progress_apply(func_reset_index)
-    # Time: 20s -> Medium groups, many duplicates
-    ret = data.groupby("GPKey2", sort=False).progress_apply(func_keep_index)
-    # Time: 3s -> Medium groups, different index.
-    ret = data.groupby("GPKey2", sort=False).progress_apply(func_reset_index)
-    # Time: 20s -> Some groups, many duplicates
-    ret = data.groupby("GPKey3", sort=False).progress_apply(func_keep_index)
-    # Time: 20s -> Some groups, many duplicates
-    ret = data.groupby("GPKey3Rand", sort=False).progress_apply(func_keep_index)
-    # Time: <1s -> Some groups, differenct index.
-    ret = data.groupby("GPKey3", sort=False).progress_apply(func_dup_index)
-    # Time: <1s
-    ret = data.groupby("GPKey3", sort=True).progress_apply(func_dup_index)
-    # Time: <1s -> Some groups, many duplicates, pre-sort
-    sorted_data = data.sort_values("GPKey3")
-    ret = sorted_data.groupby("GPKey3", sort=False).progress_apply(func_keep_index)
-    # Time: <1s -> Some groups, different index.
-    ret = data.groupby("GPKey3", sort=True).progress_apply(func_modified_index)
-    # Time: 20s -> Few groups, many duplicates.
-    ret = data.groupby("GPKey5", sort=True).progress_apply(func_keep_index)
+    # There are more and more duplicates from GPKey1 to GPKey5.
+    # 1. Noduplicated group key will always be efficient.
+    ret = r4data.groupby("GPKey1", sort=False).progress_apply(func_reset_index)
+    ret = r4data.groupby("GPKey1", sort=False).progress_apply(func_keep_index)
+    ret = uidata.groupby("GPKey1", sort=False).progress_apply(func_keep_index)
+    ret = o5data.groupby("GPKey1", sort=False).progress_apply(func_keep_index)
+
+    # 2. Duplicated group key with unique index may also be efficient?
+    ret = uidata.groupby("GPKey3", sort=False).progress_apply(func_keep_index)
+    ret = ridata.groupby("GPKey3", sort=False).progress_apply(func_keep_index)
+    ret = uidata.groupby("GPKey3", sort=False).progress_apply(func_ori_index)
+    ret = ridata.groupby("GPKey3", sort=False).progress_apply(func_ori_index)
+
+    # 3. Duplicated group key with duplicated index but different index of
+    # the return from `apply` will also be efficient.
+    ret = r4data.groupby("GPKey3", sort=False).progress_apply(func_reset_index)
+    ret = r4data.groupby("GPKey3", sort=False).progress_apply(func_dup_index)
+    ret = r4data.groupby("GPKey3", sort=False).progress_apply(func_modified_index)
+
+    # 4. Duplicated group key with duplicated index and **the same** index of
+    # the return from `apply` will be time-comsuming.
+    # 4.1 And the overhead will increase along with the duplication-level of
+    #   both the index and the group-key.
+    ret = r3data.groupby("GPKey5", sort=False).progress_apply(func_keep_index)
+    ret = r3data.groupby("GPKey5", sort=True).progress_apply(func_keep_index)
+    gpk5 = pd.Index(ret["GPKey5"].values)
+    assert not (gpk5.is_monotonic_increasing or gpk5.is_monotonic_decreasing)
+    ret = r3data.groupby("GPKey4Rand", sort=False).progress_apply(func_keep_index)
+    ret = r4data.groupby("GPKey3", sort=False).progress_apply(func_keep_index)
+    ret = r4data.groupby("GPKey3Rand", sort=False).progress_apply(func_keep_index)
+    # 4.2 The duplication-level of index seems to be more-weighted.
+    # As `o5data.groupby("GPKey2")` can't even return in time when NN > 2000.
+    ret = o5data.groupby("GPKey2", sort=False).progress_apply(func_keep_index)
+    o5data_s2 = o5data.sort_values("GPKey2")
+    ret = o5data_s2.groupby("GPKey2", sort=False).progress_apply(func_keep_index)
+    ret = o2data.groupby("GPKey5", sort=False).progress_apply(func_keep_index)
 
 
 # %%

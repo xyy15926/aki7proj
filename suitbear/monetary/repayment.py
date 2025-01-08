@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2025-01-07 22:22:45
+#   Updated: 2025-01-08 09:42:20
 #   Description:
 # ---------------------------------------------------------
 
@@ -56,7 +56,7 @@ def addup_obovd(
 
     Params:
     ------------------------
-    records: DataFrame[due_date, ovd_days, dum_amt, rem_amt]
+    records: DataFrame[due_date, ovd_days, due_amt, rem_amt]
       due_date: Datetime64 convertable sequence representing the duepayment
         dates.
       ovd_days: Day past due for each duepay dates.
@@ -141,7 +141,7 @@ def addup_obrec(
 
     Params:
     ------------------------
-    records: DataFrame[oid, due_date, ovd_days, dum_amt, rem_amt]
+    records: DataFrame[oid, due_date, ovd_days, due_amt, rem_amt]
       due_date: Datetime64 convertable sequence representing the duepayment
         dates.
       ovd_days: Day past due for each duepay dates.
@@ -170,7 +170,7 @@ def addup_obrec(
         dum_date.index.name = "oid"
         records = records.join(dum_date, on="oid")
 
-    tqdm.pandas(desc="Addup Observation")
+    tqdm.pandas(desc="Add Obrec")
     ret = records.groupby("oid").progress_apply(
         addup_obovd, ob_date=ob_date, dum_ovdd=dum_ovdd, dum_ovdp=dum_ovdp)
 

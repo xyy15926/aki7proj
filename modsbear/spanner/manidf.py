@@ -3,7 +3,7 @@
 #   Name: manidf.py
 #   Author: xyy15926
 #   Created: 2024-06-06 11:17:46
-#   Updated: 2024-12-14 22:52:12
+#   Updated: 2025-01-08 20:15:25
 #   Description:
 # ---------------------------------------------------------
 
@@ -16,7 +16,8 @@ from collections.abc import Mapping, Callable
 
 import numpy as np
 import pandas as pd
-from IPython.core.debugger import set_trace
+from tqdm import tqdm
+# from IPython.core.debugger import set_trace
 
 from flagbear.str2.dups import rename_overlaped
 
@@ -27,6 +28,47 @@ logging.basicConfig(
     force=(__name__ == "__main__"))
 logger = logging.getLogger()
 logger.info("Logging Start.")
+
+
+# %%
+def group_addup_apply(
+    df: pd.DataFrame,
+    groupkey: str | list,
+    appfunc: Callable,
+    desc: str = None,
+    **kwargs,
+) -> pd.DataFrame:
+    """Progress apply for addup-function application.
+
+    Addup functions: Function that won't change the index of the DataFrame but
+    just addup some columns in most cases.
+
+    If DF returned by callable applied keep the index unchanged, the duplicates
+    in the (index and the group-key) will slow down the process of concatenation.
+    So and external `rets` will be used to collect the results of the sub-DF.
+
+    Params:
+    -------------------------
+    df: DataFrame to be groupe and then be applied `appfunc` on.
+    groupkey: Group key.
+    appfunc: Application function on groups.
+    desc: Description prompt for tqdm progress bar.
+    kwargs: Kwargs for `appfunc`.
+
+    Return
+    """
+    tqdm.pandas(desc=desc)
+    rets = []
+
+    # Wrap `appfunc` to collect the return.
+    def addup(subdf):
+        subret = appfunc(subdf, **kwargs)
+        rets.append(subret)
+        return 1
+
+    df.groupby(groupkey, sort=False).progress_apply(addup)
+    ret = pd.concat(rets)
+    return ret
 
 
 # %%

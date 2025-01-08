@@ -3,7 +3,7 @@
 #   Name: test_manidf.py
 #   Author: xyy15926
 #   Created: 2024-06-06 11:19:40
-#   Updated: 2024-11-19 17:39:21
+#   Updated: 2025-01-08 20:25:38
 #   Description:
 # ---------------------------------------------------------
 
@@ -17,8 +17,36 @@ if __name__ == "__main__":
     from modsbear.spanner import manidf
     reload(manidf)
 
-from modsbear.spanner.manidf import merge_dfs, pivot_tags, sequeeze_named_columns
 from flagbear.str2.dups import rename_overlaped
+from modsbear.spanner.manidf import merge_dfs, pivot_tags, sequeeze_named_columns
+from modsbear.spanner.manidf import group_addup_apply
+
+
+# %%
+def repeat_df(NN):
+    data = pd.DataFrame()
+    data["GPKey1"] = range(NN * 3)
+    data["GPKey2"] = list(range(NN)) * 3
+    data["GPKey3"] = list(range(NN // 10)) * 3 * 10
+    data["GPKey3Rand"] = np.random.randint(NN // 10, size=NN * 3, dtype=int)
+    data["GPKey4"] = list(range(NN // 100)) * 3 * 100
+    data["GPKey4Rand"] = np.random.randint(NN // 100, size=NN * 3, dtype=int)
+    data["GPKey5"] = list(range(NN // 1000)) * 3 * 1000
+
+    return data
+
+
+def test_group_addup_apply():
+    def func_keep_index(df):
+        df["addup"] = 1
+        return df
+
+    NN = 10000
+    # data = repeat_df(NN).set_index("GPKey4")
+    ridata = repeat_df(NN)
+    r3data = ridata.set_index("GPKey3Rand")
+    ret = group_addup_apply(r3data, "GPKey5", func_keep_index)
+    assert np.all(ret["addup"] == 1)
 
 
 # %%
