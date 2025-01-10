@@ -208,8 +208,8 @@ def folw_mois(field: str, desc: str = "存续"):
     reprs = [(f"folw_{moi}m",
               f"({field} <= {moi}) & ({field} > 0)",
               f"未来{moi}月{desc}") for moi in mois]
-    reprs += [("closed", f"{field} <= 0", "未{desc}"),
-              ("open", f"{field} > 0", "仍{desc}"),
+    reprs += [("closed", f"{field} <= 0", f"未{desc}"),
+              ("open", f"{field} > 0", f"仍{desc}"),
               (None, None, None)]
     return reprs
 
@@ -915,9 +915,9 @@ REL_INFO = {
         "acc_sum": ("acc_sum", "sum(PD03AJ02)", "相关责任账户金额之和"),
         "acc_max": ("acc_max", "max(PD03AJ02)", "相关责任账户金额最大值"),
         "repay_status_max": ("repay_status_max", "max(rel_repay_status)",
-                             "相关责任逾期月数最大值"),
+                             "相关责任逾期状态数最大值"),
         "repay_status_sum": ("repay_status_sum", "sum(rel_repay_status)",
-                             "相关责任逾期月数之和"),
+                             "相关责任逾期状态数之和"),
         "ovd_month_max": ("ovd_month_max", "max(PD03AS01)",
                           "相关责任逾期月数最大值"),
         "ovd_month_sum": ("ovd_month_sum", "sum(PD03AS01)",
