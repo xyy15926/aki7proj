@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2025-01-08 09:42:20
+#   Updated: 2025-01-13 11:17:09
 #   Description:
 # ---------------------------------------------------------
 
@@ -94,7 +94,7 @@ def addup_obovd(
     # Add observer records.
     obd = month_date(due_date, ob_date)
     (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp, ever_ovda, stop_ovda,
-     ever_duea, stop_duea, ever_rema, stop_rema) = ovdd_from_duepay_records(
+     ever_rema, stop_rema, ever_duea, stop_duea) = ovdd_from_duepay_records(
          recs["due_date"], recs["ovd_days"], obd,
          recs["due_amt"], recs["rem_amt"])
     recs["ob_date"] = obd
