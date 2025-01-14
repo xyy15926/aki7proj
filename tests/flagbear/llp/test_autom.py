@@ -3,7 +3,7 @@
 #   Name: test_autom.py
 #   Author: xyy15926
 #   Created: 2024-08-12 11:43:52
-#   Updated: 2025-01-09 18:35:07
+#   Updated: 2025-01-13 18:15:56
 #   Description:
 # ---------------------------------------------------------
 
@@ -14,6 +14,7 @@ if __name__ == "__main__":
     from flagbear.llp import autom
     reload(autom)
 
+import logging
 import numpy as np
 import pandas as pd
 from flagbear.llp.autom import AutomState, Automaton
@@ -21,13 +22,23 @@ from flagbear.llp.autom import StatesPDA
 
 
 # %%
-def test_Automaton():
+def test_Automaton(caplog):
     at = Automaton()
     sd = {}
-    for ele in "ABCD":
+    for ele in "AB":
         state = AutomState(ele)
         sd[ele] = state
         at.add_state(state)
+    cst = at.add_state("C")
+    sd["C"] = cst
+    assert cst == AutomState("C")
+    ccst = at.adddefault_state("C")
+    assert ccst is cst
+    ccst = at.adddefault_state(AutomState("C"))
+    assert ccst is cst
+    dst = at.adddefault_state("D")
+    sd["D"] = dst
+    assert dst == AutomState("D")
 
     # AutomState equality.
     for ele in "ABCD":
@@ -43,8 +54,8 @@ def test_Automaton():
     for x, from_ in enumerate("ABCD"):
         for y, inp in enumerate("abcd"):
             at.add_transition(sd[from_], inp, sd[tss[x][y]])
-    with pytest.raises(ValueError):
-        at.add_transition(sd["A"], "a", sd["B"])
+    with caplog.at_level(logging.WARNING):
+        at.add_transition(sd["A"], "b", sd["B"])
     at.start_state = sd["A"]
     at.end_states = {sd["D"]}
 

@@ -3,7 +3,7 @@
 #   Name: autom.py
 #   Author: xyy15926
 #   Created: 2024-08-12 10:06:56
-#   Updated: 2025-01-09 18:34:52
+#   Updated: 2025-01-13 18:17:25
 #   Description:
 # ---------------------------------------------------------
 
@@ -35,13 +35,6 @@ logger.info("Logging Start.")
 
 
 # %%
-class Rule(NamedTuple):
-    stt: int
-    inp: str
-    nxt: int
-
-
-# %%
 class AutomState:
     """Automaton State.
 
@@ -57,8 +50,10 @@ class AutomState:
       The automaton the state belongs to.
     _regid: Int.
       Register id of the state in the Automaton.
+    desc: Str.
+      Description for repr.
     """
-    def __init__(self, core: Hashable):
+    def __init__(self, core: Hashable, desc: str = None):
         """Init.
 
         Params:
@@ -69,16 +64,12 @@ class AutomState:
         self._hashval = hash(core)      # Hash value for hashable implementation.
         self.autom = None               # Automaton that the state belongs to.
         self._regid = None              # For repr and fast-comparion only.
+        self.desc = (f"Unregesiterd State {self._hashval}" if desc is None
+                     else desc)
 
     def __repr__(self):
         """Representation."""
-        if self._regid is not None:
-            reprstr = f"S{self._regid}"
-        elif self._hashval is not None:
-            reprstr = f"Unregesiterd State {self._hashval}"
-        else:
-            reprstr = "Uninited State"
-        return reprstr
+        return self.desc
 
     def __str__(self):
         """String."""
@@ -123,6 +114,8 @@ class Automaton:
 
     Attrs:
     --------------------------
+    state_type: State Class.
+      State type(class) of the automaton.
     states_store: Dict[AutomState, AutomState].
       Dict of AutomState to AutomState to store the states in the automaton.
     gotos: Dict[(AutomState, HashableInput), AutomState]
@@ -134,32 +127,80 @@ class Automaton:
     end_state: Set of AutomState.
       End states.
     """
-    def __init__(self):
+    def __init__(self, state_type: type = AutomState):
         """Init"""
+        self.state_type = state_type        # Default state class to init implicitly.
         self.states_store = {}              # {AutomState: AutomState}
+        self.states_list = []               # [AutomState]
         self.gotos = {}                     # {(AutomState, HashableInput): AutomState}
         self.cur = None                     # Current state.
         self.start_state = None             # Start state.
         self.end_states = None              # End state set.
 
-    def add_state(self, state: AutomState) -> int:
+    def add_state(self, state: Hashable) -> AutomState:
         """Add state in the automaton.
 
         Params:
         --------------------------
-        state: AutomState to be added in the automaton.
+        state: AutomState or core to be added in the automaton.
+
+        Raises:
+        --------------------------
+        ValueError
 
         Return:
         --------------------------
         Regsiter id of the added AutomState.
         """
         store = self.states_store
+        slist = self.states_list
+        InnerState = self.state_type
+        if not isinstance(state, AutomState):
+            state = InnerState(state)
         if state in store:
-            return -1
-        store[state] = state
+            raise ValueError(f"{state} already exists.")
         state._regid = len(store)
+        state.desc = f"S[{state._regid:03}]"
         state.autom = self
-        return state._regid
+        store[state] = state
+        slist.append(state)
+        return state
+
+    def get_state(self, state: Hashable) -> AutomState | None:
+        """Get state from the automaton with core-only state.
+
+        Params:
+        --------------------------
+        state: Core or unregistered state.
+
+        Return:
+        --------------------------
+        Registered AutomState in the automaton if core exists.
+        Else None.
+        """
+        InnerState = self.state_type
+        if not isinstance(state, AutomState):
+            state = InnerState(state)
+        return self.states_store.get(state)
+
+    def adddefault_state(self, state: Hashable) -> AutomState:
+        """Get state from or add state to the automaton.
+
+        1. Return the state with the same core if existing.
+        2. Else add the state to the automaton.
+
+        Params:
+        --------------------------
+        state: Core or unregistered state.
+
+        Return:
+        --------------------------
+        Registered AutomState.
+        """
+        inner = self.get_state(state)
+        if inner is not None:
+            return inner
+        return self.add_state(state)
 
     def add_transition(self, from_: AutomState,
                        inp: Hashable,
@@ -177,8 +218,12 @@ class Automaton:
         Self will be return for chain operation.
         """
         gotos = self.gotos
+        if from_.autom is not self:
+            raise ValueError(f"State {from_} isn't registered in this automaton.")
+        if to_.autom is not self:
+            raise ValueError(f"State {to_} isn't registered in this automaton.")
         if (from_, inp) in gotos:
-            raise ValueError("Transition {from_} with {inp} already exists.")
+            logger.warning(f"Update existing transition {from_} with {inp}.")
         gotos[from_, inp] = to_
         return self
 
@@ -243,7 +288,7 @@ class Automaton:
         for (from_, inp), to_ in gotos.items():
             subd = pdict.setdefault(inp, {})
             subd[repr(from_)] = repr(to_)
-        df = pd.DataFrame.from_dict(pdict)
+        df = pd.DataFrame.from_dict(pdict).sort_index()
 
         return df
 
@@ -257,9 +302,9 @@ class StatesPDA(Automaton):
     states_stack: List.
       History of the states of the automaton.
     """
-    def __init__(self):
+    def __init__(self, state_type: type = AutomState):
         """Init."""
-        super().__init__()
+        super().__init__(state_type)
         self.states_stack = None
 
     def start(self, states: list[AutomState] = None):
@@ -291,7 +336,7 @@ class StatesPDA(Automaton):
             self.cur = self.states_stack[-1]
         return self
 
-    def input(self, inp: Any) -> Self:
+    def input(self, inp: Hashable) -> Self:
         """Receive the input and transit.
 
         Params:

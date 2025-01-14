@@ -3,7 +3,7 @@
 #   Name: syntax.py
 #   Author: xyy15926
 #   Created: 2023-11-29 20:20:12
-#   Updated: 2025-01-04 19:17:18
+#   Updated: 2025-01-13 20:11:20
 #   Description:
 #     PLY Ref: <https://github.com/dabeaz/ply>
 #     Lookahead Caculation Ref: <https://dl.acm.org/doi/pdf/10.1145/69622.357187>
@@ -16,7 +16,7 @@ try:
     from typing import NamedTuple, Self
 except ImportError:
     from typing_extensions import NamedTuple, Self
-from collections.abc import Iterator, Callable
+from collections.abc import Iterator, Callable, Hashable
 
 # from IPython.core.debugger import set_trace
 
@@ -26,6 +26,7 @@ from collections import deque
 from sys import maxsize as MAXINT
 
 from flagbear.tree.tree import GeTNode
+from flagbear.llp.autom import AutomState, StatesPDA
 from flagbear.llp.patterns import LEX_ENDFLAG, SYN_STARTSYM, SYN_ARITH_PRODS
 from flagbear.llp.graph import backward_update_traverse
 
@@ -287,73 +288,18 @@ class LRItem:
 
 
 # %%
-class LRState:
-    """LR state of LRItems.
+class LRState(AutomState):
+    """State for LR(0) automaton.
 
     Attrs:
-    -------------------
-    cores: Tuple[LRItem]
-      Tuple of core LRItems, from which all LRItems in LRState are derived.
-      This must tuple instead of list to be hashable.
-    ext_lris: Dict[str, List[LRItem]]
-      Dict of the non-terminals and their first LR0_Item derived from their
-      productions, namely extended LRItems.
-      This will be used to calculate the LR0_closure for the `cores`.
-    closure: List[LRItem]
-      List of all LRItems derived from `cores`.
-    store: List[LRState]
-      Recording all the LRStates in Syntaxer.
-    index: int
-      The index of current LRState in `store`.
+    ---------------------------
+    core: Tuple of LRItems.
+      Identity to identify the state int the Automaton.
+      State with the same core will be treated as equal.
+    closure: List of LRItems.
+      The LR(0) closure of the core.
     """
-    def __init__(self, cores: list[LRItem] | tuple[LRItem],
-                 ext_lris: dict[str, list[LRItem]] = None):
-        """Init LRState for only syntaxer and cores.
-
-        Only necessary attributes are set here:
-        1. LRState shouldn't be replicated but LRState do need to be
-          instantized to check if already existing. So some attributes will
-          be set later, especially those may lead to unrevertable impact.
-        2. Replicated LRState instance will be dropped instantly, so the
-          unnecessary attributes, `closure` for example, may also be set later
-          to reduce overhead.
-
-        Params:
-        -----------------------
-        cores: Tuple or list of core LRItems for current LRState.
-        ext_lris: Dict of the non-terminals and their first LR0_Item derived
-          from their productions, namely extended LRItems.
-        """
-        self.cores = tuple(cores)
-        self.hash_value = hash(self.cores)
-        self.ext_lris = ext_lris
-        if self.ext_lris:
-            self.closure = self.LR0_closure()
-        self.index = None
-        self.store = None
-
-    # This `init` method be seperated from `__init__`, or `self`
-    # will be append to `state_store` to early.
-    def register_this(self, store: list[Self],
-                      ext_lris: dict[str, list[LRItem]] = None):
-        """Init LRState for rest of the attributes.
-
-        Register this in `store` and set the rest of the attributs.
-        1. Self will be add to `store`.
-        2. `index`, `store` will be set responsibly.
-
-        Params:
-        -----------------------
-        store: List to store all the states.
-        """
-        self.store = store
-        if ext_lris is not None:
-            self.ext_lris = ext_lris
-            self.closure = self.LR0_closure()
-        self.index = len(self.store)
-        self.store.append(self)
-
-    def LR0_closure(self) -> list[LRItem]:
+    def set_LR0_closure(self, ext_lris: dict[str, LRItem]):
         """Extend cores LRItems to a closure.
 
         If the extended LRItems is None, the closure can't be calculated and
@@ -371,10 +317,7 @@ class LRState:
         -----------------------
         LR0 Closure for the cores of the LRState.
         """
-        closure = list(self.cores)
-        ext_lris = self.ext_lris
-        if ext_lris is None:
-            return None
+        closure = list(self.core)
         nsym_Q = deque([lri.nsym for lri in closure])
         nsym_recs = set()               # Record handled symbols
 
@@ -387,63 +330,33 @@ class LRState:
             closure.extend(sym_lris)
             nsym_Q.extend([lri.nsym for lri in sym_lris])
 
-        return closure
+        self.closure = closure
 
-    def __repr__(self):
-        """Representation."""
-        if self.closure is not None:
-            cs = "\n".join([repr(ele) for ele in self.closure])
-            return f"I{self.index}\n{cs}"
-        else:
-            cs = "\n".join([repr(ele) for ele in self.cores])
-            return f"Uninited State\n{cs}"
 
-    def __iter__(self) -> Iterator[LRItem]:
-        """Iterate LRItem in closure.
+class LRStatesPDA(StatesPDA):
+    def add_transition(self, from_: LRState,
+                       inp: Hashable,
+                       to_: LRState | LRItem) -> Self:
+        """Add transition or reduction to the GOTOs.
 
-        If self is not initialized fully, no LRItem will be iterated.
+        Params:
+        --------------------------
+        from_: Source LRState.
+        inp: Any hashable input.
+        from_: Target LRState for transition or LRItem for reduction.
 
         Return:
-        -----------------
-        closure: Iterator[LRItem]
+        --------------------------
+        Self will be return for chain operation.
         """
-        if self.closure is None:
-            raise StopIteration
-        return iter(self.closure)
-
-    def __eq__(self, rhs:Self) -> bool:
-        """Equal comparison.
-
-        `__eq__` is implemented to check if current state is replicated, along
-        with `__hash__`.
-        There are two different comparison logics for LRStates fully inited
-        and partially inited.
-        1. For registered(fully-inited) LRStates, comparing `index` is enough
-          and faster.
-        2. For partially-inited LRStates, the whole `cores` must be compared.
-        """
-        return (
-            isinstance(rhs, self.__class__)
-            and ((self.store is not None
-                  and self.store is rhs.store
-                  and self.index == rhs.index)
-                 or self.cores == rhs.cores)
-        )
-
-    def __hash__(self):
-        """Hash function.
-
-        `__hash__` is implemented to check if current state is replicated.
-        ATTENTION: `cores` instead of `index` is used to calculated hash value
-        because LRState do need to be checked if already existing before
-        registered.
-        """
-        return self.hash_value
+        if isinstance(to_, AutomState):
+            super().add_transition(from_, inp, to_)
+        else:
+            self.gotos[from_, inp] = to_
+        return self
 
 
 # %%
-# TODO: Pretty print.
-# TODO: Recall or reentry of its methods.
 # TODO: Extended BNF for variable-length production.
 class Syntaxer:
     """Syntaxer implemented based on LALR(1).
@@ -474,9 +387,6 @@ class Syntaxer:
       Dict of symbols and list of possible terminals starting the symbol.
     follows: dict{LRItem: [str]}
       Dict of symbols and list of possible terminals following the symbol.
-    lalrs: dict{str | LRItem: [str]}
-      Dict of reducible LRItems and list of possible terminals following the
-      LRItem(or the production).
     states: list[LRState]
       List of LRStates.
     gotos: dict{(LRState, term): LRItem | LRState}
@@ -510,26 +420,28 @@ class Syntaxer:
         """
         self.start = start_sym
         self.end = end_flag
-        self.productions = []           # [Production, ]
-        self.lr_items = []              # [LRItem, ]
-        self.terminals = set()          # {terminal, }
-        self.nonterms = {}              # {nonterm: [first LRItem of production, ]}
-        self.symbols = {}               # {symbol: [LRItem containing symbol, ]}
+        self.productions = None         # [Production, ]
+        self.lr_items = None            # [LRItem, ]
+        self.terminals = None           # {terminal, }
+        self.nonterms = None            # {nonterm: [first LRItem of production, ]}
+        self.symbols = None             # {symbol: [LRItem containing symbol, ]}
         # Init the attributes above.
         self.init_productions(productions)
 
         # Following attributes will be inited in their responsible method in
         # `init_gotos`.
-        self.nullables = set()          # {nullable nonterm, }
-        self.start_state = None
-        self.firsts = {}                # {symbol: [term, ]}
-        self.follows = {}               # {LRItem: [term, ]}
-        self.lalrs = {}                 # {LRItem: [term, ]}
-        self.states = []                # [LRState, ]
-        self.gotos = {}                 # {(LRState, term): LRItem | LRState}
-                                        # LRItem for reduction LRState for transition.
-        self.conflicts = {}             # {(LRState, term): [LRItem, ]}
+        self.nullables = None           # {nullable nonterm, }
+        self.firsts = None              # {symbol: [term, ]}
+        self.follows = None             # {LRItem: [term, ]}
+        self.conflicts = None           # {(LRState, term): [LRItem, ]}
                                         # Both Reduce-Reduce and Reduce-shift conflicts.
+        self.pda = None                 # Delegate the LR(0) automaton transition.
+
+        # Init nullables, Firsts, Follows and GOTOs sequencely.
+        self.find_nullables()
+        self.digraph_first()
+        self.digraph_follow()
+        self.LALR_states_and_gotos()
 
     def init_productions(self, prods: list[Production | tuple]):
         """Parse productions.
@@ -546,11 +458,11 @@ class Syntaxer:
         productions: list[Production | tuple]
           List of productions.
         """
-        productions = self.productions
-        lr_items = self.lr_items
-        terminals = self.terminals
-        nonterms = self.nonterms
-        symbols = self.symbols
+        productions = []           # [Production, ]
+        lr_items = []              # [LRItem, ]
+        terminals = set()          # {terminal, }
+        nonterms = {}              # {nonterm: [first LRItem of production, ]}
+        symbols = {}               # {symbol: [LRItem containing symbol, ]}
 
         for prod in prods:
             prod = Production(*prod)
@@ -570,15 +482,11 @@ class Syntaxer:
         # Update terminals
         terminals.update([key for key in symbols if key not in nonterms])
 
-    def init_gotos(self):
-        """Init GOTOs.
-
-        Init nullables, Firsts, Follows and GOTOs sequencely.
-        """
-        self.find_nullables()
-        self.digraph_first()
-        self.digraph_follow()
-        self.LALR_states_and_gotos()
+        self.productions = productions
+        self.lr_items = lr_items
+        self.terminals = terminals
+        self.nonterms = nonterms
+        self.symbols = symbols
 
     def find_nullables(self):
         """Find nullable symbols.
@@ -586,8 +494,8 @@ class Syntaxer:
         1. Get the nullables defined directly by its null production.
         2. Loop to check whether symbol could be produced totally by nullables.
         """
-        nullables = self.nullables
-        nonterms = self.nonterms
+        nonterms = self.nonterms            # {nonterm: [first LRItem of production, ]}
+        nullables = set()
 
         # Init direct-nullable non-terminals.
         for sym, lris in nonterms.items():
@@ -609,6 +517,8 @@ class Syntaxer:
                         new_nulls = True
                         break
 
+        self.nullables = nullables
+
     def digraph_first(self):
         """Compute Firsts for symbols as directed graph vertices.
 
@@ -621,11 +531,11 @@ class Syntaxer:
         `backward_update_traverse` will be called to traverse the digraph to
         update the First of each symbol.
         """
-        terminals = self.terminals
-        nonterms = self.nonterms
-        symbols = self.symbols
-        nullables = self.nullables
-        firsts = self.firsts
+        terminals = self.terminals          # {terminal, }
+        nonterms = self.nonterms            # {nonterm: [first LRItem of production, ]}
+        symbols = self.symbols              # {symbol: [LRItem containing symbol, ]}
+        nullables = self.nullables          # {nullable nonterm, }
+        firsts = {}                         # {symbol: [term, ]}
 
         def first_rel(sym):
             if sym in terminals:
@@ -655,6 +565,8 @@ class Syntaxer:
                     firsts,
                 )
 
+        self.firsts = firsts
+
     def digraph_follow(self):
         """Compute Follows for LRItem as directed graph vertices.
 
@@ -672,13 +584,16 @@ class Syntaxer:
         Read as the initial status and `backward_update_traverse` will be
         called to compute the Follows.
 
-        But, does the Follow depend not only the LRItem but also LRState?
+        ATTENTION:
+        The Follow depends not only the LRItem but also LRState in LR(1) but
+        will be merged together to LRItem granularity in LALR(1) for
+        simplicity.
         """
-        symbols = self.symbols
-        nullables = self.nullables
-        lr_items = self.lr_items
-        firsts = self.firsts
-        follows = self.follows
+        symbols = self.symbols                  # {symbol: [LRItem containing symbol, ]}
+        nullables = self.nullables              # {nullable nonterm, }
+        lr_items = self.lr_items                # [LRItem, ]
+        firsts = self.firsts                    # {symbol: [term, ]}
+        follows = {}                            # {LRItem: [term, ]}
 
         # Build Follows digraph.
         follow_next_D = {}
@@ -716,6 +631,8 @@ class Syntaxer:
                     follows,
                 )
 
+        self.follows = follows
+
     def LALR_states_and_gotos(self):
         """Init LALR(1) LRStates and GOTOs.
 
@@ -724,19 +641,18 @@ class Syntaxer:
           LRStates with the same cores if already inited.
         3. Set GOTOs along with LRStates' initialization with Follows.
         """
-        nonterms = self.nonterms
-        follows = self.follows
-        gotos = self.gotos
-        conflicts = self.conflicts
-        states = self.states
+        nonterms = self.nonterms        # {nonterm: [first LRItem of production, ]}
+        follows = self.follows          # {LRItem: [term, ]}
+        conflicts = {}                  # {(LRState, term): [LRItem, ]}
+        pda = LRStatesPDA(LRState)      # Delegate the LR(0) automaton transition.
 
-        start_state = LRState(nonterms[self.start], nonterms)
-        start_state.register_this(states)
-        self.start_state = start_state
+        # Set the Pushdown-DFA up.
+        start_state = LRState(tuple(nonterms[self.start]))
+        start_state.set_LR0_closure(nonterms)
+        pda.add_state(start_state)
+        pda.start_state = start_state
+
         states_Q = deque([start_state,])
-        states_D = {}       # {LRState: LRState}: Store all registered LRState
-                            # to get the registered LRState with only cores.
-
         while states_Q:
             state = states_Q.popleft()
             closure = state.closure
@@ -782,30 +698,30 @@ class Syntaxer:
                         # for shift or reduction so to resolve the conflicts.
                         prefered_lris[term] = LRItem.prefer(plri, lri)
                 # TODO: TRUE conflicts
-                # TODO: Pretty prints
 
             # Transit along the LR(0) DFA to init LRStates with cores from
             # `core_lris` to construct the LR(0) DFA.
             # Only shift transition will be set here in GOTO.
-            for sym, cores in core_lris.items():
-                new_state = LRState(cores)
-                # `new_state` has been assigned with the inited states.
-                if new_state in states_D:
-                    new_state = states_D[new_state]
-                # Add new state if not exists.
-                else:
-                    new_state.register_this(states, nonterms)
-                    states_Q.append(new_state)
-                    states_D[new_state] = new_state
-                core_lris[sym] = new_state
-                # Set GOTOs for symbols here.
-                gotos[(state, sym)] = new_state
+            for sym, core in core_lris.items():
+                core = tuple(core)
+                to_ = pda.get_state(core)
+                if to_ is None:
+                    to_ = pda.add_state(core)
+                    states_Q.append(to_)
+                to_.set_LR0_closure(nonterms)
+                core_lris[sym] = state
+                pda.add_transition(state, sym, to_)
 
-            # Update reduction transition in GOTO if the reduction-LRItem
+            # Update transition in GOTO to reduction if the reduction-LRItem
             # is prefered for the terminal.
+            # ATTENTION:
+            # And remember to revert one more state for the invalid transition.
             for term, lri in prefered_lris.items():
                 if lri.nsym is None:
-                    gotos[(state, term)] = lri
+                    pda.add_transition(state, term, lri)
+
+        self.conflicts = conflicts
+        self.pda = pda
 
     # TODO: Error handlers for invalid token stream.
     def reduce_tokens(
@@ -818,8 +734,12 @@ class Syntaxer:
         ------------------------
         tokens: Tokens to be reduced.
           Tokens should have `type` attribute.
-        reudce_F: Callabe to reduce tokens of syntax-sub-tree.
-          The default ASTNode will reduce the tokens into a AST.
+        reduce_F: Callabe to reduce tokens of abstract syntax subtree.
+          1. The default ASTNode will reduce the tokens into a AST.
+          2. The callable should accept two parameters:
+            1st: Production or Token.
+            2nd: A list Tokens or children reductions for 1st-Production and
+              None for 1st-Token.
 
         Raise:
         ------------------------
@@ -829,31 +749,29 @@ class Syntaxer:
         ------------------------
         Reduction result.
         """
-        gotos = self.gotos
-        state_ST = [self.start_state]
-        reductions = []
-        # `latok.type` must exists.
+        pda = self.pda
+        start_sym = self.start
+        pda.start()
+        tmp_ret = []
         for latok in tokens:
-            nlr = gotos[(state_ST[-1], latok.type)]
-            # Reduction.
-            while not isinstance(nlr, LRState):
-                lp, rp = nlr.lp, nlr.rp
-                children = []
-
-                # Pop states and reductions out according to the production.
-                for _ in rp:
-                    state_ST.pop()
-                    children.append(reductions.pop())
-                children = children[::-1]
-
-                reductions.append(reduce_F(nlr.production, children))
-                # Stop parsing.
-                if lp == self.start:
-                    return reductions[0]
-                state_ST.append(gotos[(state_ST[-1], lp)])
-                nlr = gotos[(state_ST[-1], latok.type)]
-            state_ST.append(nlr)
-            reductions.append(reduce_F(latok, None))
+            # set_trace()
+            pda.input(latok.type)
+            # Reduce if current states is LRItem.
+            while isinstance(pda.cur, LRItem):
+                nlr = pda.cur
+                lp, rpl = nlr.lp, len(nlr.rp)
+                # Pop one more states out for the last invalid states.
+                pda.revert(rpl + 1)
+                if rpl > 0:
+                    tmp_ret, red_eles = tmp_ret[:-rpl], tmp_ret[-rpl:]
+                else:
+                    red_eles = []
+                tmp_ret.append(reduce_F(nlr.production, red_eles))
+                if lp == start_sym:
+                    return tmp_ret[0]
+                pda.input(lp)
+                pda.input(latok.type)
+            tmp_ret.append(reduce_F(latok, None))
         raise ValueError(f"Invalid tokens {tokens}.")
 
     def parse_tokens(self, tokens: list[Token]) -> Reduction:
@@ -876,39 +794,23 @@ class Syntaxer:
                                   else x.val)
 
     def pprint(self):
-        """Print GOTOs and conflicts.
+        """Format GOTOs and conflicts into DataFrame.
 
         Return:
         --------------------
-        pgoto: dict[from_states, dict[terminal, to_states or reduction]]
+        gotodf: DataFrame[from_states, dict[terminal, to_states or reduction]]
           Dict represent the GOTOs matrix of the formation:
-            from_state and to_state: "I" + LRState index
-            reduction: "R" + production index
-        pconflicts: dict[from_states, dict[terminal, productions of conflicts]]
+            Transition: Repr of the states "S[regid]"
+            Reduction: Repr of the LRItem "expr -> expr ."
+        cfdf: `Gotodf` with updatation from `conflicts`.
         """
-        # Build a dict of LRItem start index and production index.
-        prod_idx = 0
-        lr_items = self.lr_items
-        production_index_D = {}
-        for lri in lr_items:
-            if lri.cur == 0:
-                production_index_D[lri.index] = prod_idx
-                prod_idx += 1
+        gotodf = self.pda.gotodf()
+        # Construct conflict DF.
+        cdict = {}
+        for (from_, inp), to_ in self.conflicts.items():
+            subd = cdict.setdefault(inp, {})
+            subd[repr(from_)] = repr(to_)
+        cfdf = gotodf.copy()
+        cfdf.update(cdict)
 
-        gotos = self.gotos
-        pgotos = {}
-        for (state, sym), dest in gotos.items():
-            from_ = f"I{state.index}"
-            to_ = (f"I{dest.index}" if isinstance(dest, LRState)
-                   else f"R{production_index_D[dest.start]}")
-            pgotos.setdefault(from_, {})[sym] = to_
-
-        pconflicts = {}
-        conflicts = self.conflicts
-        for (state, sym), dests in conflicts.items():
-            from_ = f"I{state.index}"
-            to_ = ",".join([f"R{production_index_D[dest.start]}"
-                            for dest in dests])
-            pconflicts.setdefault(from_, {})[sym] = to_
-
-        return pgotos, pconflicts
+        return gotodf, cfdf

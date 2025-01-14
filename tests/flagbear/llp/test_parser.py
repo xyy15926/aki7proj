@@ -3,7 +3,7 @@
 #   Name: test_parser.py
 #   Author: xyy15926
 #   Created: 2023-12-14 21:14:49
-#   Updated: 2024-11-11 11:46:03
+#   Updated: 2025-01-14 09:37:18
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,13 +11,12 @@
 import pytest
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear.llp import lex, syntax, parser, patterns, graph, tree
+    from flagbear.llp import lex, syntax, parser, patterns, graph
     reload(patterns)
     reload(lex)
     reload(syntax)
     reload(parser)
     reload(graph)
-    reload(tree)
 
 from flagbear.llp.lex import Lexer
 from flagbear.llp.syntax import Production, LRItem, Syntaxer
@@ -27,33 +26,19 @@ from flagbear.llp.patterns import (
     LEX_RESERVEDS,
     LEX_ENDFLAG,
     SYN_STARTSYM,
-    SYN_EXPR_PRODS
+    SYN_EXPR_PRODS,
+    CALLABLE_ENV,
 )
-from flagbear.llp.parser import LRParser, EnvParser
-
-
-# %%
-def test_Parser():
-    parser = LRParser(LEX_TOKEN_SPECS, LEX_RESERVEDS, LEX_SKIPS,
-                      SYN_EXPR_PRODS, SYN_STARTSYM, LEX_ENDFLAG)
-    exprs = [
-        "{(2+4)*8+-1000*9+1-1.5, 9}",
-        "[1, 2, 3]",
-        "[1, 2, 3, [], [1,2+3,(2+4)*4]]",
-        "1 in {2,3}",
-        "1 in {1, 2}",
-        "1+3 in {4, 5}",
-        "[1, 2, 3][2]",
-    ]
-    for expr in exprs:
-        assert parser.parse(expr) == eval(expr)
+from flagbear.llp.parser import EnvParser
 
 
 # %%
 # TODO
 def test_EnvParser():
+    envp = EnvParser(CALLABLE_ENV)
     env = {"a": 1, "b": 2}
-    envp = EnvParser().bind_env(env)
+    envp = envp.bind_env(env)
+    assert envp.parse("count(_)") == 2
     assert envp.parse("a + b") == 3
     assert envp.parse("a in [1, 2]")
     assert envp.parse("count([1, 2])") == 2
@@ -62,3 +47,21 @@ def test_EnvParser():
     assert envp.parse("sum([a, b])") == 3
     assert envp.parse("sum([a, b])") == 3
     assert envp.parse("-sum([a, b])") == -3
+    assert envp.parse("_") == env
+
+    env = {"a": 1, "b": 3, "c": 4}
+    assert envp.bind_env(env).parse("a + b") == 4
+    assert envp.bind_env(env).parse("c") == 4
+
+    env = {"a": 1, "b": 2}
+    envp = envp.bind_env(env)
+    assert envp.parse("count(_)") == 2
+    assert envp.parse("a + b") == 3
+    assert envp.parse("a in [1, 2]")
+    assert envp.parse("count([1, 2])") == 2
+    assert envp.parse("sum([a, a, b])") == 4
+    assert envp.parse("a==1")
+    assert envp.parse("sum([a, b])") == 3
+    assert envp.parse("sum([a, b])") == 3
+    assert envp.parse("-sum([a, b])") == -3
+    assert envp.parse("_") == env

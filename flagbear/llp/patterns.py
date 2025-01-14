@@ -3,7 +3,7 @@
 #   Name: patterns.py
 #   Author: xyy15926
 #   Created: 2023-12-03 21:05:51
-#   Updated: 2024-10-21 20:29:42
+#   Updated: 2025-01-13 19:11:06
 #   Description:
 # ---------------------------------------------------------
 
@@ -169,7 +169,7 @@ SYN_ARITH_PRODS = [
 # TODO
 SYN_EXPR_PRODS = [
     ("S"        , ("expr", )                    , lambda x: x[0]                    , 0     , "R"),
-    ("expr"     , ("ID", )                      , lambda x: x[0]                    , 0     , "R"),
+    ("expr"     , ("ID", )                      , None                              , 0     , "R"),
     ("expr"     , ("FLOAT", )                   , lambda x: x[0]                    , 0     , "R"),
     ("expr"     , ("INT", )                     , lambda x: x[0]                    , 0     , "R"),
     ("expr"     , ("STRING", )                  , lambda x: x[0]                    , 0     , "R"),
@@ -178,7 +178,7 @@ SYN_EXPR_PRODS = [
     ("expr"     , ("expr", "SUB", "expr")       , lambda x: x[0] - x[2]             , 3     , "L"),
     ("expr"     , ("expr", "MUL", "expr")       , lambda x: x[0] * x[2]             , 4     , "L"),
     ("expr"     , ("expr", "DIV", "expr")       , lambda x: x[0] / x[2]             , 4     , "L"),
-    ("expr"     , ("LPAR", "expr", "RPAR")      , lambda x: x[1]                    , 0     , "R"),
+    ("expr"     , ("LPAR", "expr", "RPAR")      , lambda x: x[1]                    , 0     , "L"),
     ("eles"     , ()                            , lambda x: []                      , 0     , "L"),
     ("eles"     , ("expr", )                    , lambda x: [x[0]]                  , 0     , "L"),
     ("eles"     , ("expr", "COMMA", "expr")     , lambda x: [x[0], x[2]]            , 0     , "L"),
@@ -195,7 +195,7 @@ SYN_EXPR_PRODS = [
     ("expr"     , ("expr", "BOR", "expr")       , lambda x: x[0].__or__(x[2])       , 1     , "L"),
     ("expr"     , ("expr", "AND", "expr")       , lambda x: x[0] and x[2]           , 1     , "L"),
     ("expr"     , ("expr", "BAND", "expr")      , lambda x: x[0].__and__(x[2])      , 1     , "L"),
-    ("expr"     , ("NOT", "expr")               , lambda x: not x[1]                , 1     , "L"),
+    ("expr"     , ("NOT", "expr")               , lambda x: not x[1]                , 1     , "R"),
     ("expr"     , ("expr", "IN", "expr")        , lambda x: x[0] in x[2]            , 1     , "L"),
     ("expr"     , ("expr", "LSPAR", "expr", "RSPAR")    , lambda x: x[0][x[2]]      , 9     , "L"),
     ("expr"     , ("expr", "LPAR", "expr", "RPAR")      , lambda x: x[0](x[2])      , 9     , "L"),
