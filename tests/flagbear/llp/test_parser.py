@@ -22,7 +22,6 @@ from flagbear.llp.syntax import Production, LRItem, Syntaxer
 from flagbear.const.prods import (
     SYN_STARTSYM,
     SYN_EXPR_PRODS,
-    CALLABLE_ENV,
 )
 from flagbear.llp.parser import EnvParser
 
@@ -30,13 +29,13 @@ from flagbear.llp.parser import EnvParser
 # %%
 # TODO
 def test_EnvParser():
-    envp = EnvParser(CALLABLE_ENV)
+    envp = EnvParser()
     env = {"a": 1, "b": 2}
     envp = envp.bind_env(env)
-    assert envp.parse("count(_)") == 2
+    assert envp.parse("len(_)") == 2
     assert envp.parse("a + b") == 3
     assert envp.parse("a in [1, 2]")
-    assert envp.parse("count([1, 2])") == 2
+    assert envp.parse("len([1, 2])") == 2
     assert envp.parse("sum([a, a, b])") == 4
     assert envp.parse("a==1")
     assert envp.parse("sum([a, b])") == 3
@@ -50,10 +49,10 @@ def test_EnvParser():
 
     env = {"a": 1, "b": 2}
     envp = envp.bind_env(env)
-    assert envp.parse("count(_)") == 2
+    assert envp.parse("len(_)") == 2
     assert envp.parse("a + b") == 3
     assert envp.parse("a in [1, 2]")
-    assert envp.parse("count([1, 2])") == 2
+    assert envp.parse("len([1, 2])") == 2
     assert envp.parse("sum([a, a, b])") == 4
     assert envp.parse("a==1")
     assert envp.parse("sum([a, b])") == 3

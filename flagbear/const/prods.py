@@ -59,12 +59,3 @@ SYN_EXPR_PRODS = [
     ("expr"     , ("expr", "LPAR", "expr", "RPAR")      , lambda x: x[0](x[2])      , 9     , "L"),
     ("expr"     , ("expr", "LPAR", "eles", "RPAR")      , lambda x: x[0](*x[2])     , 9     , "L"),
 ]
-
-CALLABLE_ENV = {
-    "count"             : len,
-    "sum"               : sum,
-    "max"               : max,
-    "min"               : min,
-    "nnfilter"          : lambda x: [i for i in x if i is not None],
-    "nncount"           : lambda x: len([i for i in x if i is not None]),
-}

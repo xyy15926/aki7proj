@@ -74,7 +74,7 @@ def test_extract_field():
     assert extract_field(env, "c:cb", dtype="AUTO") == 2
 
     assert extract_field(env, "c:cc:cca") == 1
-    assert extract_field(env, "c:cc:ccb:[count(_)]") == 5
+    assert extract_field(env, "c:cc:ccb:[len(_)]") == 5
     assert extract_field(env, "c:cc:ccb:[]:ccba") == [1, 2, 1, "2", 1]
     assert extract_field(env, "c:cc:ccb:[]:ccba", dtype="INT") == [1, 2, 1, 2, 1]
     assert extract_field(env, "c:cc:ccb:[]:ccba", dtype="AUTO") == [1, 2, 1, 2, 1]
@@ -175,7 +175,7 @@ def test_rebuild_dict():
     rules = [
         ("a"            , None      , "a"                           , "INT"),
         ("ca"           , None      , "c:ca"                        , "INT"),
-        ("ccb_count"    , None      , "c:cc:ccb:[count(_)]"         , "INT"),
+        ("ccb_len"      , None      , "c:cc:ccb:[len(_)]"           , "INT"),
         ("ccba"         , None      , "c:cc:ccb:[]:ccba"            , "INT"),
         ("ccbca"        , None      , "c:cc:ccb:[]:ccbc:[]:ccbca"   , "INT"),
     ]
@@ -187,7 +187,7 @@ def test_rebuild_dict():
     rules = [
         ("a"            , None      , "[_]:a"                           , "INT"),
         ("ca"           , None      , "[_]:c:ca"                        , "INT"),
-        ("ccb_count"    , None      , "[_]:c:cc:ccb:[count(_)]"         , "INT"),
+        ("ccb_len"      , None      , "[_]:c:cc:ccb:[len(_)]"         , "INT"),
         ("ccba"         , None      , "[_]:c:cc:ccb:[]:ccba"            , "INT"),
         ("ccbca"        , None      , "[_]:c:cc:ccb:[]:ccbc:[]:ccbca"   , "INT"),
     ]

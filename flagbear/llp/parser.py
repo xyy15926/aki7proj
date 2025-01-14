@@ -3,7 +3,7 @@
 #   Name: parser.py
 #   Author: xyy15926
 #   Created: 2023-12-02 21:04:21
-#   Updated: 2025-01-14 19:05:01
+#   Updated: 2025-01-14 21:45:52
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,6 +18,7 @@ from collections import ChainMap
 from collections.abc import Callable, Mapping
 # from IPython.core.debugger import set_trace
 
+import builtins
 import logging
 from collections import namedtuple
 import copy
@@ -35,8 +36,8 @@ from flagbear.const.tokens import (
 from flagbear.const.prods import (
     SYN_STARTSYM,
     SYN_EXPR_PRODS,
-    CALLABLE_ENV
 )
+from flagbear.const import callables as PY_BUITINS_
 
 # %%
 logging.basicConfig(
@@ -79,7 +80,7 @@ class EnvParser:
       which differs from the `default_env`.
     """
     def __init__(
-        self, default_env: dict[str, Callable] = CALLABLE_ENV,
+        self, default_env: dict[str, Callable] = None,
         token_specs: dict = LEX_TOKEN_SPECS,
         reserveds: dict = LEX_RESERVEDS,
         skips: set = LEX_SKIPS,
@@ -164,12 +165,16 @@ class EnvParser:
         if id_ == "_":
             return self.env
         # Any `env` with `get` method works fine, not only Mapping.
+        ret = None
         if hasattr(self.env, "get"):
             ret = self.env.get(id_)
-            if ret is None:
-                ret = self.default_env.get(id_)
-        else:
+        if ret is None and self.default_env is not None:
             ret = self.default_env.get(id_)
+        # Get the builtins.
+        if ret is None:
+            ret = getattr(PY_BUITINS_, id_, None)
+        if ret is None:
+            ret = getattr(builtins, id_, None)
         return ret
 
     @lru_cache(500)

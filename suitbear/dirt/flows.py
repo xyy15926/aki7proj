@@ -24,7 +24,7 @@ from pandas.api.types import infer_dtype
 from sklearn.preprocessing import OrdinalEncoder
 from scipy.stats import contingency
 
-from flagbear.const.prods import CALLABLE_ENV
+from modsbear.dflater.exenv import EXGINE_ENV
 from flagbear.str2.dups import rename_duplicated
 from ringbear.sortable import tree_cut
 from ringbear.numeric import edge_encode
@@ -130,7 +130,7 @@ class DataProc(DFLoggerMixin):
             elif isinstance(keep, dict):
                 for key in keep:
                     if isinstance(keep[key], str):
-                        keep[key] = CALLABLE_ENV[key]
+                        keep[key] = EXGINE_ENV[key]
                 df = df.groupby(uni_keys, sort=False).aggregate(keep)
 
         # Update `label`.
