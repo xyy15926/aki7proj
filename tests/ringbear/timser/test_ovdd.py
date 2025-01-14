@@ -3,7 +3,7 @@
 #   Name: test_finarr.py
 #   Author: xyy15926
 #   Created: 2024-04-11 09:11:58
-#   Updated: 2025-01-06 21:47:42
+#   Updated: 2025-01-14 10:22:56
 #   Description:
 # ---------------------------------------------------------
 
@@ -75,6 +75,14 @@ def test_month_date():
     assert np.all(fixed_date > due_date)
     assert np.all(fixed_date - fixed_date.astype("M8[M]")
                   == np.timedelta64(0, "D"))
+
+    nm_fixed_date = month_date(due_date, 101)
+    assert np.all(nm_fixed_date == fixed_date)
+
+    fixed_date = month_date(due_date, 28, True)
+    nm_fixed_date = month_date(due_date, 128, True)
+    assert np.all(nm_fixed_date - fixed_date.astype("M8[M]")
+                  > np.timedelta64(27, "D"))
 
 
 # %%

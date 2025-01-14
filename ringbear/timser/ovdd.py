@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-01-07 19:26:56
+#   Updated: 2025-01-14 10:20:51
 #   Description:
 # ---------------------------------------------------------
 
@@ -348,9 +348,12 @@ def month_date(
         will be 30days after the last due date.
       nextdue_noend: Ditto, but the last observation date will be 2099-12-31.
       monthend: The end of month for each due date.
-      int: The fixed date of month for each due date.
+      int: The fixed date of each month.
+        1-28: The fixed date of the month for each due date.
+        101-128: The fixed date of next month for each due date.
     forced: If to moved 1 month forward to ensure all the dates in result
       succeed the corresponding given dates.
+      This only take effective when `rule` is an integer between 1 and 28.
 
     Return:
     ----------------------
@@ -376,6 +379,10 @@ def month_date(
                             "succeed the given dates.")
                 ob_date = (due_date.astype("M8[M]") + np.timedelta64(1, "M")
                            + np.timedelta64(rule - 1, "D"))
+    elif isinstance(rule , int) and 101 <= rule <= 128:
+        ob_date = (due_date.astype("M8[M]")
+                   + np.timedelta64(1, "M")
+                   + np.timedelta64(rule - 101, "D"))
     else:
         raise ValueError(f"Invalid observeration date setting: {rule}.")
 

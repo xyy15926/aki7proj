@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2025-01-13 11:17:09
+#   Updated: 2025-01-14 10:15:27
 #   Description:
 # ---------------------------------------------------------
 
@@ -27,6 +27,7 @@ from flagbear.llp.parser import EnvParser
 from modsbear.dflater.ex4df import trans_on_df, agg_on_df
 from modsbear.dflater.exenv import EXGINE_ENV
 from ringbear.timser.ovdd import ovdd_from_duepay_records, month_date
+from modsbear.spanner.manidf import group_addup_apply
 
 # %%
 logging.basicConfig(
@@ -170,9 +171,11 @@ def addup_obrec(
         dum_date.index.name = "oid"
         records = records.join(dum_date, on="oid")
 
-    tqdm.pandas(desc="Add Obrec")
-    ret = records.groupby("oid").progress_apply(
-        addup_obovd, ob_date=ob_date, dum_ovdd=dum_ovdd, dum_ovdp=dum_ovdp)
+    ret = group_addup_apply(records, "oid", addup_obovd,
+                            desc="Addup Obrec",
+                            ob_date=ob_date,
+                            dum_ovdd=dum_ovdd,
+                            dum_ovdp=dum_ovdp)
 
     return ret
 
