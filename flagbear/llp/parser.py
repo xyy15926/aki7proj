@@ -3,7 +3,7 @@
 #   Name: parser.py
 #   Author: xyy15926
 #   Created: 2023-12-02 21:04:21
-#   Updated: 2025-01-14 09:47:57
+#   Updated: 2025-01-14 19:05:01
 #   Description:
 # ---------------------------------------------------------
 
@@ -16,20 +16,23 @@ except ImportError:
     from typing_extensions import Self
 from collections import ChainMap
 from collections.abc import Callable, Mapping
-from IPython.core.debugger import set_trace
+# from IPython.core.debugger import set_trace
 
 import logging
 from collections import namedtuple
 import copy
+from functools import lru_cache
 
 from flagbear.tree.tree import GeTNode
 from flagbear.llp.lex import Token, Lexer
 from flagbear.llp.syntax import Production, LRItem, LRState, Syntaxer
-from flagbear.llp.patterns import (
+from flagbear.const.tokens import (
     LEX_TOKEN_SPECS,
     LEX_SKIPS,
     LEX_RESERVEDS,
     LEX_ENDFLAG,
+)
+from flagbear.const.prods import (
     SYN_STARTSYM,
     SYN_EXPR_PRODS,
     CALLABLE_ENV
@@ -51,14 +54,22 @@ Reduction = TypeVar("Reduction")
 class EnvParser:
     """Parser with environment to get value of ID.
 
+    1. Two dict `default_env` and `env`, in most cases, act as the environment.
+      The `default_env` will be set up during the initialization and `env`
+      could be more flexible and could be updated easily.
+      1.1. `env` should be Mapping, DataFrame or other object with `get`
+        method mostly, so that it can act as the environment to search the
+        ID from.
+      1.2. But any object will be fine as the `_` could represent the `env`
+        itself in the expression, and the `env` won't act as the environment
+        in such cases.
+
     Attrs:
     --------------------------
     lexer: Lexer.
       Lexer to split words into tokens.
     syntaxer: Syntaxer.
       Syntaxer to compile tokens into ASTree.
-    history: Dict[str, list[Tokens].
-      Record the history to accelerate.
     default_env: Dict[ID-str, Any].
       The default environment to get value of ID from, which will be searched
       only after `env` fails.
@@ -78,15 +89,17 @@ class EnvParser:
     ):
         """Init LRParser.
 
-        1. Update the token ID's reduce so to search the ID in the
-          `default_env` and `env`.
+        1. Init a Lexer and a Syntaxer to parse the input words.
+        2. Default environment will be set here.
+        3. The production for `expr := ID` reduce will be replaced to
+          to link to the environment.
 
         Params:
         --------------------------
         default_env: Dict[ID-str, Any].
           The default environment to get value of ID from, which will be searched
           only after `env` fails.
-        token_specs: dict of {TOKEN_TYPE: REGEX_PATTERN}
+        token_specs: Dict[TOKEN_TYPE, REGEX_PATTERN].
           Token type names and their regex patterns.
           Atttention: Token patterns could override each others, but preceding
             patterns will be detected first for the `re.finditer` feature. So
@@ -94,17 +107,17 @@ class EnvParser:
           Attention: Master regular are constructed with the advantage of named
             group feature in python's re. So only no-captureing version of
             parentheses are allowed in tokens' regexs.
-        reserveds: dict of {TOKEN_VALUE: TOKEN_TYPE}
+        reserveds: Dict[TOKEN_VALUE, TOKEN_TYPE].
           Special tokens share the same token regex pattern but should be
           treated differently. Tokens detected will be checked and converted to
           reserveds if true.
-        skpis: set of {TOKEN_TYPE}
+        skips: Set[TOKEN_TYPE].
           Special tokens to be skiped.
-        productions: list[Production | tuple]
+        productions: List[Production | tuple]
           List of productions or compatiable tuple.
-        start_sym: str
-          Start symbol.
-        end_flag: str
+        start_sym: Str.
+          Start symbol of the productions for syntaxer.
+        end_flag: Str.
           End flag marking the end of input terminal stream.
           Namely the speical token type name to mark the end of a token stream.
         """
@@ -119,29 +132,34 @@ class EnvParser:
         productions[idx] = (*prod[:2], self._getID, *prod[3:])
         self.lexer = Lexer(token_specs, reserveds, skips, end_flag)
         self.syntaxer = Syntaxer(productions, start_sym, end_flag)
-        self.history = {}
 
-    def bind_env(self, env: dict[str, Any]) -> Self:
+    def bind_env(self, env: Mapping[str, Any]) -> Self:
         """Bind environment.
 
-        Replace the callable of the token ID with a lambda to get the value
-        from new `env`.
-        1. `_` represent the `env` itself.
-        2. Chain the default env and bound env with ChainMap.
+        1. `env` should be Mapping, DataFrame or other object with `get`
+          method mostly, so that it can act as the environment to search the
+          ID from.
+        2. But any object will be fine as the `_` could represent the `env`
+          itself in the expression, and the `env` won't act as the environment
+          in such cases.
 
         Params:
         ----------------------
-        env: The dict to get the value of ID from.
+        env: Dict as the customed environment to get the value of ID from.
+          Or any valid object to be processed.
 
         Return:
         ----------------------
-        self
+        Self for call in chain.
         """
         self.env = env
         return self
 
     def _getID(self, id_: str):
-        """Get value from inner environment."""
+        """Get value from inner environment.
+
+        This will replace the default reduce for the production `expr := ID`.
+        """
         id_ = id_[0]
         if id_ == "_":
             return self.env
@@ -154,6 +172,7 @@ class EnvParser:
             ret = self.default_env.get(id_)
         return ret
 
+    @lru_cache(500)
     def compile(self, words: str) -> list[GeTNode]:
         """Compile input words into post-ordered AST nodes list.
 
@@ -173,16 +192,11 @@ class EnvParser:
         """
         lexer = self.lexer
         syntaxer = self.syntaxer
-        history = self.history
-        if words in history:
-            return history[words]
-
         ast = syntaxer.reduce_tokens(lexer.input(words), GeTNode)
-        history[words] = ast.post_order()
-        return history[words]
+        return ast.post_order()
 
     def exec(self, nodes: list[GeTNode]) -> Any:
-        """Execute the nodes from post-ordered traversing.
+        """Execute the list of tree nodes in post-ordered.
 
         1. Append value of token node to temperary stack directly.
         2. Reduce part of the values in temperary stack for production node.

@@ -3,7 +3,7 @@
 #   Name: flows.py
 #   Author: xyy15926
 #   Created: 2024-03-14 09:52:48
-#   Updated: 2024-03-14 19:31:30
+#   Updated: 2025-01-14 20:19:57
 #   Description:
 # ---------------------------------------------------------
 
@@ -24,7 +24,7 @@ from pandas.api.types import infer_dtype
 from sklearn.preprocessing import OrdinalEncoder
 from scipy.stats import contingency
 
-from flagbear.llp.patterns import CALLABLE_ENV
+from flagbear.const.prods import CALLABLE_ENV
 from flagbear.str2.dups import rename_duplicated
 from ringbear.sortable import tree_cut
 from ringbear.numeric import edge_encode

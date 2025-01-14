@@ -3,7 +3,7 @@
 #   Name: test_parser.py
 #   Author: xyy15926
 #   Created: 2023-12-14 21:14:49
-#   Updated: 2025-01-14 09:37:18
+#   Updated: 2025-01-14 20:13:13
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,8 +11,7 @@
 import pytest
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear.llp import lex, syntax, parser, patterns, graph
-    reload(patterns)
+    from flagbear.llp import lex, syntax, parser, graph
     reload(lex)
     reload(syntax)
     reload(parser)
@@ -20,11 +19,7 @@ if __name__ == "__main__":
 
 from flagbear.llp.lex import Lexer
 from flagbear.llp.syntax import Production, LRItem, Syntaxer
-from flagbear.llp.patterns import (
-    LEX_TOKEN_SPECS,
-    LEX_SKIPS,
-    LEX_RESERVEDS,
-    LEX_ENDFLAG,
+from flagbear.const.prods import (
     SYN_STARTSYM,
     SYN_EXPR_PRODS,
     CALLABLE_ENV,

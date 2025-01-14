@@ -3,7 +3,7 @@
 #   Name: test_lex.py
 #   Author: xyy15926
 #   Created: 2023-12-12 12:35:39
-#   Updated: 2024-11-11 11:45:13
+#   Updated: 2025-01-14 20:12:20
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,11 +11,11 @@
 import pytest
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear.llp import patterns, lex
-    reload(patterns)
+    from flagbear.llp import lex
     reload(lex)
 
-from flagbear.llp.lex import Token, Lexer, LEX_ENDFLAG
+from flagbear.llp.lex import Token, Lexer
+from flagbear.const.tokens import LEX_ENDFLAG
 
 
 # %%

@@ -3,7 +3,7 @@
 #   Name: test_grammer.py
 #   Author: xyy15926
 #   Created: 2023-11-30 09:49:53
-#   Updated: 2025-01-13 20:08:52
+#   Updated: 2025-01-14 20:16:26
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,17 +11,16 @@
 from pytest import mark
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear.llp import lex, autom, syntax, parser, patterns, graph
+    from flagbear.llp import lex, autom, syntax, parser, graph
     reload(autom)
     reload(lex)
     reload(syntax)
     reload(parser)
-    reload(patterns)
     reload(graph)
 
+from flagbear.const.prods import SYN_ARITH_PRODS, SYN_EXPR_PRODS
 from flagbear.llp.lex import Lexer
 from flagbear.llp.syntax import Production, LRItem, Syntaxer
-from flagbear.llp.patterns import SYN_ARITH_PRODS, SYN_EXPR_PRODS
 
 
 # %%

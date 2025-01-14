@@ -25,7 +25,6 @@ if __name__ == "__main__":
 
 import numpy as np
 from datetime import date, time
-from flagbear.llp.patterns import LEX_ENDFLAG
 from flagbear.llp.lex import Lexer
 from flagbear.llp.parser import EnvParser
 from flagbear.str2.fliper import extract_field, rebuild_dict

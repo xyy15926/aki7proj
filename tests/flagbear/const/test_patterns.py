@@ -13,10 +13,10 @@ import pytest
 
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear.llp import patterns
+    from flagbear.const import patterns
     reload(patterns)
 
-from flagbear.llp.patterns import REGEXS
+from flagbear.const.patterns import REGEXS
 
 
 # %%

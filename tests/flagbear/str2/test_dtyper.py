@@ -3,7 +3,7 @@
 #   Name: test_dtyper.py
 #   Author: xyy15926
 #   Created: 2024-11-11 11:56:24
-#   Updated: 2024-12-16 22:14:51
+#   Updated: 2025-01-14 20:18:17
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,9 +11,8 @@
 import pytest
 if __name__ == "__main__":
     from importlib import reload
-    from flagbear.llp import lex, patterns
+    from flagbear.llp import lex
     from flagbear.str2 import dtyper
-    reload(patterns)
     reload(lex)
     reload(dtyper)
 
@@ -21,7 +20,7 @@ import numpy as np
 from datetime import datetime
 import re
 
-from flagbear.llp.patterns import LEX_ENDFLAG
+from flagbear.const.tokens import LEX_ENDFLAG
 from flagbear.llp.lex import Lexer
 from flagbear.str2.dtyper import stype_spec, regex_caster, str_caster
 

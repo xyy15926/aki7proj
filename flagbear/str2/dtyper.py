@@ -18,7 +18,8 @@ from collections import deque
 
 from functools import lru_cache, partial
 from flagbear.llp.lex import Lexer
-from flagbear.llp.patterns import REGEXS, LEX_ENDFLAG
+from flagbear.const.patterns import REGEXS
+from flagbear.const.tokens import LEX_ENDFLAG
 
 # %%
 logging.basicConfig(

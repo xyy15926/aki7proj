@@ -3,7 +3,7 @@
 #   Name: lex.py
 #   Author: xyy15926
 #   Created: 2023-11-29 20:17:03
-#   Updated: 2024-11-11 10:36:13
+#   Updated: 2025-01-14 20:10:09
 #   Description:
 # ---------------------------------------------------------
 
@@ -21,7 +21,7 @@ import re
 import logging
 from functools import lru_cache
 
-from flagbear.llp.patterns import (
+from flagbear.const.tokens import (
     LEX_TOKEN_SPECS,
     LEX_RESERVEDS,
     LEX_ENDFLAG,

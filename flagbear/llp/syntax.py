@@ -26,9 +26,10 @@ from collections import deque
 from sys import maxsize as MAXINT
 
 from flagbear.tree.tree import GeTNode
-from flagbear.llp.autom import AutomState, StatesPDA
-from flagbear.llp.patterns import LEX_ENDFLAG, SYN_STARTSYM, SYN_ARITH_PRODS
 from flagbear.llp.graph import backward_update_traverse
+from flagbear.llp.autom import AutomState, StatesPDA
+from flagbear.const.tokens import LEX_ENDFLAG
+from flagbear.const.prods import SYN_STARTSYM, SYN_ARITH_PRODS
 
 # %%
 logging.basicConfig(

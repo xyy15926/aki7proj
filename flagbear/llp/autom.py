@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 import copy
 import logging
 from collections import deque
-from flagbear.llp.patterns import LEX_ENDFLAG
+from flagbear.const.tokens import LEX_ENDFLAG
 
 # %%
 logging.basicConfig(
