@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2024-04-09 20:02:08
-#   Updated: 2025-01-07 22:24:30
+#   Updated: 2025-01-16 17:14:55
 #   Description:
 # ---------------------------------------------------------
 
@@ -14,7 +14,9 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
+    from ringbear.timser import ovdd
     from suitbear.monetary import repayment
+    reload(ovdd)
     reload(repayment)
 
 from suitbear.monetary.repayment import (
@@ -30,10 +32,10 @@ from suitbear.monetary.repayment import (
 # %%
 def ovd_recs():
     recs = pd.DataFrame([
-        ("2021-12-11"   , 0     , 0     , 2200),
-        ("2022-01-11"   , 0     , 0     , 2200),
+        ("2021-12-11"   , 0     , 0     , 2300),
+        ("2022-01-11"   , 23    , 100   , 2200),
         # Repay date overpassing the observation date within the next duepay date.
-        ("2022-02-11"   , 23     , 100   , 2100),
+        ("2022-02-11"   , 0     , 100   , 2100),
         # Repay date overpassing the next duepay date.
         ("2022-03-11"   , 37    , 100   , 2000),
         # 37 - 31 = 6 > 4: Invalid overdue days.

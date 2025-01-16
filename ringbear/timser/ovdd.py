@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-01-14 10:20:51
+#   Updated: 2025-01-16 21:34:32
 #   Description:
 # ---------------------------------------------------------
 
@@ -36,13 +36,193 @@ DUM_OVDP = 7
 
 
 # %%
+def snap_ovd(
+    due_date: list | np.ndarray,
+    rep_date: list | np.ndarray = None,
+    ovd_days: list | np.ndarray = None,
+    ob_date: list | np.ndarray = None,
+    due_amt: list | np.ndarray = None,
+    rem_amt: list | np.ndarray = None,
+) -> tuple[np.ndarray]:
+    """Calculate the snapshot from the repayment cashflow.
+
+    1. Use two queues, that differs in if to include the edge records, to
+      store the continuous overdue records.
+      1.1 In the outer loop for obdates, the queues retain the records
+        overpass the former obdates.
+      1.2 In the inner loop for duedates, the queues retain the continuous
+        overdue records.
+    2. Be careful with following corner cases:
+      2.1 duedate == obdate or duedate == repdate: not overdue
+
+    Assumption:
+    ----------------------
+    1. At most 1 record for one day.
+    2. The repayment dates must be in ascending order along with the duedates.
+    3. Gaps between duepay dates are equal and gasp between obdates are
+      equal, so the first period could be used directly and no more check
+      need to be done for continuous overdue periods.
+
+    Params:
+    ----------------------
+    due_date: Sequence[N] of duepayment dates, which should be datetime64 or
+      string that could be casted into datetime64 by NumPy.
+    rep_date: Sequence[N] of repayment dates.
+      This will calculated from the `due_date` and `ovd_days` is not passed.
+    ovd_days: Sequence[N] of overdue days of each repayments.
+    ob_date: Sequence[M] of observation dates.
+      If no argument passed, this will be the `due_date` after shifting
+      out the first duepay date and including a faraway date.
+    due_amt: Sequence of duepay amount.
+    rem_amt: Sequence of remaining amount.
+
+    Return:
+    ----------------------
+    ovd-time: NDArray[N, 4]
+      ever_ovdd: NDArray of maximum of overdue days ever occured during two
+        responsible point of observation.
+      ever_ovdp: Maximum of overdue periods ever.
+        NOTE: The number periods counted here will be more precise as the days
+        of each of month is not the same.
+      stop_ovdd: NDArray of overdue days at the point of observation.
+      stop_ovdp: Ditto.
+    ovd-amount: NDArray[N, 6]
+      ever_rema: Maximum (or the first) remainal amount ever.
+      ever_ovda: Maximum (or the first) overdue amount ever.
+      ever_duea: Maximum (or the first) duepay amount ever.
+      stop_rema: Ditto.
+      stop_ovda: Ditto.
+      stop_duea: Ditto.
+    """
+    # Prepare the data.
+    dueds = np.asarray(due_date, dtype="M8[D]")
+    if ob_date is None:
+        obds = np.concatenate(
+            [dueds[1:], np.array(["2999-12-31"], dtype="M8[D]")])
+    else:
+        obds = np.asarray(ob_date, dtype="M8[D]")
+    if rep_date is None:
+        ovdds = np.asarray(ovd_days, dtype="m8[D]")
+        ovdds[np.isnat(ovdds)] = np.timedelta64(0, "D")
+        repds = dueds + ovdds
+    else:
+        repds = np.asarray(rep_date, dtype="M8[D]")
+        ovdds = repds - dueds
+    das = [0] * len(ovd_days) if due_amt is None else due_amt
+    ras = [0] * len(ovd_days) if rem_amt is None else rem_amt
+
+    ovdt, ovda = [], []
+    duei = 0
+    # Actually, `sconti_recs` ares just used to store the records with
+    # `rep-date(former) == due-date == ob-date`, so to calculate the STOPs.
+    # While `conti_recs` will drop those records except the last one, since
+    # they can't be continuous with the following records.
+    conti_recs = deque()            # Excludes the edge records.
+    sconti_recs = deque()           # Includes the edge records.
+    for obd in obds:
+        # set_trace()
+        # Set initial values.
+        if len(conti_recs) == 0:
+            ever_rema = das[duei] + ras[duei]
+        else:
+            ever_rema = conti_recs[0][-2] + conti_recs[0][-1]
+        ever_ovdd, ever_ovdp, ever_ovda, ever_duea = 0, 0, 0, 0
+        # Traverse all the duepayments before or on the obdate to get the EVERs.
+        while duei < len(dueds) and dueds[duei] <= obd:
+            dued, repd, ovdd = dueds[duei], repds[duei], ovdds[duei]
+            duea, rema = das[duei], ras[duei]
+            if len(conti_recs) == 0:
+                conti_recs.append((dued, repd, ovdd, duea, rema))
+                sconti_recs.append((dued, repd, ovdd, duea, rema))
+            else:
+                hdued, hrepd, hovdd, hduea, hrema = conti_recs[0]
+                tdued, trepd, tovdd, tduea, trema = conti_recs[-1]
+                if hrepd < dued:
+                    if tdued == trepd:
+                        ever_ovdd = max(hovdd, ever_ovdd)
+                        ever_ovdp = max(len(conti_recs) - 1, ever_ovdp)
+                        va = sum([i[-2] for i in conti_recs])
+                        ever_ovda = max(va - tduea, ever_ovda)
+                        ever_duea = max(va, ever_duea)
+                    else:
+                        ever_ovdd = max(hovdd, ever_ovdd)
+                        ever_ovdp = max(len(conti_recs), ever_ovdp)
+                        va = sum([i[-2] for i in conti_recs])
+                        ever_ovda = max(va, ever_ovda)
+                        ever_duea = max(va, ever_duea)
+                # As `trepd >= hrepd == dued > tdued`,
+                # Don't need to compared `trepd` and `tdued`.
+                elif hrepd == dued:
+                    ever_ovdd = max(hovdd, ever_ovdd)
+                    ever_ovdp = max(len(conti_recs), ever_ovdp)
+                    va = sum([i[-2] for i in conti_recs])
+                    ever_ovda = max(va, ever_ovda)
+                    ever_duea = max(va + duea, ever_duea)
+                # Pop uncontinuous overdue periods out.
+                while len(conti_recs) > 0 and conti_recs[0][1] <= dued:
+                    conti_recs.popleft()
+                while len(sconti_recs) > 0 and sconti_recs[0][1] < dued:
+                    sconti_recs.popleft()
+                conti_recs.append((dued, repd, ovdd, duea, rema))
+                sconti_recs.append((dued, repd, ovdd, duea, rema))
+            duei += 1
+
+        # Check the last continuous overdued periods to update EVERs.
+        stop_rema = conti_recs[-1][-1]
+        hdued, hrepd, hovdd, hduea, hrema = conti_recs[0]
+        tdued, trepd, tovdd, tduea, trema = conti_recs[-1]
+        if hrepd < obd:
+            # TODO: No-equal gap between obdates.
+            ever_ovdd = max(hovdd, ever_ovdd)
+        else:
+            ever_ovdd = max(obd - hdued, ever_ovdd)
+        if tdued == trepd or tdued == obd:
+            ever_ovdp = max(len(conti_recs) - 1, ever_ovdp)
+            va = sum([i[-2] for i in conti_recs])
+            ever_ovda = max(va - tduea, ever_ovda)
+            ever_duea = max(va, ever_duea)
+        else:
+            ever_ovdp = max(len(conti_recs), ever_ovdp)
+            va = sum([i[-2] for i in conti_recs])
+            ever_ovda = max(va, ever_ovda)
+            ever_duea = max(va, ever_duea)
+
+        # Pop out records repayed before obdate.
+        while len(conti_recs) > 0 and conti_recs[0][1] <= obd:
+            conti_recs.popleft()
+        while len(sconti_recs) > 0 and sconti_recs[0][1] < obd:
+            sconti_recs.popleft()
+
+        # Check current records in queue to get the STOPs.
+        if len(sconti_recs) == 0:
+            stop_ovdd, stop_ovdp, stop_ovda, stop_duea = 0, 0, 0, 0
+        else:
+            stop_ovdd = obd - sconti_recs[0][0]
+            stop_rema = sconti_recs[0][-2] + sconti_recs[0][-1]
+            va = sum([i[-2] for i in sconti_recs])
+            stop_duea = va
+            stop_ovda = va
+            stop_ovdp = len(sconti_recs)
+            # Check the if the last period is overdued.
+            if dued == repd or dued == obd:
+                stop_ovda -= duea
+                stop_ovdp -= 1
+
+        ovdt.append((ever_ovdd, ever_ovdp, stop_ovdd, stop_ovdp))
+        ovda.append((ever_rema, ever_ovda, ever_duea,
+                     stop_rema, stop_ovda, stop_duea))
+
+    return np.asarray(ovdt).astype(np.int_), np.asarray(ovda).astype(np.float_)
+
+
+# %%
 def ovdd_from_duepay_records(
     due_date: list | np.ndarray,
     ovd_days: list | np.ndarray,
     ob_date: list | np.ndarray = None,
     due_amt: list | np.ndarray = None,
     rem_amt: list | np.ndarray = None,
-) -> tuple[pd.DataFrame]:
+) -> tuple[np.ndarray]:
     """Calculate overdue days from duepay records.
 
     1. Mostly, the repayment records will be with format like:

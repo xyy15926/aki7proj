@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2025-01-14 10:15:27
+#   Updated: 2025-01-16 22:19:04
 #   Description:
 # ---------------------------------------------------------
 
@@ -26,7 +26,7 @@ from tqdm import tqdm
 from flagbear.llp.parser import EnvParser
 from modsbear.dflater.ex4df import trans_on_df, agg_on_df
 from modsbear.dflater.exenv import EXGINE_ENV
-from ringbear.timser.ovdd import ovdd_from_duepay_records, month_date
+from ringbear.timser.ovdd import month_date, snap_ovd
 from modsbear.spanner.manidf import group_addup_apply
 
 # %%
@@ -60,6 +60,7 @@ def addup_obovd(
     records: DataFrame[due_date, ovd_days, due_amt, rem_amt]
       due_date: Datetime64 convertable sequence representing the duepayment
         dates.
+      rep_date: Repayment dates.
       ovd_days: Day past due for each duepay dates.
       due_amt: Duepay amount.
       rem_amt: Remaining amount.
@@ -82,23 +83,28 @@ def addup_obovd(
     # Sort by due date.
     recs = records.sort_values("due_date")
     due_date = recs["due_date"]
-    # Add MOB.
+
+    # Add MOB and START.
     if "MOB" not in recs:
         if "START" in recs:
             start_date = recs["START"].dt.to_period("M")
         else:
             start_date = due_date.min().to_period("M")
+            recs["START"] = start_date
         mobs = (due_date.dt.to_period("M") - start_date).apply(lambda x:x.n)
         recs["MOB"] = mobs
     else:
         mobs = recs["MOB"]
+
     # Add observer records.
     obd = month_date(due_date, ob_date)
-    (ever_ovdd, stop_ovdd, ever_ovdp, stop_ovdp, ever_ovda, stop_ovda,
-     ever_rema, stop_rema, ever_duea, stop_duea) = ovdd_from_duepay_records(
-         recs["due_date"], recs["ovd_days"], obd,
-         recs["due_amt"], recs["rem_amt"])
     recs["ob_date"] = obd
+    ovdt, ovda = snap_ovd(recs["due_date"], recs.get("rep_date", None),
+                          recs.get("ovd_days", None), obd,
+                          recs["due_amt"], recs["rem_amt"])
+    ever_ovdd, ever_ovdp, stop_ovdd, stop_ovdp = ovdt.T
+    ever_rema, ever_ovda, ever_duea, stop_rema, stop_ovda, stop_duea = ovda.T
+
     # Add dummy month.
     if "DUMMY" in records:
         dum_date = recs["DUMMY"]
@@ -108,15 +114,16 @@ def addup_obovd(
         stop_ovdp[due_date >= dum_date] = dum_ovdp
 
     recs["ever_ovdd"] = ever_ovdd
-    recs["stop_ovdd"] = stop_ovdd
     recs["ever_ovdp"] = ever_ovdp
-    recs["stop_ovdp"] = stop_ovdp
-    recs["ever_ovda"] = ever_ovda
-    recs["stop_ovda"] = stop_ovda
-    recs["ever_duea"] = ever_duea
-    recs["stop_duea"] = stop_duea
     recs["ever_rema"] = ever_rema
+    recs["ever_ovda"] = ever_ovda
+    recs["ever_duea"] = ever_duea
+
+    recs["stop_ovdd"] = stop_ovdd
+    recs["stop_ovdp"] = stop_ovdp
     recs["stop_rema"] = stop_rema
+    recs["stop_ovda"] = stop_ovda
+    recs["stop_duea"] = stop_duea
 
     # Convert dtype to categorical so to keep null rows and columns in crosstab.
     # cats = pd.CategoricalDtype([f"M{i}" for i in range(8)])
