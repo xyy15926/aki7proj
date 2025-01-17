@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2025-01-16 22:19:04
+#   Updated: 2025-01-17 17:10:25
 #   Description:
 # ---------------------------------------------------------
 
@@ -99,9 +99,12 @@ def addup_obovd(
     # Add observer records.
     obd = month_date(due_date, ob_date)
     recs["ob_date"] = obd
-    ovdt, ovda = snap_ovd(recs["due_date"], recs.get("rep_date", None),
-                          recs.get("ovd_days", None), obd,
-                          recs["due_amt"], recs["rem_amt"])
+    due_date = recs["due_date"].values
+    rep_date = recs["rep_date"].values if "rep_date" in recs else None
+    ovd_days = recs["ovd_days"].values if "ovd_days" in recs else None
+    due_amt = recs["due_amt"].values if "due_amt" in recs else None
+    rem_amt = recs["rem_amt"].values if "rem_amt" in recs else None
+    ovdt, ovda = snap_ovd(due_date, rep_date, ovd_days, obd, due_amt, rem_amt)
     ever_ovdd, ever_ovdp, stop_ovdd, stop_ovdp = ovdt.T
     ever_rema, ever_ovda, ever_duea, stop_rema, stop_ovda, stop_duea = ovda.T
 
