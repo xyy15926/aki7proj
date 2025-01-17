@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-01-17 16:25:17
+#   Updated: 2025-01-17 19:34:22
 #   Description:
 # ---------------------------------------------------------
 
@@ -108,8 +108,8 @@ def snap_ovd(
     else:
         repds = np.asarray(rep_date, dtype="M8[D]")
         ovdds = repds - dueds
-    das = [0] * len(ovd_days) if due_amt is None else due_amt
-    ras = [0] * len(ovd_days) if rem_amt is None else rem_amt
+    das = [0] * len(ovd_days) if due_amt is None else np.asarray(due_amt)
+    ras = [0] * len(ovd_days) if rem_amt is None else np.asarray(rem_amt)
 
     ovdt, ovda = [], []
     duei = 0
@@ -166,6 +166,18 @@ def snap_ovd(
                 conti_recs.append((dued, repd, ovdd, duea, rema))
                 sconti_recs.append((dued, repd, ovdd, duea, rema))
             duei += 1
+
+        # Adjacent obdates with no records cutting in, namely no duedate
+        # lies between two obdates and no repdate overpass the former obdate.
+        # Or observer before all records.
+        if len(conti_recs) == 0:
+            if len(ovdt) == 0:
+                logger.warning("Observe before all records.")
+            else:
+                logger.warning("Adjacent obdates with no records cutting in.")
+            ovdt.append((0, 0, 0, 0))
+            ovda.append((ever_rema, 0, 0, ever_rema, 0, 0))
+            continue
 
         # Check the last continuous overdued periods to update EVERs.
         stop_rema = conti_recs[-1][-1]
