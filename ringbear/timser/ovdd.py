@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-01-16 21:34:32
+#   Updated: 2025-01-17 16:25:17
 #   Description:
 # ---------------------------------------------------------
 
@@ -171,11 +171,8 @@ def snap_ovd(
         stop_rema = conti_recs[-1][-1]
         hdued, hrepd, hovdd, hduea, hrema = conti_recs[0]
         tdued, trepd, tovdd, tduea, trema = conti_recs[-1]
-        if hrepd < obd:
-            # TODO: No-equal gap between obdates.
-            ever_ovdd = max(hovdd, ever_ovdd)
-        else:
-            ever_ovdd = max(obd - hdued, ever_ovdd)
+        # TODO: No-equal gap between obdates.
+        ever_ovdd = max(min(hrepd, obd) - hdued, ever_ovdd)
         if tdued == trepd or tdued == obd:
             ever_ovdp = max(len(conti_recs) - 1, ever_ovdp)
             va = sum([i[-2] for i in conti_recs])
@@ -188,8 +185,10 @@ def snap_ovd(
             ever_duea = max(va, ever_duea)
 
         # Pop out records repayed before obdate.
+        # TODO: No-equal gap may be solved here.
         while len(conti_recs) > 0 and conti_recs[0][1] <= obd:
-            conti_recs.popleft()
+            hdued, hrepd, hovdd, hduea, hrema = conti_recs.popleft()
+            ever_ovdd = max(hovdd, ever_ovdd)
         while len(sconti_recs) > 0 and sconti_recs[0][1] < obd:
             sconti_recs.popleft()
 
@@ -541,6 +540,8 @@ def month_date(
     """
     due_date = np.asarray(dates, dtype="M8[D]")
 
+    # The same day of the next month may not exists, so 30 days is added up
+    # instead of moving a month forward.
     if rule == "nextdue":
         stop_date = due_date.max() + np.timedelta64(30, "D")
         ob_date = np.concatenate(
