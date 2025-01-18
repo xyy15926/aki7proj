@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-01-17 19:34:22
+#   Updated: 2025-01-18 18:40:15
 #   Description:
 # ---------------------------------------------------------
 
@@ -74,7 +74,7 @@ def snap_ovd(
       If no argument passed, this will be the `due_date` after shifting
       out the first duepay date and including a faraway date.
     due_amt: Sequence of duepay amount.
-    rem_amt: Sequence of remaining amount.
+    rem_amt: Sequence of remaining amount after the duepay amount.
 
     Return:
     ----------------------
@@ -123,9 +123,16 @@ def snap_ovd(
         # set_trace()
         # Set initial values.
         if len(conti_recs) == 0:
-            ever_rema = das[duei] + ras[duei]
+            if duei < len(dueds):
+                ever_rema = das[duei] + ras[duei]
+            else:
+                # No more valid records, so the last `rem_amt` will be kept
+                # unchanged.
+                # So is the `stop_rema`.
+                ever_rema = ras[-1]
         else:
             ever_rema = conti_recs[0][-2] + conti_recs[0][-1]
+
         ever_ovdd, ever_ovdp, ever_ovda, ever_duea = 0, 0, 0, 0
         # Traverse all the duepayments before or on the obdate to get the EVERs.
         while duei < len(dueds) and dueds[duei] <= obd:
@@ -167,57 +174,79 @@ def snap_ovd(
                 sconti_recs.append((dued, repd, ovdd, duea, rema))
             duei += 1
 
-        # Adjacent obdates with no records cutting in, namely no duedate
-        # lies between two obdates and no repdate overpass the former obdate.
-        # Or observer before all records.
+        # TODO
+        # 1. Adjacent obdates with no records cutting in, namely no duedate
+        #   lies between two obdates and no repdate overpass the former obdate.
+        # 2. Or observe before all records.
+        # 3. Or observe after all records and no repdate overpass the former
+        #   obdate.
         if len(conti_recs) == 0:
-            if len(ovdt) == 0:
-                logger.warning("Observe before all records.")
+            if duei < len(dueds):
+                if len(ovdt) == 0:
+                    logger.warning("Observe before all records.")
+                else:
+                    logger.warning("Adjacent obdates with no records cutting in.")
+            ever_ovdd = 0
+            ever_ovdp = 0
+            ever_ovda = 0
+            ever_duea = 0
+        else:
+            # Check the last continuous overdued periods to update EVERs.
+            hdued, hrepd, hovdd, hduea, hrema = conti_recs[0]
+            tdued, trepd, tovdd, tduea, trema = conti_recs[-1]
+            # TODO: No-equal gap between obdates.
+            ever_ovdd = max(min(hrepd, obd) - hdued, ever_ovdd)
+            if tdued == trepd or tdued == obd:
+                ever_ovdp = max(len(conti_recs) - 1, ever_ovdp)
+                va = sum([i[-2] for i in conti_recs])
+                ever_ovda = max(va - tduea, ever_ovda)
+                ever_duea = max(va, ever_duea)
             else:
-                logger.warning("Adjacent obdates with no records cutting in.")
-            ovdt.append((0, 0, 0, 0))
-            ovda.append((ever_rema, 0, 0, ever_rema, 0, 0))
-            continue
+                ever_ovdp = max(len(conti_recs), ever_ovdp)
+                va = sum([i[-2] for i in conti_recs])
+                ever_ovda = max(va, ever_ovda)
+                ever_duea = max(va, ever_duea)
 
-        # Check the last continuous overdued periods to update EVERs.
-        stop_rema = conti_recs[-1][-1]
-        hdued, hrepd, hovdd, hduea, hrema = conti_recs[0]
-        tdued, trepd, tovdd, tduea, trema = conti_recs[-1]
-        # TODO: No-equal gap between obdates.
-        ever_ovdd = max(min(hrepd, obd) - hdued, ever_ovdd)
-        if tdued == trepd or tdued == obd:
-            ever_ovdp = max(len(conti_recs) - 1, ever_ovdp)
-            va = sum([i[-2] for i in conti_recs])
-            ever_ovda = max(va - tduea, ever_ovda)
-            ever_duea = max(va, ever_duea)
-        else:
-            ever_ovdp = max(len(conti_recs), ever_ovdp)
-            va = sum([i[-2] for i in conti_recs])
-            ever_ovda = max(va, ever_ovda)
-            ever_duea = max(va, ever_duea)
+            # Pop out records repayed before obdate.
+            # TODO: No-equal gap may be solved here.
+            while len(conti_recs) > 0 and conti_recs[0][1] <= obd:
+                hdued, hrepd, hovdd, hduea, hrema = conti_recs.popleft()
+                ever_ovdd = max(hovdd, ever_ovdd)
 
-        # Pop out records repayed before obdate.
-        # TODO: No-equal gap may be solved here.
-        while len(conti_recs) > 0 and conti_recs[0][1] <= obd:
-            hdued, hrepd, hovdd, hduea, hrema = conti_recs.popleft()
-            ever_ovdd = max(hovdd, ever_ovdd)
-        while len(sconti_recs) > 0 and sconti_recs[0][1] < obd:
-            sconti_recs.popleft()
-
-        # Check current records in queue to get the STOPs.
         if len(sconti_recs) == 0:
-            stop_ovdd, stop_ovdp, stop_ovda, stop_duea = 0, 0, 0, 0
+            # As no post-effect from the fromer recoreds, just consider the
+            # very next record will be fine.
+            if duei < len(dueds):
+                stop_rema = das[duei] + ras[duei]
+            else:
+                stop_rema = ras[-1]
+            stop_ovdd = 0
+            stop_ovdp = 0
+            stop_ovda = 0
+            stop_duea = 0
         else:
-            stop_ovdd = obd - sconti_recs[0][0]
-            stop_rema = sconti_recs[0][-2] + sconti_recs[0][-1]
-            va = sum([i[-2] for i in sconti_recs])
-            stop_duea = va
-            stop_ovda = va
-            stop_ovdp = len(sconti_recs)
-            # Check the if the last period is overdued.
-            if dued == repd or dued == obd:
-                stop_ovda -= duea
-                stop_ovdp -= 1
+            # Try init `stop_rema` with latest `rem_amt` first.
+            # If no the continuous overdue record achieve the obdate, this
+            #   will be kept unchanged.
+            # Else continuous overdue records will be used to update.
+            stop_rema = sconti_recs[-1][-1]
+            while len(sconti_recs) > 0 and sconti_recs[0][1] < obd:
+                sconti_recs.popleft()
+
+            # Check current records in queue to get the STOPs.
+            if len(sconti_recs) == 0:
+                stop_ovdd, stop_ovdp, stop_ovda, stop_duea = 0, 0, 0, 0
+            else:
+                stop_ovdd = obd - sconti_recs[0][0]
+                stop_rema = sconti_recs[0][-2] + sconti_recs[0][-1]
+                va = sum([i[-2] for i in sconti_recs])
+                stop_duea = va
+                stop_ovda = va
+                stop_ovdp = len(sconti_recs)
+                # Check the if the last period is overdued.
+                if dued == repd or dued == obd:
+                    stop_ovda -= duea
+                    stop_ovdp -= 1
 
         ovdt.append((ever_ovdd, ever_ovdp, stop_ovdd, stop_ovdp))
         ovda.append((ever_rema, ever_ovda, ever_duea,
