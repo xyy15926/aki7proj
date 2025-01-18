@@ -1,4 +1,4 @@
 recursive-include docs *.md
 recursive-include assets *.csv *.pdf *.json *.txt *.xlsx
 include license.txt pytest.ini readme.md
-exclude tmp*
+prune **/tmp
