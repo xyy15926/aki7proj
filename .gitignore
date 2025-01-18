@@ -1,6 +1,7 @@
 # tmp files
 tmp/
 temp/
+dist/
 Session.vim
 
 # executable directories
@@ -18,6 +19,7 @@ __pycache__/
 
 # log files
 *.log
+*.egg-info
 
 # setting files
 .classpath
