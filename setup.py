@@ -3,7 +3,7 @@
 #   Name: setup.py
 #   Author: xyy15926
 #   Created: 2023-07-10 14:37:11
-#   Updated: 2025-01-18 20:12:52
+#   Updated: 2025-01-19 19:43:14
 #   Description:
 #     Classifer Ref: <https://pypi.org/pypi?%3Aaction=list_classifiers>
 # ---------------------------------------------------------
@@ -22,19 +22,16 @@ setup(
     description="A project for collecting some tricks.",
     url="https://github.com/xyy15926",
     packages=find_namespace_packages(include=[
-        "contrib.*",
-        "flagbear.*",
-        "modsbear.*",
-        "ringbear.*",
-        "suitbear.*",
-        "tests.*",
+        "flagbear*",
+        "ringbear*",
+        "modsbear*",
+        "suitbear*",
     ]),
     include_package_data=True,
     # Classifier tags
-    classifier=[
+    classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Console"
-        "Intended :: Data Analysis(Mainly)",
         "Intended Audience :: Financial and Insurance Industry",
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python",
@@ -46,34 +43,50 @@ setup(
     ],
     keywords="Data Science",
     license="Apache License 2.0",
-    python_requires=">=3.6, <=3.11",
+    python_requires=">=3.6, <=3.14",
     # Requirements for installment.
     install_requires=[
         "numpy >= 1.2",
         "scipy >= 1.10",
         "pandas >= 1.4",
         "scikit-learn >= 1.1",
-        "tqdm >= 5.0",
-        "chinese_calendar",
+        "tqdm >= 4.0",
     ],
+    # Plugins packages for setuptools.
+    setup_requires=[],
     # Requirements for tests will be installed only when `python setup.py test`
     # is called.
-    tests_requires=[
+    tests_require=[
         "pytest >= 7, <= 10",
         "ipython >= 8.4.0",
     ],
     # Extra requirments won't be installed automatically, just to indicate
     # the dependencies for specific usage.
-    extra_require={
-        "TA-Lib",
-        "jieba",
-        "openpyxl",
-        "SQLAlchemy",
-        "PyMySQL",
-        "cx-Oracle",
-        "torch",
-        "tensorboard",
-        "pdfplumber",
+    extras_require={
+        "ml": [
+            "torch",
+            "tensorboard",
+            "networkx",
+            "xgboost",
+        ],
+        "locale": [
+            "chinese_calendar",
+            "jieba",
+            "pdfplumber",
+        ],
+        "display": [
+            "pyecharts",
+        ],
+        "db": [
+            "SQLAlchemy",
+            "sqlite",
+            "PyMySQL",
+            "cx-Oracle",
+        ],
+        "quant": [
+            "TA-Lib",
+            "numpy_financial",
+        ],
     },
     entry_points={
         "concole_scripts": [],
