@@ -3,7 +3,7 @@
 #   Name: test_candlestick.py
 #   Author: xyy15926
 #   Created: 2024-11-25 13:59:19
-#   Updated: 2024-11-29 12:10:19
+#   Updated: 2025-01-21 09:20:04
 #   Description:
 # ---------------------------------------------------------
 
@@ -15,12 +15,12 @@ if __name__ == "__main__":
     from importlib import reload
     from ubears.ringbear.talib import overlap
     from ubears.ringbear.talib import momentum
-    from ubears.ringbear.talib import candlestick
+    from ubears.ringbear.talib import ptnrecog
     reload(overlap)
     reload(momentum)
-    reload(candlestick)
+    reload(ptnrecog)
 
-from ubears.ringbear.talib.candlestick import (
+from ubears.ringbear.talib.ptnrecog import (
     sma_excur,
     belthold, closing_marubozu, doji, dragonfly_doji, gravestone_doji,
     counter_attack, darkcloud_cover, doji_star, engulfing,
@@ -302,4 +302,4 @@ def test_advance_block():
         val = advance_block(open_, high, low, close)
         ta_val = ta.CDLADVANCEBLOCK(open_, high, low, close)
 
-        # assert np.all(np.isclose(val, ta_val, equal_nan=True))
+        assert np.all(np.isclose(val, ta_val, equal_nan=True))

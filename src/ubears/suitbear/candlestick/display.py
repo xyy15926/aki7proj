@@ -3,7 +3,7 @@
 #   Name: display.py
 #   Author: xyy15926
 #   Created: 2024-11-29 12:13:36
-#   Updated: 2025-01-20 18:03:26
+#   Updated: 2025-01-21 12:04:58
 #   Description:
 # ---------------------------------------------------------
 
@@ -32,8 +32,8 @@ logger.info("Logging Start.")
 # %%
 def draw_kline(
     data: pd.DataFrame,
-    mas: pd.DataFrame = None,
-    ptns: pd.DataFrame = None,
+    MAs: pd.DataFrame = None,
+    PTNs: pd.DataFrame = None,
     fname: str = None,
 ) -> Grid:
     """Draw KLine with volume bars, trend lines.
@@ -41,13 +41,18 @@ def draw_kline(
     Params:
     ------------------------
     data: Price data with columns
-      date:
-      open_:
-      high:
-      low:
-      close:
-      volume:
-    mas: MA trend line.
+      date: Time tag.
+      open_: Open price.
+      high: High price.
+      low: Low price.
+      close: Close price.
+      volume: Volume.
+    MAs: MA trend line.
+      Each column of `MAs` represents one type of MAs line and will be drawn
+      seperately with Line.
+    PTNs: Candlestick pattern.
+      Each column of `PTNs` represents one type of pattern recognition with
+      value of 100, 0, -100 and will be drawn seperately with Line.
     fname: Filename for saving html render
 
     Return:
@@ -134,12 +139,12 @@ def draw_kline(
     )
 
     # Add MA Lines.
-    mas = pd.DataFrame() if mas is None else mas
+    MAs = pd.DataFrame() if MAs is None else MAs
     line = Line() .add_xaxis(xaxis_data=xticks)
-    for matype in mas:
+    for matype in MAs:
         line.add_yaxis(
             series_name=matype,
-            y_axis=mas[matype].tolist(),
+            y_axis=MAs[matype].tolist(),
             yaxis_index=0,
             is_smooth=True,
             is_hover_animation=False,
@@ -147,11 +152,11 @@ def draw_kline(
             label_opts=opts.LabelOpts(is_show=False),
         )
     # Add candlstick patterns.
-    ptns = pd.DataFrame() if ptns is None else ptns
-    for ptntype in ptns:
+    PTNs = pd.DataFrame() if PTNs is None else PTNs
+    for ptntype in PTNs:
         line.add_yaxis(
             series_name=ptntype,
-            y_axis=ptns[ptntype].tolist(),
+            y_axis=PTNs[ptntype].tolist(),
             yaxis_index=1,
             is_smooth=True,
             is_hover_animation=False,
@@ -202,7 +207,7 @@ def draw_kline(
                 is_show=False,
                 dimension=2,
                 # Index among the whole data series.
-                series_index=mas.shape[1] + ptns.shape[1] + 1,
+                series_index=MAs.shape[1] + PTNs.shape[1] + 1,
                 is_piecewise=True,
                 pieces=[
                     {"value": 1, "color": "#ec0000"},

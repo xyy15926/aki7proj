@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # ---------------------------------------------------------
-#   Name: candlestick.py
+#   Name: ptnrecog.py
 #   Author: xyy15926
 #   Created: 2024-11-25 13:44:52
-#   Updated: 2024-11-30 21:54:27
+#   Updated: 2025-01-21 11:55:02
 #   Description:
 #   Ref: https://github.com/frgomes/ta-lib_code/blob/master/ta-lib/c/src/ta_func/
 #   Ref: https://www.fmlabs.com/reference/default.htm
@@ -66,7 +66,12 @@ def candle_spec(
 ) -> np.ndarray:
     """Candle stick basic specifications.
 
-    Global Setting: https://github.com/frgomes/ta-lib_code/blob/master/ta-lib/c/src/ta_common/ta_global.c#L142
+    Global Setting: <https://github.com/frgomes/ta-lib_code/blob/master/ta-lib/c/src/ta_common/ta_global.c#L142>
+    ATTENTION:
+    The code for `shadowshort` in the Global Setting is **1.0 times** of the
+    average while the annotation says the **half the average**. And the test
+    cases for `advance_block` shows that **half the average** should be the
+    default setting in `TA-Lib == 0.4.32`.
 
     1 Candle Terms:
     ---------------------------
@@ -80,7 +85,7 @@ def candle_spec(
     ---------------------------
     - declining: close[t] < close[t-1]
     - rising: close[t] > close[t-1]
-    - gap: range gap
+    - gap: range gap, even no-overlapping shadow
       - gap up: low[t] > high[t-1]
       - gap dn: high[t] < low[t-1]
     - star: body gapping up in a uptrend or down in a downtrend
@@ -95,6 +100,7 @@ def candle_spec(
       - black engulf white: (open_[:-1] < close[:-1])
                             & (close[:-1] < open_[1:])
                             & (open_[:-1] > close[1:])
+    - engulf with shadow: high[:-1] > high[1:] & low[:-1] < low[1:]
 
     Possible description:
     ---------------------------
@@ -138,7 +144,7 @@ def candle_spec(
         "bodydoji": ("highlow", 10, 0.1),
         "shadowlong": ("realbody", 0, 1.0),
         "shadowverylong": ("realbody", 0, 2.0),
-        "shadowshort": ("shadows", 10, 1.0),
+        "shadowshort": ("shadows", 10, 0.5),
         "shadowveryshort": ("highlow", 10, 0.1),
         "near": ("highlow", 5, 0.2),
         "far": ("highlow", 5, 0.6),
@@ -922,10 +928,10 @@ def stars_insouth3(
          & (rb[1:-1] < rb[:-2])
          & (open_[1:-1] > close[1:-1])
          & (open_[1:-1] > close[:-2])
-         & (open_[1:-1] < high[:-2])
+         & (open_[1:-1] <= high[:-2])
          # 3. 2nd: Trades lower than prior close but not lower than prior low.
-         & (close[1:-1] < close[:-2])
-         & (close[1:-1] > low[:-2])
+         & (low[1:-1] < close[:-2])
+         & (low[1:-1] >= low[:-2])
          # 4. 2nd: Closes off its low(has lower shadow).
          & (close[1:-1] - low[1:-1] > shadowveryshort[1:-1])
          # 5. 3rd: Small black marubozu engulfed by prior range.
@@ -952,6 +958,8 @@ def white_soldiers3(
     --------------------------
     1. 1st, 2nd, 3rd: White with consecutively higher closes.
     2. 1st, 2nd, 3rd: Not short.
+      ATTENTION: The annotation says not be short for all of them, but the code
+      only ensure the 3nd not to be short.
     3. 1st, 2nd, 3rd: Opens within or near prior real body.
     4. 1st, 2nd, 3rd: No or very short upper shadow.
     5. 1st, 2nd, 3rd: Not far shorter than prior.
@@ -987,14 +995,14 @@ def white_soldiers3(
          & (close[:-2] < close[1:-1])
          & (close[1:-1] < close[2:])
          # 2. 1st, 2nd, 3rd: Not short.
-         & (rb[:-2] > bodyshort[:-2])
-         & (rb[1:-1] > bodyshort[1:-1])
+         # & (rb[:-2] > bodyshort[:-2])
+         # & (rb[1:-1] > bodyshort[1:-1])
          & (rb[2:] > bodyshort[2:])
          # 3. 1st, 2nd, 3rd: Opens within or near prior real body.
          & (open_[1:-1] > open_[:-2])
-         & (open_[1:-1] < close[:-2] + near[:-2])
+         & (open_[1:-1] <= close[:-2] + near[:-2])
          & (open_[2:] > open_[1:-1])
-         & (open_[2:] < close[1:-1] + near[1:-1])
+         & (open_[2:] <= close[1:-1] + near[1:-1])
          # 4. 1st, 2nd, 3rd: No or very short upper shadow.
          & (high[:-2] - close[:-2] < shadowveryshort[:-2])
          & (high[1:-1] - close[1:-1] < shadowveryshort[1:-1])
@@ -1090,7 +1098,8 @@ def conceal_baby_swall(
     1. 1st, 2nd: Black marubozu.
     2. 3rd: Black opens gapping down with upper shadow extends to
       prior real body.
-    1. 4st: Black engulf the range of 3rd.
+    1. 4th: Black completely engulf the 3rd, including the shadows.
+      ATTENTION: The engulf indicates high > high and low < low.
 
     Params:
     --------------------------
@@ -1125,9 +1134,10 @@ def conceal_baby_swall(
          & (close[2:-1] < open_[2:-1])
          & (open_[2:-1] < close[1:-2])
          & (high[2:-1] > close[1:-2])
-         # 3. 4st: Black engulf the range of 3rd.
-         & (open_[3:] > high[2:-1])
-         & (close[3:] < low[2:-1])] = 100
+         # 3. 4th: Black engulf the range of 3rd.
+         & (close[3:] < open_[3:])
+         & (high[3:] > high[2:-1])
+         & (low[3:] < low[2:-1])] = 100
 
     return ret
 
@@ -1146,9 +1156,9 @@ def abandoned_baby(
     --------------------------
     1. 1st: Long white(black) real body.
     2. 2nd: Doji.
-    3. 3rd: Not short black(white) real body moves well in 1st's real body.
-    4. 1st, 2nd: 2nd gap up(down) 1st with shadows not overlaping.
-    5. 2rd, 3nd: 3nd gap down(up) 2rd with shadows not overlaping.
+    3. 3rd: Black(white) real body moves well in 1st's real body.
+    4. 1st, 2nd: 2nd gap up(down) from 1st with shadows not overlaping.
+    5. 2rd, 3nd: 3nd gap down(up) from 2rd with shadows not overlaping.
 
     Params:
     --------------------------
@@ -1174,17 +1184,27 @@ def abandoned_baby(
 
     ret = np.zeros_like(close, dtype=np.int_)
     ret_ = ret[2:]
+    # 1. 1st: Long white.
     ret_[(open_[:-2] + bodylong[:-2] < close[:-2])
-         & (rb[1:-1] < bodydoji[1:-1])
+         # 2. 2nd: Doji.
+         & (rb[1:-1] <= bodydoji[1:-1])
+         # 3. 3rd: Not short black body move well within the 1st realbody.
          & (open_[2:] > close[2:] + bodyshort[2:])
-         & (close[2:] > close[:-2] - rb[:-2] * penetration)
+         & (close[2:] < close[:-2] - rb[:-2] * penetration)
+         # 4. 2nd gap up from 1st.
          & (low[1:-1] > high[:-2])
+         # 5. 2nd gap up from 3rd.
          & (low[1:-1] > high[2:])] = -100
+    # 1. 1st: Long black.
     ret_[(close[:-2] + bodylong[:-2] < open_[:-2])
+         # 2. 2nd: Doji.
          & (rb[1:-1] < bodydoji[1:-1])
+         # 3. 3rd: Not short white body move well within the 1st realbody.
          & (close[2:] > open_[2:] + bodyshort[2:])
-         & (close[2:] > close[:-2] - rb[:-2] * penetration)
+         & (close[2:] > close[:-2] + rb[:-2] * penetration)
+         # 4. 2nd gap down from 1st.
          & (high[1:-1] < low[:-2])
+         # 5. 2nd gap down from 3rd.
          & (high[1:-1] < low[2:])] = 100
 
     return ret
@@ -1364,10 +1384,11 @@ def break_away(
 
     5 Candle Pattern:
     --------------------------
-    1. 1st: Long black.
+    1. 1st: Long black(white).
     2. 2nd: Black(white) body gaps down(up).
-    3. 3rd, 4th: Black(white) with lower(higher) high and lower(higher) low than prior.
-    4. 5th: White(black) closes inside the gap of 1st and 2nd.
+    3. 3rd: Black or white(both fine) with lower(higher) high and lower(higher) low than 2nd.
+    4. 4th: Black(white) with lower(higher) high and lower(higher) low than 3rd.
+    5. 5th: White(black) closes inside the gap of 1st and 2nd.
 
     Params:
     --------------------------
@@ -1378,7 +1399,7 @@ def break_away(
 
     Return:
     --------------------------
-    Break Away: np.ndarray filled with 0, -100
+    Break Away: np.ndarray filled with 0, -100, 100
     """
     if len(close) < 3:
         logging.warning(f"The number of samples should be larger than {3}, "
@@ -1391,40 +1412,41 @@ def break_away(
     ret_ = ret[4:]
     # 1. 1st: Long black.
     ret_[(close[:-4] + bodylong[:-4] < open_[:-4])
-         # 2. 2nd: Black(white) body gaps down(up).
+         # 2. 2nd: Black body gaps down.
          & (close[1:-3] < open_[1:-3])
          & (open_[1:-3] < close[:-4])
-         # 3. 3rd, 4th: Black(white) with lower(higher) high and lower(higher)
-         # low than prior.
-         & (close[2:-2] < open_[2:-2])
+         # 3. 3rd: Black or white(both fine) with lower high and lower low
+         # than 2nd.
          & (low[2:-2] < low[1:-3])
          & (high[2:-2] < high[1:-3])
+         # 4. 4th: Black with lower high and lower low than 3rd.
          & (close[3:-1] < open_[3:-1])
          & (low[3:-1] < low[2:-2])
          & (high[3:-1] < high[2:-2])
-         # 4. 5th: White(black) closes inside the gap of 1st and 2nd.
+         # 4. 5th: White closes inside the gap of 1st and 2nd.
          & (close[4:] > open_[4:])
          & (close[4:] > open_[1:-3])
          & (close[4:] < close[:-4])] = 100
-    # 1. 1st: Long black.
-    ret_[(close[:-4] + bodylong[:-4] < open_[:-4])
-         # 2. 2nd: Black(white) body gaps down(up).
+    # 1. 1st: Long White.
+    ret_[(open_[:-4] + bodylong[:-4] < close[:-4])
+         # 2. 2nd: White body gaps up.
          & (close[1:-3] > open_[1:-3])
-         & (open_[1:-3] > open_[:-4])
-         # 3. 3rd, 4th: Black(white) with lower(higher) high and lower(higher)
-         # low than prior.
-         & (close[2:-2] > open_[2:-2])
+         & (open_[1:-3] > close[:-4])
+         # 3. 3rd: Black or white(both fine) with lower high and lower low
+         # than 2nd.
          & (low[2:-2] > low[1:-3])
          & (high[2:-2] > high[1:-3])
+         # 4. 4th: White with higher high and higher low than 3rd.
          & (close[3:-1] > open_[3:-1])
          & (low[3:-1] > low[2:-2])
          & (high[3:-1] > high[2:-2])
-         # 4. 5th: White(black) closes inside the gap of 1st and 2nd.
+         # 4. 5th: Black closes inside the gap of 1st and 2nd.
          & (close[4:] < open_[4:])
          & (close[4:] < open_[1:-3])
-         & (close[4:] > open_[:-4])] = 100
+         & (close[4:] > close[:-4])] = -100
 
     return ret
+
 
 # %%
 # TODO: Can't pass tests.
@@ -1494,7 +1516,7 @@ def advance_block(
             #   with not short upper shadow.
             | ((rb[2:] < rb[1:-1])
                & (rb[1:-1] < rb[:-2])
-               & (((high[2:] - close[2:] > shadowshort[2:]))
+               & ((high[2:] - close[2:] > shadowshort[2:])
                   | (high[1:-1] - close[1:-1] > shadowshort[1:-1])))
             # 4.4 3rd smaller than 2nd and 3rd with long upper shadow.
             | ((rb[2:] < rb[1:-1])

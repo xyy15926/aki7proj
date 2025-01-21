@@ -2,6 +2,7 @@
 tmp/
 temp/
 dist/
+outputs/
 Session.vim
 
 # executable directories
