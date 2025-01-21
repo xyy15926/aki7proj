@@ -3,7 +3,7 @@
 #   Name: sortable.py
 #   Author: xyy15926
 #   Created: 2023-12-06 21:29:38
-#   Updated: 2025-01-20 17:28:45
+#   Updated: 2025-01-21 17:50:42
 #   Description: Modules with functions to handle sortable features.
 # -----------------------------------------------------------------------------
 
@@ -88,6 +88,11 @@ def tree_cut(
     cl = tree.tree_.children_left
     cr = tree.tree_.children_right
     value = tree.tree_.value[:, 0, :]
+    # `Tree.tree_.value` stores frequencies at scikit-learn 1.2 but ratio
+    # of frequencies at scikit-learn 1.6.
+    if np.any((value > 0) & (value < 1)):
+        value = ((value * tree.tree_.weighted_n_node_samples.reshape(-1, 1))
+                 .astype(np.int32))
 
     # Select leaf node by compare its children node with -1.
     leaf_node_map = ((cl == -1) & (cr == -1))
@@ -96,7 +101,7 @@ def tree_cut(
                               np.sort(tree.tree_.threshold[~leaf_node_map]),
                               [np.max(x) + 1e-6]])
 
-    def leaf_post_order(cl, cr):
+    def leaf_post_order(cl, cr, value):
         ctab = []
         st = []
         cur = 0
@@ -115,7 +120,7 @@ def tree_cut(
                 cur = cr[cur]
         return np.array(ctab)
 
-    ctab = leaf_post_order(cl, cr)
+    ctab = leaf_post_order(cl, cr, value)
 
     return threshs, ctab
 

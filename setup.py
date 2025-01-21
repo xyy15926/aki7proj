@@ -16,7 +16,7 @@ from setuptools.command.install_scripts import install_scripts
 
 setup(
     name="ubears",
-    version="0.2.2",
+    version="0.2.3",
     author="UBeaRLy",
     author_email="ubearly@outlook.com",
     description="A project for collecting some tricks.",
@@ -47,17 +47,16 @@ setup(
     python_requires=">=3.8, <=3.14",
     # Requirements for installment.
     install_requires=[
-        "numpy >= 1.2",
-        "scipy >= 1.10",
-        "pandas >= 1.4",
-        "scikit-learn >= 1.1",
+        "numpy >= 1.2, <= 2.2.2",
+        "scipy >= 1.10, <= 1.15.1",
+        "pandas >= 1.4, <= 2.2.3",
+        "scikit-learn >= 1.1, <= 1.6.1",
         "tqdm >= 4.0",
         "pyecharts >= 2.0",
         "SQLAlchemy >= 1.4",
         "chinese_calendar",
         "jieba",
         "pdfplumber",
-        "TA-Lib",
         "numpy_financial",
     ],
     # Plugins packages for setuptools.
@@ -67,6 +66,7 @@ setup(
     tests_require=[
         "pytest >= 7, <= 10",
         "ipython >= 8.4.0",
+        "flake8",
     ],
     # Extra requirments won't be installed automatically, just to indicate
     # the dependencies for specific usage.
@@ -78,6 +78,7 @@ setup(
             "xgboost",
             "PyMySQL",
             "cx-Oracle",
+            "TA-Lib",
         ],
     },
     entry_points={

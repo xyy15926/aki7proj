@@ -3,7 +3,7 @@
 #   Name: dlog.py
 #   Author: xyy15926
 #   Created: 2023-12-05 08:55:37
-#   Updated: 2024-03-27 15:22:39
+#   Updated: 2025-01-21 14:56:10
 #   Description:
 # ---------------------------------------------------------
 
@@ -16,7 +16,6 @@ try:
     from typing import NamedTuple, Self
 except ImportError:
     from typing_extensions import NamedTuple, Self
-from IPython.core.debugger import set_trace
 
 from functools import wraps, partial
 import numpy as np

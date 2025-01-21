@@ -3,7 +3,7 @@
 #   Name: pdsl.py
 #   Author: xyy15926
 #   Created: 2024-11-11 10:30:14
-#   Updated: 2024-12-10 14:15:21
+#   Updated: 2025-01-21 16:02:03
 #   Description:
 # ---------------------------------------------------------
 
@@ -14,6 +14,8 @@ from collections.abc import Iterable
 
 import logging
 from pathlib import Path
+import json
+import pickle
 
 import pandas as pd
 import sqlalchemy as sa
@@ -47,11 +49,8 @@ def jsonfy_df(df: pd.DataFrame) -> pd.DataFrame:
     -----------------------
     DataFrame with some columns JSONfied.
     """
-    import pandas as pd
-    import json
-
     dfc = df.copy()
-    for coln, colv in dfc.iteritems():
+    for coln, colv in dfc.items():
         if pd.api.types.infer_dtype(colv) in ["mixed", "unknown-array"]:
             dfc[coln] = colv.apply(json.dumps)
     return dfc
@@ -83,9 +82,6 @@ def save_with_excel(
     ----------------------
     The final absolute pathlib.Path of the Excel file.
     """
-    import pandas as pd
-    import pickle
-
     # Add extname if not provided or not proper.
     tfname = tmp_file(fname)
     if tfname.suffix.lower() not in [".xls", ".xlsx"]:
@@ -137,8 +133,6 @@ def save_with_pickle(
     ----------------------------
     The final absolute pathlib.Path of the Excel file.
     """
-    import pickle
-
     # Add extname if not provided or not proper.
     tfname = tmp_file(fname).with_suffix(".pkl")
     pickle.dump(inst, open(tfname, "wb"))
@@ -163,8 +157,6 @@ def load_from_pickle(
     ----------------------------
     Instance loaded from the pickle.
     """
-    import pickle
-
     tfname = tmp_file(fname, None, 0).with_suffix(".pkl")
     with open(tfname, "rb") as fp:
         ret = pickle.load(fp)
@@ -195,8 +187,6 @@ def save_with_db(
     ----------------------
     sa.engine.Engine of the DB.
     """
-    import pandas as pd
-
     if isinstance(dfs, pd.DataFrame):
         dfs = {fdb: dfs}
 

@@ -9,7 +9,10 @@
 
 # %%
 import pytest
-import talib as ta
+try:
+    import talib as ta
+except ImportError:
+    pytestmark = pytest.mark.skip(reason="TA-Lib uninstalled.")
 import numpy as np
 if __name__ == "__main__":
     from importlib import reload

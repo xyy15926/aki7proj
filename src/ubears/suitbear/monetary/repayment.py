@@ -16,7 +16,7 @@ try:
     from typing import NamedTuple, Self
 except ImportError:
     from typing_extensions import NamedTuple, Self
-from IPython.core.debugger import set_trace
+# from IPython.core.debugger import set_trace
 
 import re
 import numpy as np
@@ -317,7 +317,7 @@ def mob_align(
     # not provided.
     if rectag is None:
         rectag = (recs.groupby("oid")["due_date"].agg("min")
-                  .astype("M8[M]").rename("rectag"))
+                  .astype("M8[s]").rename("rectag"))
     rectag.name = "rectag"
     mob_recs = recs.join(rectag, on="oid")
 
@@ -327,8 +327,8 @@ def mob_align(
         agg_rules = [(__NONE__, cond, agg)]
     envp = EnvParser(EXGINE_ENV)
     tqdm.pandas(desc="MOB Alignment")
-    agg_ret = mob_recs.groupby(["rectag", "MOB"]).progress_apply(
-        agg_on_df, rules=agg_rules, envp=envp)
+    agg_ret = (mob_recs.groupby(["rectag", "MOB"])[mob_recs.columns]
+               .progress_apply(agg_on_df, rules=agg_rules, envp=envp))
     if trans_rules:
         agg_ret = trans_on_df(agg_ret, trans_rules, how="inplace", envp=envp)
 

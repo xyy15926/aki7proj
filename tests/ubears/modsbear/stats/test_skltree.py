@@ -55,9 +55,11 @@ def test_tree_node_metric():
     rfreqs_none, freqs_none = tree_node_metric(tree)
     rfreqs_xy, freqs_xy = tree_node_metric(tree, X, y)
     assert np.all(freqs_none == freqs_xy)
+    assert np.all(rfreqs_none == rfreqs_xy)
     gini_xy, freqs_xy = tree_node_metric(tree, X, y, "gini")
     ent_xy, freqs_xy = tree_node_metric(tree, X, y, "entropy")
     assert np.all(ent_xy >= gini_xy)
+    assert np.all(freqs_none == freqs_xy)
 
 
 # %%

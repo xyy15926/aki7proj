@@ -3,7 +3,7 @@
 #   Name: manidf.py
 #   Author: xyy15926
 #   Created: 2024-06-06 11:17:46
-#   Updated: 2025-01-08 20:15:25
+#   Updated: 2025-01-21 21:27:34
 #   Description:
 # ---------------------------------------------------------
 
@@ -14,6 +14,7 @@ import json
 from typing import Any, TypeVar
 from collections.abc import Mapping, Callable
 
+import string
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -66,7 +67,7 @@ def group_addup_apply(
         rets.append(subret)
         return 1
 
-    df.groupby(groupkey, sort=False).progress_apply(addup)
+    df.groupby(groupkey, sort=False)[df.columns].progress_apply(addup)
     ret = pd.concat(rets)
     return ret
 
@@ -194,47 +195,10 @@ def pivot_tags(
         )
         .replace("", "NULL")
         .groupby(["id", "tags"])["ones"]
-        .agg(sum)
+        .agg("sum")
         .unstack()
         .fillna(0)
         .astype(np.int_)
     )
 
     return tag_counts
-
-
-# %%
-def sequeeze_named_columns(
-    df: pd.DataFrame,
-    how: str | Callable = "exists",
-) -> pd.DataFrame:
-    """Sequeeze columns with the same name.
-
-    Params:
-    ---------------------------
-    df: DataFrame with Columns of the same 
-    how: How to sequeeze the columns, which will be passed to `groupby.agg`.
-      str: Try to search inner mapping first.
-      callble:
-
-    Return:
-    ---------------------------
-    DataFrame with Columns of the same name sequeezed.
-    """
-    import string
-    # Pandas will rename duplicated column by adding suffix `.<N>`.
-    uni_cols = [col.strip(string.digits + ".")
-                if isinstance(col, str) else col
-                for col in df.columns]
-    uni_cols_ = [f"MARK{i}" for i in uni_cols]
-    col_map = {k: v for k,v in zip(uni_cols_, uni_cols)}
-
-    HOW_MAPPER = {
-        "sum": lambda x: x.sum(axis=1),
-        "exists": lambda x: (x.sum(axis=1) > 0).astype(int),
-    }
-    how = HOW_MAPPER.get(how, how)
-    sequeezed = df.groupby(uni_cols_, axis=1).agg(how)
-    sequeezed.rename(col_map, axis=1, inplace=True)
-
-    return sequeezed

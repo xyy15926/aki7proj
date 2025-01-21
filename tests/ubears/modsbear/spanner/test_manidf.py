@@ -18,7 +18,7 @@ if __name__ == "__main__":
     reload(manidf)
 
 from ubears.flagbear.str2.dups import rename_overlaped
-from ubears.modsbear.spanner.manidf import merge_dfs, pivot_tags, sequeeze_named_columns
+from ubears.modsbear.spanner.manidf import merge_dfs, pivot_tags
 from ubears.modsbear.spanner.manidf import group_addup_apply
 
 
@@ -54,16 +54,16 @@ def test_merge_dfs():
     N = 30
     by6 = list("abcdef")
     nby6 = N // len(by6)
-    df1 = pd.DataFrame({"on": np.arange(N, dtype=np.float_),
+    df1 = pd.DataFrame({"on": np.arange(N, dtype=np.float64),
                         "by": sorted(by6 * nby6),
                         "vals": np.arange(N)})
-    df2 = pd.DataFrame({"on": np.arange(N, dtype=np.float_) - 0.1,
+    df2 = pd.DataFrame({"on": np.arange(N, dtype=np.float64) - 0.1,
                         "by": np.random.choice(by6, N),
                         "vals_1": np.arange(N)})
-    df3 = pd.DataFrame({"on": np.arange(N, dtype=np.float_) + 0.2,
+    df3 = pd.DataFrame({"on": np.arange(N, dtype=np.float64) + 0.2,
                         "by": np.random.choice(by6, N),
                         "vals": np.arange(N)})
-    df4 = pd.DataFrame({"on": np.arange(N, dtype=np.float_) + 0.3,
+    df4 = pd.DataFrame({"on": np.arange(N, dtype=np.float64) + 0.3,
                         "by": np.random.choice(by6, N),
                         "vals": np.arange(N)})
     dfs = [df1, df2, df3, df4]
@@ -99,14 +99,3 @@ def test_pivot_tags():
     pt = pivot_tags(ser)
     cn = count_n(ser)
     assert np.all(pt.sum() == pd.Series(cn))
-
-
-# %%
-def test_sequeeze_named_columns():
-    ser = pd.Series(["a,b,c", "a,b", "a,c", "c", None, ""])
-    pt = pivot_tags(ser)
-    pt["c.1"] = (1 - pt["c"]).astype(int)
-    sequeezed = sequeeze_named_columns(pt)
-    assert np.all(sequeezed["c"] == 1)
-
-

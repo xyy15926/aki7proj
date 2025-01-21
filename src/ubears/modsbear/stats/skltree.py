@@ -3,7 +3,7 @@
 #   Name: skltree.py
 #   Author: xyy15926
 #   Created: 2023-12-06 09:18:58
-#   Updated: 2023-12-11 11:52:45
+#   Updated: 2025-01-21 17:42:40
 #   Description:
 # ---------------------------------------------------------
 
@@ -213,12 +213,17 @@ def tree_node_metric(
         if weights is not None:
             paths *= weights.reshape(-1, 1)
         freqs = enhanced_freqs(y, others=paths, agg=lambda x: x.sum(axis=0))[0].T
+        cri = freqs / freqs.sum(axis=1, keepdims=True)
     # Fetch `tree.tree_.value` as freqs directly.
     else:
+        # `Tree.tree_.value` stores frequencies at scikit-learn 1.2 but ratio
+        # of frequencies at scikit-learn 1.6.
         freqs = tree.tree_.value[:, 0, :]
+        cri = freqs / freqs.sum(axis=1, keepdims=True)
+        freqs = cri * tree.tree_.weighted_n_node_samples.reshape(-1, 1)
 
     if metric == "freq":
-        cri = freqs / freqs.sum(axis=1, keepdims=True)
+        pass
     elif metric == "entropy":
         cri = cal_entropy(freqs)
     elif metric == "gini":

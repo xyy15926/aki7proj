@@ -3,7 +3,7 @@
 #   Name: test_ex4df.py
 #   Author: xyy15926
 #   Created: 2024-04-15 18:17:58
-#   Updated: 2024-12-14 23:22:05
+#   Updated: 2025-01-21 21:51:34
 #   Description:
 # ---------------------------------------------------------
 
@@ -231,12 +231,42 @@ def test_trans_on_df():
     for k, v in mret.items():
         assert v == mapper["cdr_cat"][k]
 
+
+# %%
+def cal_trans_on_df():
+    src = pboc_acc_info()
+    mapper = {
+        "cdr_cat": {
+            "D1": (1        , "非循环贷账户"),
+            "R1": (3        , "循环贷账户"),
+            "R2": (4        , "贷记卡账户"),
+            "R3": (5        , "准贷记卡账户"),
+            "R4": (2        , "循环额度下分账户"),
+            "C1": (99       , "催收账户"),
+        },
+        "exchange_rate": {
+            "USD": (7       , "USD"),
+            "EUR": (7.7     , "EUR"),
+            "JPY": (0.05    , "JPY"),
+            "CNY": (1       , "CNY"),
+            "AUD": (4.7     , "AUD"),
+            "RUB": (0.07    , "RUB"),
+            "CAD": (5.3     , "CAD"),
+        },
+    }
+    mapper = {k: {kk: vv[0] for kk, vv in v.items()} for k,v in mapper.items()}
+
+    trans_rules = [
+        ["acc_cat", "map(PD01AD01, cdr_cat)"],
+        ["acc_exchange_rate", "acc_cat != 99", "map(PD01AD04, exchange_rate)"],
+    ]
+    transed = trans_on_df(src, trans_rules, env=mapper)
     return transed
 
 
 # %%
 def test_agg_on_df():
-    src = test_trans_on_df()
+    src = cal_trans_on_df()
     agg_rules = [
         ["c1_acc_cat_cnt", "acc_cat == 99", "count(_)"],
         ["d1r41_acc_cat_cnt", "acc_cat <=3", "count(_)"],

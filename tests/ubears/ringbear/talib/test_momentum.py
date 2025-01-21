@@ -3,13 +3,16 @@
 #   Name: test_momentum.py
 #   Author: xyy15926
 #   Created: 2024-11-22 09:53:05
-#   Updated: 2024-11-25 12:12:28
+#   Updated: 2025-01-21 15:06:45
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 import pytest
-import talib as ta
+try:
+    import talib as ta
+except ImportError:
+    pytestmark = pytest.mark.skip(reason="TA-Lib uninstalled.")
 import numpy as np
 if __name__ == "__main__":
     from importlib import reload

@@ -3,7 +3,7 @@
 #   Name: finer.py
 #   Author: xyy15926
 #   Created: 2024-06-24 14:04:14
-#   Updated: 2025-01-20 16:25:42
+#   Updated: 2025-01-21 14:53:48
 #   Description:
 # ---------------------------------------------------------
 
@@ -14,12 +14,16 @@ from collections.abc import Iterable
 
 import logging
 import os
+import sys
 import re
 from pathlib import Path
 from functools import lru_cache
 from datetime import datetime, date
-from importlib_resources import files
-# from IPython.core.debugger import set_trace
+if sys.version_info.minor >= 10:
+    from importlib.resources import files
+else:
+    from importlib_resources import files
+
 
 # %%
 logging.basicConfig(

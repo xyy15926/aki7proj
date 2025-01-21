@@ -57,7 +57,7 @@ def mock_data(row_n=100):
     float_10 = np.random.randint(1, 10, row_n)
     float_10 = float_10 + np.random.random(row_n).round(1)
 
-    nan_float_10 = np.random.randint(1, 10, row_n).astype(np.float_)
+    nan_float_10 = np.random.randint(1, 10, row_n).astype(np.float64)
     nan_float_10[np.random.randint(0, row_n, int(nan_ratio * row_n))] = np.nan
 
     nan_all = np.array([np.nan] * row_n)

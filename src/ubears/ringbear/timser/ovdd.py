@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-01-18 18:40:15
+#   Updated: 2025-01-21 14:56:03
 #   Description:
 # ---------------------------------------------------------
 
@@ -17,7 +17,6 @@ try:
     from typing import NamedTuple, Self
 except ImportError:
     from typing_extensions import NamedTuple, Self
-from IPython.core.debugger import set_trace
 
 import numpy as np
 import pandas as pd
@@ -252,7 +251,7 @@ def snap_ovd(
         ovda.append((ever_rema, ever_ovda, ever_duea,
                      stop_rema, stop_ovda, stop_duea))
 
-    return np.asarray(ovdt).astype(np.int_), np.asarray(ovda).astype(np.float_)
+    return np.asarray(ovdt).astype(np.int_), np.asarray(ovda).astype(np.float64)
 
 
 # %%

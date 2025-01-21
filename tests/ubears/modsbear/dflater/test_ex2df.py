@@ -3,7 +3,7 @@
 #   Name: test_ex2df.py
 #   Author: xyy15926
 #   Created: 2024-11-11 14:17:07
-#   Updated: 2024-12-14 23:17:00
+#   Updated: 2025-01-21 21:49:43
 #   Description:
 # ---------------------------------------------------------
 
@@ -355,6 +355,41 @@ def test_compress_hierarchy():
     assert repay_60m_psrc_v2.index.nlevels == src.index.nlevels + 1 + 1
     assert np.all(repay_60m_psrc.values == repay_60m_psrc_v2.values)
 
+
+# %%
+def cal_compress_hierarchy():
+    rec = pboc_rec()
+    rec2 = rec.copy()
+    rec2["PRH"]["PA01"]["PA01A"]["PA01AI01"] = "2019101617463675115708"
+    src = pd.Series([rec, rec2])
+
+    acc_info_part = [
+        {
+            "content": "PDA:PD01:[_]:PD01A",
+            "key": [
+                ("rid", "PRH:PA01:PA01A:PA01AI01"),
+                ("certno", "PRH:PA01:PA01B:PA01BI01"),
+                ("accid", "PDA:PD01:[_]:PD01A:PD01AI01"),
+            ]
+        }
+    ]
+    acc_info_psrc = compress_hierarchy(src, acc_info_part)
+
+    repay_60m_part = [
+        {
+            "content": "PDA:PD01:[_]:PD01E",
+            "key": [
+                ("rid", "PRH:PA01:PA01A:PA01AI01"),
+                ("certno", "PRH:PA01:PA01B:PA01BI01"),
+                ("accid", "PDA:PD01:[_]:PD01A:PD01AI01"),
+            ]
+        },{
+            "content": "PD01EH:[_]",
+        }
+    ]
+
+    repay_60m_psrc = compress_hierarchy(src, repay_60m_part)
+
     return acc_info_psrc, repay_60m_psrc
 
 
@@ -409,7 +444,7 @@ def test_compress_hierarchy_null_vals():
 
 # %%
 def test_flat_record():
-    acc_info_psrc, repay_60m_psrc = test_compress_hierarchy()
+    acc_info_psrc, repay_60m_psrc = cal_compress_hierarchy()
 
     acc_info_fields = [
         ["PD01AD01", "PD01AD01", "VARCHAR(31)", "基本信息_账户类型"],
@@ -471,5 +506,3 @@ def test_flat_record():
     repay_60m_vals = flat_records(repay_60m_psrc, tuple2_fields, drop_rid=False)
     assert np.all(repay_60m_vals.index.names[:-1] == repay_60m_psrc.index.names)
     assert len(repay_60m_vals) == len(repay_60m_psrc)
-
-    return acc_info_vals, repay_60m_vals

@@ -16,7 +16,6 @@ try:
     from typing import NamedTuple, Self
 except ImportError:
     from typing_extensions import NamedTuple, Self
-from IPython.core.debugger import set_trace
 
 import numpy as np
 import pandas as pd

@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2024-04-09 20:02:08
-#   Updated: 2025-01-16 17:14:55
+#   Updated: 2025-01-21 21:36:53
 #   Description:
 # ---------------------------------------------------------
 
@@ -58,7 +58,7 @@ def ovd_recs():
         # No ending tail.
         ("2023-05-11"   , 34    , 100   , 600),
     ], columns=["due_date", "ovd_days", "due_amt", "rem_amt"])
-    recs["due_date"] = recs["due_date"].astype("M8[D]")
+    recs["due_date"] = recs["due_date"].astype("M8[s]")
 
     return recs
 
@@ -66,7 +66,6 @@ def ovd_recs():
 # %%
 def test_addup_obovd():
     recs = ovd_recs()
-
     df = addup_obovd(recs)
     assert df.loc[0, "ever_ovdd"] == np.timedelta64(0, "D")
     assert df.loc[0, "ever_ovdp"] == 0
@@ -88,11 +87,10 @@ def test_addup_obovd():
     assert np.all(dum_df.loc[10:, "ever_ovdd"] == DUM_OVDD)
     assert np.all(dum_df.loc[10:, "ever_ovdp"] == DUM_OVDP)
 
-    return df
-
 
 def test_addup_obovd_unsorted():
-    df = test_addup_obovd()
+    recs = ovd_recs()
+    df = addup_obovd(recs)
     unsorted = [ele for idx, ele in ovd_recs().iterrows()]
     unsorted = pd.DataFrame().from_records(unsorted)
 
@@ -166,13 +164,14 @@ def test_edge_crosstab():
     assert rolls.loc["SUM", "SUM"] == rec_n
 
     srolls = edge_crosstab(recs, 1, values="stop_ovdp", aggfunc="sum")
-    rolls = edge_crosstab(recs, 1, values="stop_ovdp", aggfunc=sum)
+    rolls = edge_crosstab(recs, 1, values="stop_ovdp", aggfunc="sum")
     assert np.all(np.isclose(srolls, rolls, equal_nan=True))
 
 
 # %%
 def test_mob_align():
-    rec_one = test_addup_obovd()
+    recs = ovd_recs()
+    rec_one = addup_obovd(recs)
     N = 5
     recs = pd.concat([rec_one,] * N,
                      keys=[f"OID-{i:03}" for i in range(1, N + 1)],

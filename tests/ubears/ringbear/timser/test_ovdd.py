@@ -49,7 +49,7 @@ def ovd_recs():
         # No ending tail.
         ("2023-05-11"   , 34    , 100   , 600),
     ], columns=["due_date", "ovd_days", "due_amt", "rem_amt"])
-    recs["due_date"] = recs["due_date"].astype("M8[D]")
+    recs["due_date"] = recs["due_date"].astype("M8[s]")
 
     return recs
 

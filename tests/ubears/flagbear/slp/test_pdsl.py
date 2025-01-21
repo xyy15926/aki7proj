@@ -3,7 +3,7 @@
 #   Name: test_pdsl.py
 #   Author: xyy15926
 #   Created: 2024-11-11 11:50:28
-#   Updated: 2024-11-11 11:51:36
+#   Updated: 2025-01-21 18:00:53
 #   Description:
 # ---------------------------------------------------------
 
@@ -19,6 +19,7 @@ if __name__ == "__main__":
 import re
 from datetime import date
 import sqlalchemy as sa
+from sqlalchemy import text
 import pandas as pd
 from ubears.flagbear.slp.finer import get_tmp_path, tmp_file
 from ubears.flagbear.slp.pdsl import tmp_table, jsonfy_df
@@ -34,10 +35,10 @@ TMP_TBL = "tmp_tbl"
 def tmptable(request):
     print(request)
     dbname = tmp_file(TMP_DB)
-    fdb = sa.create_engine(f"sqlite:///{dbname}")
-    ftbl = tmp_table(fdb, TMP_TBL)
-    fdb.execute(f"create table {ftbl} (id int);")
-    yield dbname, fdb, ftbl
+    con = sa.create_engine(f"sqlite:///{dbname}").connect()
+    tbl = tmp_table(con, TMP_TBL)
+    con.execute(text(f"create table {tbl} (id int);"))
+    yield dbname, con, tbl
     dbname.unlink()
 
 

@@ -3,13 +3,16 @@
 #   Name: test_candlestick.py
 #   Author: xyy15926
 #   Created: 2024-11-25 13:59:19
-#   Updated: 2025-01-21 09:20:04
+#   Updated: 2025-01-21 15:07:22
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 import pytest
-import talib as ta
+try:
+    import talib as ta
+except ImportError:
+    pytestmark = pytest.mark.skip(reason="TA-Lib uninstalled.")
 import numpy as np
 if __name__ == "__main__":
     from importlib import reload

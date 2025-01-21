@@ -145,8 +145,7 @@ def _enhanced_freqs_1D(
 
     where = np.concatenate(np.nonzero(mask) + ([mask.size], ))
     auxo = others[perm]
-    ret = np.row_stack([agg(auxo[s:e])
-                        for s, e in zip(where[:-1], where[1:])])
+    ret = np.vstack([agg(auxo[s:e]) for s, e in zip(where[:-1], where[1:])])
 
     return ret.squeeze(), unis
 

@@ -3,15 +3,15 @@
 #   Name: test_pandas.py
 #   Author: xyy15926
 #   Created: 2024-05-06 14:44:03
-#   Updated: 2025-01-08 20:11:05
+#   Updated: 2025-01-21 16:45:14
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 import pytest
-from tqdm import tqdm, trange
-from trace import Trace
+from packaging.version import Version
 
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
 
@@ -34,8 +34,9 @@ def repeat_df(NN):
 # `DataFrame.groupby().apply` features:
 # 1. If DF returned by the callable applied shares the same index with the
 #   group-DF, the result of groupby won't add and additional level of Index.
+@pytest.mark.skipif(Version(pd.__version__) >= Version("2.0"),
+                    reason="Index level bug has been fixed for Pandas == 2.2.3.")
 @pytest.mark.pkgs
-@pytest.mark.pandas
 def test_groupby_apply_index():
     def func_reset_index(df):
         df = df.copy()
@@ -100,10 +101,8 @@ def test_groupby_apply_index():
 # 1. Reset index in apply function.
 # 2. Pre-sort group-key may also be useful. I found that the apply progress
 #   may also be much more time-consuming in larger scale of test cases.
-@pytest.mark.skipif(pd.__version__ == '1.4.4',
-                    reason="Efficiency demo")
+@pytest.mark.skip(reason="Efficiency test cases for Pandas == 1.4.4.")
 @pytest.mark.pkgs
-@pytest.mark.pandas
 def test_groupby_apply_efficiency():
     def func_reset_index(df):
         df = df.copy()
@@ -185,7 +184,6 @@ def test_groupby_apply_efficiency():
 
 # %%
 @pytest.mark.pkgs
-@pytest.mark.pandas
 def test_zero_divide():
     # ZeroDivisionError won't be raised for numeric dtype.
     df = pd.DataFrame(np.arange(10).reshape((5, 2)))
@@ -206,7 +204,6 @@ def test_zero_divide():
 
 # %%
 @pytest.mark.pkgs
-@pytest.mark.pandas
 def test_concat_nan_index():
     ser = pd.Series([1, 2, 3])
     sers = [ser, ser]
