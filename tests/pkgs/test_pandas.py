@@ -3,7 +3,7 @@
 #   Name: test_pandas.py
 #   Author: xyy15926
 #   Created: 2024-05-06 14:44:03
-#   Updated: 2025-01-21 16:45:14
+#   Updated: 2025-01-22 19:52:40
 #   Description:
 # ---------------------------------------------------------
 
@@ -230,3 +230,87 @@ def test_concat_nan_index():
     mindex = pd.MultiIndex.from_tuples(idxs)
     df = pd.concat(sers)
     df.index = mindex
+
+
+# %%
+@pytest.mark.skipif(Version(pd.__version__) > Version("2.0"),
+                    reason="Pandas change the way to handle datetime dtype.")
+@pytest.mark.pkgs
+def test_empty_datetime_seris_pd14():
+    a = pd.Series(["2024-01-01", "2024-01-02"], dtype="M8[s]")
+    b = pd.Series(["2023-01-01", "2023-01-02"], dtype="M8[s]")
+    gap = a - b
+    # `gap` won't inherit the dtype from `a` and `b`.
+    assert gap.dtype == "m8[ns]"
+
+    a = pd.Series(dtype="M8[s]")
+    b = pd.Series(dtype="M8[s]")
+    gap = a - b
+    assert gap.dtype == "m8[ns]"
+
+    a = pd.Series(["2024-01-01", "2024-01-02"], dtype="M8[s]").dt.to_period("M")
+    b = pd.Series(["2023-01-01", "2023-01-02"], dtype="M8[s]").dt.to_period("M")
+    gap = a - b
+    assert gap.dtype == "O"
+
+    a = pd.Series(dtype="M8[s]").dt.to_period("M")
+    gap = a - b
+    assert gap.dtype == "M8[ns]"
+
+    b = pd.Series(dtype="M8[s]").dt.to_period("M")
+    # The `gap.dtype` will be float if both are empty for Pandas == 1.4.4.
+    gap = a - b
+    assert gap.dtype == "float"
+
+
+# %%
+@pytest.mark.skipif(Version(pd.__version__) < Version("2.0"),
+                    reason="Pandas change the way to handle datetime dtype.")
+@pytest.mark.pkgs
+def test_empty_datetime_seris_pd20():
+    a = pd.Series(["2024-01-01", "2024-01-02"], dtype="M8[s]")
+    b = pd.Series(["2023-01-01", "2023-01-02"], dtype="M8[s]")
+    gap = a - b
+    assert gap.dtype == "m8[s]"
+
+    a = pd.Series(dtype="M8[s]")
+    b = pd.Series(dtype="M8[s]")
+    gap = a - b
+    assert gap.dtype == "m8[s]"
+
+    a = pd.Series(["2024-01-01", "2024-01-02"], dtype="M8[s]").dt.to_period("M")
+    b = pd.Series(["2023-01-01", "2023-01-02"], dtype="M8[s]").dt.to_period("M")
+    gap = a - b
+    assert gap.dtype == "O"
+
+    a = pd.Series(dtype="M8[s]").dt.to_period("M")
+    gap = a - b
+    assert gap.dtype == "O"
+
+    b = pd.Series(dtype="M8[s]").dt.to_period("M")
+    # And the additional dtype check leads to TypeError for Pandas == 2.2.3.
+    with pytest.raises(TypeError):
+        gap = a - b
+
+
+# %%
+@pytest.mark.pkgs
+def test_na_argmax():
+    a = pd.Series([np.nan] * 3, index=[5, 6, 7])
+    with pytest.warns(RuntimeWarning, match="All-NaN"):
+        assert np.isnan(np.nanmax(a))
+
+    if Version(pd.__version__) > Version("2.0"):
+        with pytest.warns(FutureWarning, match="argmax/argmin"):
+            assert a.argmax() == -1
+        # `np.argmax` will call `pd.Series.argmax`.
+        with pytest.warns(FutureWarning, match="argmax/argmin"):
+            assert np.argmax(a) == -1
+    else:
+        assert a.argmax() == -1
+
+    # Pandas will skip NA automatically.
+    a = pd.Series([1, np.nan, np.nan], index=[5, 6, 7])
+    assert a.argmax() == 0
+    
+    

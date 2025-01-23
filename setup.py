@@ -3,7 +3,7 @@
 #   Name: setup.py
 #   Author: xyy15926
 #   Created: 2023-07-10 14:37:11
-#   Updated: 2025-01-20 21:29:43
+#   Updated: 2025-01-22 09:25:32
 #   Description:
 #     Classifer Ref: <https://pypi.org/pypi?%3Aaction=list_classifiers>
 # ---------------------------------------------------------
@@ -54,6 +54,7 @@ setup(
         "tqdm >= 4.0",
         "pyecharts >= 2.0",
         "SQLAlchemy >= 1.4",
+        "openpyxl >= 3.0",
         "chinese_calendar",
         "jieba",
         "pdfplumber",

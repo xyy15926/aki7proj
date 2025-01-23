@@ -18,8 +18,6 @@ from pyecharts import options as opts
 from pyecharts.globals import ThemeType
 from pyecharts.charts import Kline, Line, Bar, Grid
 
-from ubears.flagbear.slp.finer import tmp_file, get_assets_path
-
 # %%
 logging.basicConfig(
     format="%(module)s: %(asctime)s: %(levelname)s: %(message)s",

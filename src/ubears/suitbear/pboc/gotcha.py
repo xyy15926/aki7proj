@@ -3,7 +3,7 @@
 #   Name: gotcha.py
 #   Author: xyy15926
 #   Created: 2024-11-21 14:22:18
-#   Updated: 2024-11-21 20:27:50
+#   Updated: 2025-01-22 09:50:31
 #   Description:
 # ---------------------------------------------------------
 
@@ -23,7 +23,6 @@ from ubears.modsbear.locale.pronoun import (
     rand_addr,
 )
 from ubears.flagbear.str2.fliper import reset_field
-from ubears.flagbear.slp.finer import get_assets_path
 
 
 # %%
@@ -54,14 +53,3 @@ def mosaic_sensitives(ctt: dict):
         ctt = reset_field(ctt, steps, cval)
 
     return ctt
-
-
-# %%
-if __name__ == "__main__":
-    reports_path = get_assets_path() / "pboc_reports"
-    files = list(filter(lambda x: x.name.startswith('2024'),
-                        reports_path.iterdir()))
-    for file in files:
-        ctt = json.load(open(file, "r"))
-        ctt = mosaic_sensitives(ctt)
-        json.dump(ctt, open(file, "w"), ensure_ascii=False, indent=4)

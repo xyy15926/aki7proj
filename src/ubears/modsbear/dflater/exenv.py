@@ -3,7 +3,7 @@
 #   Name: exenv.py
 #   Author: xyy15926
 #   Created: 2024-11-10 19:33:40
-#   Updated: 2024-12-17 11:13:01
+#   Updated: 2025-01-22 16:02:30
 #   Description:
 # ---------------------------------------------------------
 
@@ -73,10 +73,14 @@ def _mon_itvl(x: pd.Series | pd.Timestamp, y: pd.Series | pd.Timestamp):
         return np.nan
 
     if isinstance(x, pd.Series):
+        if x.empty:
+            return pd.Series(dtype=float)
         x = pd.to_datetime(x).dt.to_period("M")
     else:
         x = pd.to_datetime(x).to_period("M")
     if isinstance(y, pd.Series):
+        if y.empty:
+            return pd.Series(dtype=float)
         y = pd.to_datetime(y).dt.to_period("M")
     else:
         y = pd.to_datetime(y).to_period("M")
@@ -99,10 +103,14 @@ def _day_itvl(x: pd.Series | pd.Timestamp, y: pd.Series | pd.Timestamp):
         return np.nan
 
     if isinstance(x, pd.Series):
+        if x.empty:
+            return pd.Series(dtype=float)
         x = pd.to_datetime(x).dt.to_period("D")
     else:
         x = pd.to_datetime(x).to_period("D")
     if isinstance(y, pd.Series):
+        if y.empty:
+            return pd.Series(dtype=float)
         y = pd.to_datetime(y).dt.to_period("D")
     else:
         y = pd.to_datetime(y).to_period("D")
@@ -220,6 +228,7 @@ EXGINE_ENV = {
     "isin"      : lambda x, y: x.isin(y),
     "count"     : len,
     "unique"    : np.unique,
+    # pd.Series will skip NA automatically.
     "sum"       : lambda x: x.sum(),
     "max"       : lambda x: x.max(),
     "min"       : lambda x: x.min(),
@@ -228,8 +237,8 @@ EXGINE_ENV = {
     "nncount"   : lambda x: len([i for i in x if i is not None]),
     "flat1_max" : _flat1_max,
     "sortby"    : _sortby,
-    "argmax"    : lambda x: None if len(x) == 0 else np.argmax(x),
-    "argmin"    : lambda x: None if len(x) == 0 else np.argmin(x),
+    "argmax"    : lambda x: None if len(x) == 0 or np.all(pd.isna(x)) else np.argmax(x),
+    "argmin"    : lambda x: None if len(x) == 0 or np.all(pd.isna(x)) else np.argmin(x),
     "argmaxs"   : _argmaxs,
     "argmins"   : _argmins,
     "getn"      : _getn,
@@ -238,7 +247,7 @@ EXGINE_ENV = {
     "sadd"      : lambda x, y: x + y,
     "ssub"      : lambda x, y: x - y,
     "smul"      : lambda x, y: x * y,
-    "sdiv"      : lambda x, y: np.nan if isinstance(y, int) and y == 0 else x / y,
+    "sdiv"      : lambda x, y: np.nan if np.isscalar(y) and y == 0 else x / y,
     "hist"      : lambda x, y: np.histogram(x, y)[0],
     "coef_var"  : lambda x: 0 if len(x) == 0 else np.std(x) / np.mean(x),
     "contains"  : lambda x, y: x.apply(lambda val: y in val),

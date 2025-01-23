@@ -23,7 +23,6 @@ import pandas as pd
 import os
 import json
 
-from ubears.flagbear.slp.finer import get_assets_path
 from ubears.flagbear.str2.fliper import extract_field, rebuild_dict
 from ubears.modsbear.dflater.ex2df import rebuild_rec2df, compress_hierarchy, flat_records
 
