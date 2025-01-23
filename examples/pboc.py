@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2024-12-12 19:53:28
+#   Updated: 2025-01-22 19:44:03
 #   Description:
 # ---------------------------------------------------------
 
@@ -34,25 +34,27 @@ if __name__ == "__main__":
     reload(confmark)
 
 import os
+import json
 from collections import ChainMap
-import sqlalchemy as sa
-from tqdm import tqdm
 from IPython.core.debugger import set_trace
 
 from ubears.flagbear.llp.parser import EnvParser
-from ubears.flagbear.str2.fliper import extract_field
 from ubears.flagbear.slp.finer import get_assets_path, get_tmp_path
-from ubears.flagbear.slp.pdsl import save_with_excel
-from ubears.modsbear.spanner.manidf import merge_dfs
-from ubears.modsbear.dflater.ex2df import compress_hierarchy, flat_records
-from ubears.modsbear.dflater.ex4df import trans_on_df, agg_on_df
+from ubears.flagbear.slp.pdsl import (save_with_excel,
+                                      save_with_pickle,
+                                      load_from_pickle)
 from ubears.modsbear.dflater.exenv import EXGINE_ENV
 from ubears.suitbear.dirt.exdf import (flat_ft_dfs, trans_from_dfs,
-                                agg_from_dfs, dep_from_fconfs)
-from ubears.suitbear.pboc.confflat import PBOC_PARTS, df_flat_confs
+                                       agg_from_dfs, dep_from_fconfs)
+from ubears.suitbear.pboc.confflat import df_flat_confs
 from ubears.suitbear.pboc.conftrans import MAPPERS, MAPPERS_CODE, df_trans_confs
-from ubears.suitbear.pboc.confagg import df_agg_confs, LV2_AGG_CONF, LV20_AGG_CONF, LV1_AGG_CONF
+from ubears.suitbear.pboc.confagg import (df_agg_confs,
+                                          LV2_AGG_CONF,
+                                          LV20_AGG_CONF,
+                                          LV1_AGG_CONF)
 from ubears.suitbear.pboc.confmark import df_mark_confs
+from ubears.suitbear.pboc.gotcha import mosaic_sensitives
+
 
 # MAPPERS_CODE["today"] = pd.Timestamp.today()
 PBOC_AGG_CONF = {**LV2_AGG_CONF, **LV20_AGG_CONF,
@@ -66,6 +68,14 @@ logging.basicConfig(
     force=(__name__ == "__main__"))
 logger = logging.getLogger()
 logger.info("Logging Start.")
+
+
+# %%
+def mosaic_pboc_sensitives(files: list):
+    for file in files:
+        ctt = json.load(open(file, "r"))
+        ctt = mosaic_sensitives(ctt)
+        json.dump(ctt, open(file, "w"), ensure_ascii=False, indent=4)
 
 
 # %%
@@ -172,8 +182,6 @@ def pboc_vars(
 
 # %%
 if __name__ == "__main__":
-    from flagbear.slp.pdsl import save_with_pickle, load_from_pickle
-
     # PBOC_JSON = os.path.join(ASSETS, "pboc_utf8.json")
     pboc_conf_file = "pboc/pboc_conf.xlsx"
     write_pboc_confs(pboc_conf_file)

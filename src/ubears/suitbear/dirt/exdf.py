@@ -127,7 +127,7 @@ def flat_ft_dfs(
             for idx, fconf in fconfs_.iterrows():
                 field_name = fconf["key"]
                 dtype = fconf["dtype"]
-                nptype = stype_spec(dtype, "nptype")
+                nptype = stype_spec(dtype, "pdtype")
                 if field_name not in df:
                     logger.info(f"{field_name} can't be found in `{part_name}`.")
                     continue

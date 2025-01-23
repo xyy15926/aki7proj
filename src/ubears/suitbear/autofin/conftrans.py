@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-23 09:57:58
-#   Updated: 2024-12-09 19:29:59
+#   Updated: 2025-01-23 19:50:19
 #   Description:
 # ---------------------------------------------------------
 
@@ -15,8 +15,6 @@ from itertools import product
 import pandas as pd
 from ubears.flagbear.slp.finer import get_assets_path
 from ubears.modsbear.locale.govreg import get_chn_govrs
-
-INFOCODE_MAPPER_FILE = get_assets_path() / "autofin/infocode_mapper.xlsx"
 
 
 # %%
@@ -319,24 +317,12 @@ APPR_CODE_CATS = {
     ),
 }
 
-
-def gen_appr_code_mapper_lv21() -> dict:
-    imdf = pd.read_excel(INFOCODE_MAPPER_FILE)
-    immap = {}
-    for code, cc, cd in imdf[["code", "code_cat", "cat_desc"]].values:
-        if pd.notna(cc):
-            immap[code] = (cc, cd)
-    return immap
+# {LV1-CODE: (LV0-CODE, LV0-DESC)}
+APPR_CODE_CAT10_MAPPER = {k1: (k0, d0 + d1) for k0, d0, items in APPR_CODE_CATS.values()
+                          for k1, d1 in items}
 
 
-def gen_appr_code_mapper_lv10() -> dict:
-    immap = {}
-    for part, (klv0, dlv0, items) in APPR_CODE_CATS.items():
-        for klv1, dlv1 in items:
-            immap[klv1] = (klv0, dlv0)
-    return immap
-
-
+# Only some specified lv-1 approval codes will be checked here.
 def appr_catlv1_reprs(field: str = "appr_catlv1"):
     reprs = []
     cats = [
@@ -412,27 +398,6 @@ def acc_status(field: str = "acc_status"):
 
 
 # %%
-def merge_certno_perday(df: pd.DataFrame):
-    """Merge duplicated records of the same biz with the same certno per-day.
-    """
-    def drop_and_merge(sub_df: pd.DataFrame):
-        # sub_df = subdf.sort_values("apply_date", ascending=False)
-        ser = sub_df.iloc[0]
-        # ATTENTION: this takes effects just because the precendece of
-        # `accept`, `reject` and `validation` are the same with their
-        # alphabetic order.
-        ser["appr_res"] = sub_df["approval_result"].sort_values().iloc[0]
-        ser["appr_codes"] = ",".join(
-            set(sub_df["approval_codes"].dropna().values))
-        return ser
-
-    df = (df.groupby(["biztype", "channel_code", "certno", "apply_date"])
-          .apply(drop_and_merge)
-          .reset_index(drop=True))
-
-    return df
-
-
 TRANS_AUTOFIN_PRETRIAL = {
     "part": "autofin_pretrial",
     "desc": "预审记录",
@@ -444,12 +409,10 @@ TRANS_AUTOFIN_PRETRIAL = {
         ("cert_prov"        , 'map(certno, prov_code_map, "unknown")'   , None  , "身份证省"),
         ("apply_doi"        , "day_itvl(apply_date, today)"             , None  , "申请距今日"),
         ("appr_doi"         , "day_itvl(approval_date, today)"          , None  , "决策距今日"),
-        ("appr_res"         , "map(appr_res, appr_res_mapper)"          , None  , "决策结果"),
-        ("appr_catlv1"      , "sep_map(appr_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
+        ("appr_res"         , "map(approval_result, appr_res_mapper)"          , None  , "决策结果"),
+        ("appr_catlv1"      , "sep_map(approval_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
         ("appr_catlv0"      , "list_map(appr_catlv1, appr_cats_mapper_lv10)"    , None  , "标签分类LV0"),
     ],
-    # `appr_res` and `appr_codes` are added.
-    "pre_trans": merge_certno_perday,
 }
 
 
@@ -464,12 +427,10 @@ TRANS_AUTOFIN_SECTRIAL = {
     "trans": [
         ("apply_doi"        , "day_itvl(apply_date, today)"             , None  , "申请距今日"),
         ("appr_doi"         , "day_itvl(approval_date, today)"          , None  , "决策距今日"),
-        ("appr_res"         , "map(appr_res, appr_res_mapper)"          , None  , "决策结果"),
-        ("appr_catlv1"      , "sep_map(appr_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
+        ("appr_res"         , "map(approval_result, appr_res_mapper)"          , None  , "决策结果"),
+        ("appr_catlv1"      , "sep_map(approval_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
         ("appr_catlv0"      , "list_map(appr_catlv1, appr_cats_mapper_lv10)"    , None  , "标签分率LV0"),
     ],
-    # `appr_res` and `appr_codes` are added.
-    "pre_trans": merge_certno_perday,
 }
 
 
@@ -510,8 +471,9 @@ MAPPERS = {
     "loan_acc_status"               : LOAN_ACC_STATUS,
     "appr_res_mapper"               : APPR_RES_MAPPER,
     "prov_code_map"                 : prov_code(),
-    "appr_cats_mapper_lv21"         : gen_appr_code_mapper_lv21(),
-    "appr_cats_mapper_lv10"         : gen_appr_code_mapper_lv10(),
+    "appr_cats_mapper_lv10"         : APPR_CODE_CAT10_MAPPER,
+    # This should be updated later manually for field `approval_codes`.
+    "appr_cats_mapper_lv21"         : {None: (None, None)}
 }
 
 MAPPERS_CODE = {k: {kk: vv[0] for kk, vv in v.items()}
@@ -531,8 +493,6 @@ TRANS_CONF = {
 
 # %%
 def df_trans_confs():
-    import pandas as pd
-
     pconfs = []
     tconfs = []
     for part_name, pconf in TRANS_CONF.items():

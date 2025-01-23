@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2025-01-20 17:30:38
+#   Updated: 2025-01-23 21:21:51
 #   Description:
 # ---------------------------------------------------------
 
@@ -41,26 +41,28 @@ if __name__ == "__main__":
 
 import os
 from collections import ChainMap
-import sqlalchemy as sa
-from tqdm import tqdm
 from IPython.core.debugger import set_trace
 
 from ubears.flagbear.llp.parser import EnvParser
 from ubears.flagbear.slp.finer import get_tmp_path, get_assets_path
-from ubears.flagbear.slp.pdsl import save_with_excel
+from ubears.flagbear.slp.pdsl import (save_with_excel,
+                                      save_with_pickle,
+                                      load_from_pickle)
 from ubears.modsbear.dflater.exenv import EXGINE_ENV
 from ubears.suitbear.kgraph.kgenum import NodeType, df_enum_confs
 from ubears.suitbear.kgraph.display import save_as_html
 from ubears.suitbear.dirt.exdf import (flat_ft_dfs, trans_from_dfs,
-                                agg_from_dfs, agg_from_graphdf)
+                                       agg_from_dfs, agg_from_graphdf)
 from ubears.suitbear.autofin.confflat import df_flat_confs as af_flat_confs
 from ubears.suitbear.pboc.confflat import df_flat_confs as pboc_flat_confs
-from ubears.suitbear.autofin.conftrans import (df_trans_confs, merge_certno_perday,
-                                        MAPPERS, MAPPERS_CODE)
+from ubears.suitbear.autofin.conftrans import (df_trans_confs,
+                                               MAPPERS, MAPPERS_CODE)
 from ubears.suitbear.autofin.confagg import df_agg_confs, PERSONAL_CONF, MASS_CONF
 from ubears.suitbear.autofin.graphagg import df_graph_agg_confs, GRAPH_REL, GRAPH_NODE
 
 AUTOFIN_AGG_CONF = {**PERSONAL_CONF, **MASS_CONF}
+INFOCODE_MAPPER_FILE = get_assets_path() / "autofin/infocode_mapper.xlsx"
+
 
 # %%
 logging.basicConfig(
@@ -69,6 +71,28 @@ logging.basicConfig(
     force=(__name__ == "__main__"))
 logger = logging.getLogger()
 logger.info("Logging Start.")
+
+
+# %%
+def merge_certno_perday(df: pd.DataFrame):
+    """Merge duplicated records of the same biz with the same certno per-day.
+    """
+    def drop_and_merge(sub_df: pd.DataFrame):
+        # sub_df = subdf.sort_values("apply_date", ascending=False)
+        ser = sub_df.iloc[0]
+        # ATTENTION: this takes effects just because the precendece of
+        # `accept`, `reject` and `validation` are the same with their
+        # alphabetic order.
+        ser["approval_result"] = sub_df["approval_result"].sort_values().iloc[0]
+        ser["approval_codes"] = ",".join(
+            set(sub_df["approval_codes"].dropna().values))
+        return ser
+
+    df = (df.groupby(["biztype", "channel_code", "certno", "apply_date"])
+          .apply(drop_and_merge)
+          .reset_index(drop=True))
+
+    return df
 
 
 # %%
@@ -161,21 +185,21 @@ def autofin_vars(
 
 # %%
 if __name__ == "__main__":
-    from flagbear.slp.pdsl import save_with_pickle, load_from_pickle
-
     write_autofin_confs("autofin/autofin_conf.xlsx")
 
     # Prepare mock data.
     mock_file = get_assets_path() / "autofin/autofin_mock_20241101.xlsx"
-    af_flat_pconfs, af_flat_fconfs = af_flat_confs()
-    pboc_flat_pconfs, pboc_flat_fconfs = pboc_flat_confs()
-    flat_pconfs = pd.concat([af_flat_pconfs, pboc_flat_pconfs], axis=0)
-    flat_fconfs = pd.concat([af_flat_fconfs, pboc_flat_fconfs], axis=0)
     xlr = pd.ExcelFile(mock_file)
     dfs = {}
     for shname in xlr.sheet_names:
         df = pd.read_excel(xlr, sheet_name=shname)
         dfs[shname] = df
+
+    # Flat the data.
+    af_flat_pconfs, af_flat_fconfs = af_flat_confs()
+    pboc_flat_pconfs, pboc_flat_fconfs = pboc_flat_confs()
+    flat_pconfs = pd.concat([af_flat_pconfs, pboc_flat_pconfs], axis=0)
+    flat_fconfs = pd.concat([af_flat_fconfs, pboc_flat_fconfs], axis=0)
     flat_rets = flat_ft_dfs(dfs, flat_pconfs, flat_fconfs)
 
     # Build graph DF.
@@ -194,6 +218,11 @@ if __name__ == "__main__":
     # Merge records first.
     dfs["autofin_pretrial"] = merge_certno_perday(dfs["autofin_pretrial"])
     dfs["autofin_sectrial"] = merge_certno_perday(dfs["autofin_sectrial"])
+
+    # Get mapper from customed infocode to standard approval code cats.
+    immap = dict(pd.read_excel(INFOCODE_MAPPER_FILE).dropna(subset="code_cat")
+                 [["code", "code_cat"]].values)
+    MAPPERS_CODE["appr_cats_mapper_lv21"] = immap
 
     # Set `today` with the date in the `mock_file`.
     MAPPERS_CODE["today"] = pd.Timestamp("20241101")

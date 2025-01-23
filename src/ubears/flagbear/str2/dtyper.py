@@ -78,6 +78,7 @@ def stype_spec(
             "caster": float,
             "default": nan,
             "nptype": "float",
+            "pdtype": "float",
         },
         "INT": {
             "dtype": "INT",
@@ -85,6 +86,7 @@ def stype_spec(
             "caster": int,
             "default": nan,
             "nptype": "int",
+            "pdtype": "int",
         },
         "DATE": {
             "dtype": "DATE",
@@ -92,6 +94,7 @@ def stype_spec(
             "caster": datetime64,
             "default": nat,
             "nptype": "M8[D]",
+            "pdtype": "M8[s]",
         },
         "DATETIME": {
             "dtype": "DATETIME",
@@ -99,13 +102,15 @@ def stype_spec(
             "caster": datetime64,
             "default": nat,
             "nptype": "M8[s]",
+            "pdtype": "M8[s]",
         },
         "*CHAR*": {
             "dtype": "*CHAR*",
             "regex": r".*",
             "caster": str,
             "default": "",
-            "nptype": "string",
+            "nptype": "str",
+            "pdtype": "string",
         },
         "OBJECT": {
             "dtype": "OBJECT",
@@ -113,6 +118,7 @@ def stype_spec(
             "caster": None,
             "default": None,
             "nptype": "object",
+            "pdtype": "object",
         }
     }
 
