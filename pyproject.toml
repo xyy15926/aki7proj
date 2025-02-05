@@ -1,0 +1,61 @@
+[project]
+name = "ubears"
+version = "0.2.3"
+authors = [
+	{name = "UBeaRLy", email = "ubearly@outlook.com"},
+]
+description = "A project for collecting some tricks."
+# url = "https://github.com/xyy15926/aki7"
+readme = { file = "README.md", content-type = "text/plain" }
+classifiers = [
+	"Development Status :: 3 - Alpha",
+	"Environment :: Console",
+	"Intended Audience :: Financial and Insurance Industry",
+	"License :: OSI Approved :: Apache Software License",
+	"Programming Language :: Python",
+	"Programming Language :: Python :: 3 :: Only",
+	"Programming Language :: Python :: 3.6",
+	"Programming Language :: Python :: 3.7",
+	"Programming Language :: Python :: 3.8",
+	"Programming Language :: Python :: 3.9",
+]
+license = {text = "Apache License 2.0"}
+requires-python = ">=3.8, <= 3.14"
+dependencies = [
+	"numpy >= 1.2, <= 2.2.2",
+	"scipy >= 1.10, <= 1.15.1",
+	"pandas >= 1.4, <= 2.2.3",
+	"scikit-learn >= 1.1, <= 1.6.1",
+	"tqdm >= 4.0",
+	"pyecharts >= 2.0",
+	"SQLAlchemy >= 1.4",
+	"openpyxl >= 3.0",
+	"chinese_calendar",
+	"jieba",
+	"pdfplumber",
+	"numpy_financial",
+]
+
+[project.optional-dependencies]
+all = [
+	"torch",
+	"tensorboard",
+	"networkx",
+	"xgboost",
+	"PyMySQL",
+	"cx-Oracle",
+	"TA-Lib",
+]
+
+[build-system]
+requires = ["setuptools", "build"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["ubears*"]
+exclude = []
+namespaces = true
