@@ -3,7 +3,7 @@
 #   Name: finer.py
 #   Author: xyy15926
 #   Created: 2024-06-24 14:04:14
-#   Updated: 2025-01-21 14:53:48
+#   Updated: 2025-02-08 17:13:56
 #   Description:
 # ---------------------------------------------------------
 
@@ -19,7 +19,7 @@ import re
 from pathlib import Path
 from functools import lru_cache
 from datetime import datetime, date
-if sys.version_info.minor >= 10:
+if sys.version_info.major >= 3 and sys.version_info.minor >= 9:
     from importlib.resources import files
 else:
     from importlib_resources import files
@@ -40,7 +40,11 @@ DATA_MODNAME = "ubears.data"
 # %%
 @lru_cache
 def get_root_path() -> Path:
-    """Get the absolute path of the root of the project.
+    """Get the absolute path of the root of current working project.
+
+    The root is remarked by the ROOT_FLAG, namely the first parent directory
+    bottom-up containing file or directory with name in ROOT_FLAG will be
+    treated as root.
     """
     # if __name__ == "__main__":
     #     path = Path(".").absolute()
@@ -63,14 +67,14 @@ def get_root_path() -> Path:
 
 @lru_cache
 def get_tmp_path() -> Path:
-    """Get the absolute path of the tmp of the project.
+    """Get the absolute path of the `tmp` of the currrent working project.
     """
     return get_root_path() / "tmp"
 
 
 @lru_cache
 def get_assets_path() -> Path:
-    """Get the absolute path of the assets of the project.
+    """Get the absolute path of the `assets` of the current working project.
     """
     return get_root_path() / "assets"
 
@@ -78,7 +82,7 @@ def get_assets_path() -> Path:
 # %%
 @lru_cache
 def get_data(fname: str = None) -> Path:
-    """Get the absolute path of the assets of the project.
+    """Get the data resources from the project.
     """
     if fname is None:
         return files(DATA_MODNAME)
@@ -113,6 +117,7 @@ def date_order_mark(
     --------------------------
     Next or the largest mark.
     """
+    # The whole date and order-id will be concated together as an integer.
     if rdmark == "today":
         today = date.today().isoformat().replace("-", "")
         max_mark = int(today + "0000")

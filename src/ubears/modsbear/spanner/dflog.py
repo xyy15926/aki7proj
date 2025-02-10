@@ -3,7 +3,7 @@
 #   Name: dlog.py
 #   Author: xyy15926
 #   Created: 2023-12-05 08:55:37
-#   Updated: 2025-01-21 14:56:10
+#   Updated: 2025-02-10 22:08:39
 #   Description:
 # ---------------------------------------------------------
 
@@ -23,8 +23,8 @@ import pandas as pd
 from pandas.api.types import infer_dtype
 from scipy.stats import contingency
 
+from ubears.flagbear.slp.pdsl import save_with_excel, save_with_pickle
 from ubears.ringbear.metrics import cal_lifts_from_ctab, cal_woes_from_ctab
-
 
 EPSILON = 1e-6
 RC_NAME = "RC"

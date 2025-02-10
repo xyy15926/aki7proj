@@ -3,7 +3,7 @@
 #   Name: test_flows.py
 #   Author: xyy15926
 #   Created: 2024-03-14 10:01:32
-#   Updated: 2025-01-20 17:50:17
+#   Updated: 2025-02-10 22:08:03
 #   Description:
 # ---------------------------------------------------------
 
@@ -20,6 +20,10 @@ if __name__ == "__main__":
     reload(sortable)
     reload(dflog)
     reload(flows)
+    # Stop at all warnings.
+    # from warnings import simplefilter
+    # simplefilter(action="error")
+    # simplefilter(action="default")
 
 import numpy as np
 import pandas as pd
@@ -87,10 +91,9 @@ def mock_data(row_n=100):
 
 
 # %%
-# Refer to the following link for the `FutureWarning` threw in comparion
-# between python `str` and `np.numeric`.
-# https://stackoverflow.com/questions/40659212/futurewarning-elementwise-comparison-failed-returning-scalar-but-in-the-futur
 @mark.filterwarnings("ignore: divide by zero encountered")
+@mark.filterwarnings("ignore: invalid value encountered")
+@mark.filterwarnings("ignore: An input array is constant")
 def test_data_sketch_cols():
     rown = 100
     df, y = mock_data(rown)
@@ -118,21 +121,40 @@ def test_data_sketch_cols():
         assert np.all(np.isclose(woes, vals.loc[colname, "woes"]))
         assert np.all(np.isclose(ivs, vals.loc[colname, "ivs"]))
 
+
+def cal_data_sketch_cols():
+    rown = 100
+    df, y = mock_data(rown)
+    sort_keys = {"range_int_half": 1}
+    factors = 10
+    uni_keys = ["range_int_half", ]
+    uni_keep = "first"
+    ds = DataProc(df, y, factors, sort_keys, uni_keys, uni_keep)
+
+    ds.check_index()
+    ds.fillna()
+    ds.drop_duplicates()
+    ds.drop_flat()
+
     return ds
 
 
 # %%
 @mark.filterwarnings("ignore: divide by zero encountered")
+@mark.filterwarnings("ignore: invalid value encountered")
+@mark.filterwarnings("ignore: An input array is constant")
 def test_data_sketch_drop_pcorr():
-    ds = test_data_sketch_cols()
+    ds = cal_data_sketch_cols()
     ds.drop_pcorr()
     assert "int_str" in ds.data.columns
 
 
 # %%
 @mark.filterwarnings("ignore: divide by zero encountered")
+@mark.filterwarnings("ignore: invalid value encountered")
+@mark.filterwarnings("ignore: An input array is constant")
 def test_data_sketch_woe_directly():
-    ds = test_data_sketch_cols()
+    ds = cal_data_sketch_cols()
     logs = ds.logs
     dfc = ds.data
 
@@ -151,8 +173,10 @@ def test_data_sketch_woe_directly():
 
 # %%
 @mark.filterwarnings("ignore: divide by zero encountered")
+@mark.filterwarnings("ignore: invalid value encountered")
+@mark.filterwarnings("ignore: An input array is constant")
 def test_data_sketch_woe_after_bin():
-    ds = test_data_sketch_cols()
+    ds = cal_data_sketch_cols()
     logs = ds.logs
     dfc = ds.data
 

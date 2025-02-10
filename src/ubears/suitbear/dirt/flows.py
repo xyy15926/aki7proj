@@ -3,7 +3,7 @@
 #   Name: flows.py
 #   Author: xyy15926
 #   Created: 2024-03-14 09:52:48
-#   Updated: 2025-01-14 20:19:57
+#   Updated: 2025-02-08 21:48:13
 #   Description:
 # ---------------------------------------------------------
 
@@ -152,8 +152,8 @@ class DataProc(DFLoggerMixin):
         row_n = df.shape[0]
         for colname in df.columns:
             ser = df[colname]
-            vcnts = pd.value_counts(ser, sort=True, ascending=False,
-                                    normalize=False, dropna=True)
+            vcnts = ser.value_counts(sort=True, ascending=False,
+                                     normalize=False, dropna=True)
             nna_n = vcnts.sum()
             na_r = (row_n - nna_n) / nna_n
             if na_thresh is not None and na_r >= na_thresh:
@@ -242,6 +242,8 @@ class DataProc(DFLoggerMixin):
             ser = df[colname]
             (ux, uy), ctab = contingency.crosstab(ser.values, label.values)
             woes, ivs = cal_woes_from_ctab(ctab)
+            # Pandas requires to cast to compatiable dtype explicitly first.
+            df[colname] = df[colname].astype(np.float64)
             df.loc[:, colname] = woes[np.searchsorted(ux, ser.values)]
 
     @DFLoggerMixin.rclog(ltag="DropPCorr")
