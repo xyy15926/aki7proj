@@ -24,7 +24,7 @@ if __name__ == "__main__":
     fnamep = "stock/kline.html"
     fname = tmp_file(fnamep, incr=0).with_suffix(".html")
     dfile = get_assets_path() / "stock/stock_jdi.json"
-    data = json.load(open(dfile))
+    data = json.load(open(dfile, "r", encoding="utf8"))
     data = pd.DataFrame.from_records(
         data,
         columns=["date", "open_", "close", "low", "high", "volume"])

@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2025-01-22 19:44:03
+#   Updated: 2025-02-14 10:07:32
 #   Description:
 # ---------------------------------------------------------
 
@@ -73,9 +73,9 @@ logger.info("Logging Start.")
 # %%
 def mosaic_pboc_sensitives(files: list):
     for file in files:
-        ctt = json.load(open(file, "r"))
+        ctt = json.load(open(file, "r", encoding="utf8"))
         ctt = mosaic_sensitives(ctt)
-        json.dump(ctt, open(file, "w"), ensure_ascii=False, indent=4)
+        json.dump(ctt, open(file, "w", encoding="utf8"), ensure_ascii=False, indent=4)
 
 
 # %%
@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
     # Read and flatten reports.
     files = list((get_assets_path() / "pboc_reports").iterdir())
-    report_recs = [open(file, "r").read() for file in files]
+    report_recs = [open(file, "r", encoding="utf8").read() for file in files]
     flat_pconfs, flat_fconfs = df_flat_confs()
     dfs = flat_ft_dfs(report_recs, flat_pconfs, flat_fconfs)
 

@@ -3,7 +3,7 @@
 #   Name: jieba.py
 #   Author: xyy15926
 #   Created: 2024-07-24 19:05:15
-#   Updated: 2024-07-24 21:45:06
+#   Updated: 2025-02-14 10:04:52
 #   Description:
 # ---------------------------------------------------------
 
@@ -108,7 +108,8 @@ def jieba_toker():
     # Load user dict.
     toker.add_word("熊风扬", tag="nr")
     toker.add_word("aki7", tag="nz")
-    toker.load_userdict(open(get_assets_path() / "govern_region_names.txt"))
+    toker.load_userdict(open(get_assets_path() / "govern_region_names.txt",
+                             encoding="utf8"))
 
     return toker
 

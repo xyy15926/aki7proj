@@ -3,7 +3,7 @@
 #   Name: pronoun.py
 #   Author: xyy15926
 #   Created: 2024-11-21 10:06:38
-#   Updated: 2024-12-09 18:28:38
+#   Updated: 2025-02-14 09:53:06
 #   Description:
 # ---------------------------------------------------------
 
@@ -31,7 +31,7 @@ logger.info("Logging Start.")
 def init_short_alts():
     fname = get_data() / "userdict/jieba_dict_small.txt"
     name_alts = []
-    for line in open(fname, "r"):
+    for line in open(fname, "r", encoding="utf8"):
         zh, w, zht = line.strip().split(" ")
         if zht in ["j"] and len(zh) <= 2:
             name_alts.append(zh)
@@ -41,7 +41,7 @@ def init_short_alts():
 def init_firstname_alts():
     fname = get_data() / "userdict/jieba_dict_small.txt"
     name_alts = []
-    for line in open(fname, "r"):
+    for line in open(fname, "r", encoding="utf8"):
         zh, w, zht = line.strip().split(" ")
         if zht in ["nr"] and len(zh) <= 2:
             name_alts.append(zh)
