@@ -3,7 +3,7 @@
 #   Name: exdf.py
 #   Author: xyy15926
 #   Created: 2024-11-11 17:04:03
-#   Updated: 2024-12-14 23:08:05
+#   Updated: 2025-02-14 21:34:44
 #   Description:
 # ---------------------------------------------------------
 
@@ -127,7 +127,7 @@ def flat_ft_dfs(
             for idx, fconf in fconfs_.iterrows():
                 field_name = fconf["key"]
                 dtype = fconf["dtype"]
-                nptype = stype_spec(dtype, "pdtype")
+                nptype = stype_spec(dtype, "pdtype", True)
                 if field_name not in df:
                     logger.info(f"{field_name} can't be found in `{part_name}`.")
                     continue

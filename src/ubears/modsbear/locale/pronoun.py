@@ -3,7 +3,7 @@
 #   Name: pronoun.py
 #   Author: xyy15926
 #   Created: 2024-11-21 10:06:38
-#   Updated: 2025-02-14 09:53:06
+#   Updated: 2025-02-14 10:40:58
 #   Description:
 # ---------------------------------------------------------
 
@@ -55,6 +55,7 @@ def init_orgno_ws():
     return ws
 
 
+# Firstname, lastname and orgname alternatives.
 FIRSTNAME_ALTS = init_firstname_alts()
 LASTNAME_ALTS = [
     "李", "王", "张", "刘", "陈", "杨", "黄", "赵", "周", "吴",
@@ -69,6 +70,7 @@ LASTNAME_ALTS = [
     "武", "康", "贺", "严", "尹", "钱", "施", "牛", "洪", "龚",
 ]
 SHORT_ALTS = init_short_alts()
+# Weights of each letter in orgno for validation check.
 ORGNO_WS = init_orgno_ws()
 
 
@@ -93,7 +95,7 @@ def certno_parity(certno_p: str) -> str:
 
 
 # %%
-def certno_check(certno: str):
+def check_certno(certno: str):
     """Check if certno is valid.
 
     Params:
@@ -134,6 +136,13 @@ def rand_certno(
     # Random government region id.
     if govrid is None:
         govrid = str(np.random.choice(get_chn_govrs(2)["id"].values))
+    elif len(govrid) < 6:
+        govrids = get_chn_govrs(2)["id"].astype(str)
+        govrids = govrids[govrids.str.startswith(govrid)]
+        if govrids.empty:
+            logger.warning(f"Invalid government region id: {govrid}.")
+            return None
+        govrid = np.random.choice(govrids.values)
 
     # Random birthday.
     if age is None:

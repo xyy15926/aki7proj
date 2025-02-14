@@ -3,7 +3,7 @@
 #   Name: dtyper.py
 #   Author: xyy15926
 #   Created: 2024-11-11 09:18:28
-#   Updated: 2024-12-16 22:23:03
+#   Updated: 2025-02-14 20:06:19
 #   Description:
 # ---------------------------------------------------------
 
@@ -35,7 +35,7 @@ logger.info("Logging Start.")
 def stype_spec(
     dtype: str,
     spec: str = "regex",
-    extended: bool = True,
+    extended: bool = False,
 ) -> Any:
     """Get specifications for string conversion.
 
@@ -69,6 +69,8 @@ def stype_spec(
             x = x.replace("/", "-")
             if len(x) > 10:
                 x = x[:10] + " " + x[-8:]
+            if len(x) == 7:
+                x += "-01"
             return datetime.fromisoformat(x)
 
     DTYPE_SPECS = {
@@ -161,7 +163,8 @@ def regex_caster(
     if lexer is None:
         # Keep the order for the master regex.
         token_types = ["DATETIME", "DATE", "FLOAT", "INT"]
-        token_specs = {tt: (stype_spec(tt, "regex"), stype_spec(tt, "caster"))
+        token_specs = {tt: (stype_spec(tt, "regex", extended),
+                            stype_spec(tt, "caster", extended))
                        for tt in token_types}
         lexer = Lexer(token_specs, {}, set(), LEX_ENDFLAG)
 

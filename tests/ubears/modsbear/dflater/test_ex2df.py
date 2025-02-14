@@ -12,8 +12,9 @@ import pytest
 
 if __name__ == "__main__":
     from importlib import reload
-    from ubears.flagbear.str2 import fliper
+    from ubears.flagbear.str2 import dtyper, fliper
     from ubears.modsbear.dflater import ex2df, exenv
+    reload(dtyper)
     reload(fliper)
     reload(ex2df)
     reload(exenv)
@@ -489,6 +490,18 @@ def test_flat_record():
     for key, step, dtype, desc in acc_info_fields:
         if dtype == "DATE":
             mixed_fields.append([key, None, step, dtype, np.datetime64("nat")])
+        else:
+            mixed_fields.append([key, step])
+    acc_info_vals = flat_records(acc_info_psrc, mixed_fields)
+    assert np.all(acc_info_vals.index.names == acc_info_psrc.index.names)
+    assert len(acc_info_vals) == len(acc_info_psrc)
+    assert np.sum(acc_info_vals.dtypes != "object") == 2
+
+    # Flat with 6-Tuple confs.
+    mixed_fields = []
+    for key, step, dtype, desc in acc_info_fields:
+        if dtype == "DATE":
+            mixed_fields.append([key, None, step, dtype, None, True])
         else:
             mixed_fields.append([key, step])
     acc_info_vals = flat_records(acc_info_psrc, mixed_fields)

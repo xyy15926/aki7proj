@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
+# ---------------------------------------------------------
 #   Name: fliper.py
 #   Author: xyy15926
 #   Created: 2023-12-07 10:41:26
-#   Updated: 2023-12-07 15:17:05
+#   Updated: 2025-02-14 20:16:00
 #   Description:
 # ---------------------------------------------------------
 
@@ -16,7 +18,6 @@ from collections import deque
 
 from ubears.flagbear.llp.parser import EnvParser
 from ubears.flagbear.str2.dtyper import stype_spec, str_caster
-# from IPython.core.debugger import set_trace
 
 # %%
 logging.basicConfig(
@@ -125,6 +126,7 @@ def extract_field(
                 cur_obj = cur_obj.values()
             for obj_ in cur_obj:
                 ret = extract_field(obj_, steps[idx + 1:], envp, dtype,
+                                    extended=extended,
                                     dforced=dforced, dfill=dfill)
                 rets.append(ret)
             agg_expr = step[1:-1]
@@ -158,7 +160,7 @@ def extract_field(
         # Set with default value if dtype is specified and dtype unfication
         # is forced.
         elif cur_obj is None and dforced:
-            cur_obj = stype_spec(dtype, "default") if dfill is None else dfill
+            cur_obj = stype_spec(dtype, "default", extended) if dfill is None else dfill
 
     return cur_obj
 

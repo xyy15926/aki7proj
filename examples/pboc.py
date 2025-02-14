@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2025-02-14 10:07:32
+#   Updated: 2025-02-14 21:30:35
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,10 +18,13 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
+    from ubears.flagbear.str2 import dtyper, fliper
     from ubears.modsbear.dflater import ex2df, ex4df, exenv, exoptim
     from ubears.modsbear.spanner import manidf
     from ubears.suitbear.dirt import exdf
     from ubears.suitbear.pboc import confflat, confagg, conftrans, confmark
+    reload(dtyper)
+    reload(fliper)
     reload(ex2df)
     reload(ex4df)
     reload(exenv)
@@ -201,22 +204,26 @@ if __name__ == "__main__":
                       left_on="rid", right_index=True)
         dfs[part_name] = df
 
+    # old_dfs = load_from_pickle("pboc/flat_dfs")
+    # for key in dfs:
+    #     ndf = dfs[key]
+    #     odf = old_dfs[key]
+    #     assert np.all(np.isclose(ndf.values, odf.values, equal_nan=True))
     # save_with_pickle(dfs, "pboc/flat_dfs")
-    # dfs = load_from_pickle("pboc/flat_dfs")
 
     # Read aggregation keys.
     # agg_keys = get_assets_path() / "pboc_aggconf_mark.xlsx"
     # if isinstance(agg_keys, (str, os.PathLike)) and os.path.isfile(agg_keys):
     #     agg_keys = pd.read_excel(agg_keys)["key"]
-    key_mark = "min"
+    key_mark = "max"
     dfs, trans_ret, agg_ret, mark_ret = pboc_vars(dfs, key_mark)
     assert len(trans_ret.keys() - dfs.keys()) == 0
-    # save_with_pickle(agg_ret, "pboc/agg_dfs")
     # old_agg_ret = load_from_pickle("pboc/agg_dfs")
     # for key in agg_ret:
     #     ndf = agg_ret[key]
     #     odf = old_agg_ret[key]
     #     assert np.all(np.isclose(ndf.values, odf.values, equal_nan=True))
+    # save_with_pickle(agg_ret, "pboc/agg_dfs")
 
     flats_file = f"pboc/pboc_flats_{key_mark}.xlsx"
     aggs_file = f"pboc/pboc_aggs_{key_mark}.xlsx"
