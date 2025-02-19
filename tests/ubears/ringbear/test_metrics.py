@@ -3,7 +3,7 @@
 #   Name: test_data_preprocessing.py
 #   Author: xyy15926
 #   Created: 2023-07-24 15:58:10
-#   Updated: 2025-01-20 17:48:43
+#   Updated: 2025-02-18 22:06:05
 #   Description:
 # ---------------------------------------------------------
 
@@ -34,7 +34,7 @@ def test_lifts():
     b[:10], b[20:23], b[40:42] = [1] * 10, [1] * 3, [1] * 2
 
     wux, wlifts, wax, wacl, wasc = cal_lifts_weighted(a, b)
-    lifts, acl, kcorr, pv = cal_lifts(a, b)
+    lifts, acl, racl, kcorr, pv = cal_lifts(a, b)
     assert np.all(np.isclose(wlifts, lifts))
     assert np.all(np.isclose(lifts, [2, 0.6, 0.4]))
     assert np.all(np.isclose(wacl, acl))
@@ -42,15 +42,15 @@ def test_lifts():
     assert kcorr > 0
 
     wux, wlifts, wax, wacl, wasc = cal_lifts_weighted(aa, b)
-    lifts, acl, kcorr, pv = cal_lifts(aa, b)
+    lifts, acl, racl, kcorr, pv = cal_lifts(aa, b)
     assert np.all(np.isclose(wlifts, lifts))
     assert np.all(np.isclose(lifts, [0.4, 0.6, 2]))
-    assert np.all(np.isclose(wacl, acl))
-    assert np.all(np.isclose(acl, [2, 1.3, 1]))
+    assert np.all(np.isclose(wacl, racl))
+    assert np.all(np.isclose(racl, [2, 1.3, 1]))
     assert kcorr < 0
 
     wux, wlifts, wax, wacl, wasc = cal_lifts_weighted(a, b, acc_keys=[2, 3])
-    lifts, acl, kcorr, pv = cal_lifts(a, b, acc_keys=[2, 3])
+    lifts, acl, racl, kcorr, pv = cal_lifts(a, b, acc_keys=[2, 3])
     assert np.all(np.isclose(wlifts, lifts))
     assert np.all(np.isclose(lifts, [2, 0.6, 0.4]))
     assert np.all(np.isclose(wacl, acl))
@@ -59,11 +59,11 @@ def test_lifts():
     assert kcorr > 0
 
     wux, wlifts, wax, wacl, wasc = cal_lifts_weighted(a, b, acc_keys=[3, 2])
-    lifts, acl, kcorr, pv = cal_lifts(a, b, acc_keys=[3, 2])
+    lifts, acl, racl, kcorr, pv = cal_lifts(a, b, acc_keys=[3, 2])
     assert np.all(np.isclose(wlifts, lifts))
     assert np.all(np.isclose(lifts, [2, 0.6, 0.4]))
-    assert np.all(np.isclose(wacl, acl))
-    assert np.all(np.isclose(acl, [0.6, 0.5]))
+    assert np.all(np.isclose(wacl, racl))
+    assert np.all(np.isclose(racl, [0.6, 0.5]))
     assert wasc
     assert kcorr < 0
 

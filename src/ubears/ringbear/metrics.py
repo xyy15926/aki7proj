@@ -3,7 +3,7 @@
 #   Name: metrics.py
 #   Author: xyy15926
 #   Created: 2023-04-23 14:32:37
-#   Updated: 2024-01-18 15:30:21
+#   Updated: 2025-02-18 22:10:03
 #   Description:
 # ---------------------------------------------------------
 
@@ -48,6 +48,7 @@ def cal_lifts_from_ctab(
     ----------------
     lifts: Lifts of all uniques.
     acc_lifts: Accumulating lifts.
+    acc_lifts_r: Accumulating lifts in reversed order.
     corr_ken: Kendall-tau correlation.
     pv: P-value of Kendall-tau.
     """
@@ -64,11 +65,10 @@ def cal_lifts_from_ctab(
 
     # Kendall-tau test.
     corr_ken, pv = kendalltau(acc_lifts, np.arange(len(acc_lifts), 0, -1))
-    if corr_ken < 0:
-        acc_ctab = np.add.accumulate(ctab[::-1], axis=0)
-        acc_lifts = acc_ctab[:, 1] / acc_ctab.sum(axis=1) / cavg
+    acc_ctab_r = np.add.accumulate(ctab[::-1], axis=0)
+    acc_lifts_r = (acc_ctab_r[:, 1] / acc_ctab_r.sum(axis=1) / cavg)
 
-    return lifts, acc_lifts, corr_ken, pv
+    return lifts, acc_lifts, acc_lifts_r, corr_ken, pv
 
 
 def cal_lifts(
@@ -99,6 +99,7 @@ def cal_lifts(
     ----------------
     lifts: Lifts of all uniques.
     acc_lifts: Accumulating lifts.
+    acc_lifts_r: Accumulating lifts in reversed order.
     corr_ken: Kendall-tau correlation.
     pv: P-value of Kendall-tau.
     """
@@ -178,6 +179,7 @@ def cal_ivs(X: np.ndarray, y: np.ndarray) -> float:
 
 # %%
 # TODO: replace counting frequencies to `enhanced_freqs`.
+# TODO: Remove ascending?
 def cal_lifts_weighted(
     x: np.ndarray,
     y: np.ndarray,

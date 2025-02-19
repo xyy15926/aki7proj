@@ -3,7 +3,7 @@
 #   Name: test_numpy.py
 #   Author: xyy15926
 #   Created: 2025-02-08 18:36:44
-#   Updated: 2025-02-10 22:00:24
+#   Updated: 2025-02-11 11:55:20
 #   Description:
 # ---------------------------------------------------------
 
@@ -61,13 +61,38 @@ def test_isclose():
     assert isinstance(a[1], float)
 
 
+# So is the `np.isnan`
+def test_isnan():
+    with pytest.raises(TypeError):
+        np.isnan("a")
+
+
 # %%
 # --------------------------------------------------------------
 #               * * * BUG ???????? * * *
 # --------------------------------------------------------------
-# `np.unqiue` may return duplicate elements when np.ndarray.dtype is objects
-# and `np.nan` exists.
-def test_unique():
+# `np.unique` bases on sort which will:
+def test_unique_mixed_type():
+    # 1. Cast data type of NON-`np.ndarray` sequence to down to the same dtype
+    # implicitly if possible.
+    a = [9, "10", np.nan]
+    ret = np.unique(a)
+    assert np.issubdtype(ret.dtype, str)
+    # Else, TypeError will be raised.
+    a = [9, "10", np.nan, None]
+    with pytest.raises(TypeError):
+        np.unique(a)
+
+    # 2. And so does the explicitly specified dtype `np.ndarray`.
+    a = np.array([9, "10", np.nan], dtype="object")
+    with pytest.raises(TypeError):
+        np.unique(a)
+    assert not np.issubdtype(a.dtype, str)
+
+
+# So? `np.unqiue` may return duplicate elements when `np.ndarray.dtype` is
+# objects and `np.nan` exists.
+def test_unique_nan():
     a = np.array([1, 1, np.nan], dtype=object)
     # Return `[1, np.nan]`
     ret = np.unique(a)

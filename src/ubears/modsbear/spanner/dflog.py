@@ -3,27 +3,25 @@
 #   Name: dlog.py
 #   Author: xyy15926
 #   Created: 2023-12-05 08:55:37
-#   Updated: 2025-02-10 22:08:39
+#   Updated: 2025-02-15 18:31:33
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 from __future__ import annotations
 import logging
-from typing import Any, TypeVar
+from typing import Any, TypeVar, TYPE_CHECKING
+if TYPE_CHECKING:
+    from pathlib import Path
 from collections.abc import Callable, Iterator
-try:
-    from typing import NamedTuple, Self
-except ImportError:
-    from typing_extensions import NamedTuple, Self
 
-from functools import wraps, partial
+from collections import Counter
 import numpy as np
 import pandas as pd
-from pandas.api.types import infer_dtype
+from pandas.api.types import is_numeric_dtype
 from scipy.stats import contingency
 
-from ubears.flagbear.slp.pdsl import save_with_excel, save_with_pickle
+from ubears.flagbear.slp.pdsl import save_with_excel
 from ubears.ringbear.metrics import cal_lifts_from_ctab, cal_woes_from_ctab
 
 EPSILON = 1e-6
@@ -47,412 +45,113 @@ logger.info("Logging Start.")
 
 
 # %%
-class DFLoggerMixin:
-    """Logger for DataFrame processing.
+def serdesc(
+    ser: pd.Series | np.ndarray,
+    label: pd.Series | np.ndarray = None,
+    with_woe: bool = True,
+    with_lift: bool = True
+) -> tuple[pd.DataFrame, pd.Series]:
+    """Describe the sequences.
 
-    1. DataFrame will be used to record the infomation.
-    2. Most of the logger methods are staticmethod intended for decorating to
-      gathering the necessary sketches.
-
-    Attrs:
-    -----------------------------
-    data: pd.DataFrame
-      Data.
-    label: pd.Series
-      Labels.
-    stage: str
-      String indicating the stage of data processing.
-    logs: dict[str: DataFrame]
-      Dict storing DataFrame of
-      {
-        stage:{
-          "RC": DF sketch down to column level,
-          "MAP": DF of mapping of values,
-          "VAL": DF sketch down to value level,
-          "PCORR": DF of pearson correlation,
-        }
-      }
-    """
-    def __init__(self):
-        self.data = None
-        self.label = None
-        self.stage = INIT_STATE
-        self.logs = {}
-
-    @staticmethod
-    def rclog(ltag: str = None, type_: str = RC_NAME):
-        """Decorator logging for row or column changes.
-
-        1. The final log will be stored in the log-dict for the stage.
-        2. The log will be a dataframe with Column[ltag] and
-          Index[data.columns, ROWN_NAME], which will be like:
-                    ltag
-            Col_1
-            Col_2
-            ...
-            ROWN
-        3. Logs generated with the same `type_` will be concatenated along the
-          row axis, namely the final log, `logs[stage][type_]`, will be:
-                    ltag_1  ltag_2
-            Col_1
-            Col_2
-            ...
-            ROWN
-
-        Params(keyword-only) added for the decorated:
-        ----------------
-        new_stage: New stage name.
-
-        Params:
-        ----------------
-        ltag: Tag remarking the log
-          `func.__name__` will be set as default if None is passed.
-        type_: Log type.
-          Log type indicates the content in the log, and log of the same type
-            in the same stage will be concatenated.
-        """
-        def decorate(func: callable):
-            @wraps(func)
-            def wrapper(self, *args, **kwargs):
-                # Update stage and record the original index and columns.
-                new_stage = kwargs.pop("new_stage", None)
-                if new_stage is not None:
-                    self.stage = new_stage
-                ori_cols = self.data.columns
-                ori_rows = self.data.index
-
-                ret = func(self, *args[1:], **kwargs)
-
-                df = self.data
-                nonlocal ltag
-                if ltag is None:
-                    ltag = func.__name__
-
-                # Check and record the changes from index and columns.
-                log = dict.fromkeys(set(ori_cols) - set(df.columns), 1)
-                log.update(dict.fromkeys(set(df.columns) - set(ori_cols), -1))
-                log[ROWN_NAME] = len(df.index) - len(ori_rows)
-                log = pd.DataFrame({ltag: log})
-
-                # Update the log with the `type_` of current stage.
-                slogs = self.logs.setdefault(self.stage, {})
-                if type_ in slogs:
-                    slogs[type_] = pd.concat([slogs[type_], log], axis=1)
-                else:
-                    slogs[type_] = log
-
-                pcorr = (self.data.select_dtypes(include=np.number)
-                         .corr(method="pearson"))
-                slogs[PCORR_NAME] = pcorr
-
-                return ret
-            return wrapper
-        return decorate
-
-    @staticmethod
-    def valog(func: callable = None,
-              rctype_: str = RC_NAME,
-              vatype_: str = VA_NAME):
-        """Decorator logging for description of values columns.
-
-        1. This log includes both column-level and factor-level granularity
-          for each column.
-        2. For column-level granularity, stats such as Chi, P-value, IV will be
-          calculated and updated to log dict, namely the log will be like:
-                    Chi     P-value     IV
-            Col_1
-            Col_2
-            ...
-        3. For factor-level granularity, stats such as value-count, IV, WOE
-          will be calculated for each factor.
-                            Count   IV      WOE
-            Col_1   Val_1
-                    Val_2
-                    ...
-            Col_2   Val_1
-            ...
-
-        Params(keyword-only) added for the decorated:
-        ----------------
-        new_stage: New stage name.
-
-        Params:
-        ----------------
-        rctype_: Log type for column-level granularity stats.
-          Log type indicates the content in the log, and log of the same type
-            in the same stage will be concatenated.
-        vatype_: Log type for factor-level granularity stats.
-          Log type indicates the content in the log, and log of the same type
-            in the same stage will be concatenated.
-        """
-        if func is None:
-            return partial(__class__.valog, rctype_=rctype_, vatype_=vatype_)
-
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            # Update stage.
-            new_stage = kwargs.pop("new_stage", None)
-            if new_stage is not None:
-                self.stage = new_stage
-
-            ret = func(self, *args[1:], **kwargs)
-
-            # Sketch for data down to both factor level and column level.
-            # 1. Factor level: crosstabs, lifts, woes, ivs
-            # 2. Column level: Chi2, IV
-            df = self.data
-            label = self.label
-            uni_dfs = []
-            col_Ds = []
-            cols = df.columns
-
-            # Log for each column.
-            for colname in cols:
-                ser = df[colname]
-                uni_df, col_D = serlog(ser, label)
-                uni_dfs.append(uni_df)
-                col_Ds.append(col_D)
-
-            # Update factor-level granularity log.
-            log = pd.concat(uni_dfs, axis=0, keys=cols)
-            slogs = self.logs.setdefault(self.stage, {})
-            if vatype_ in slogs:
-                slogs[vatype_] = pd.concat([slogs[vatype_], log], axis=1)
-            else:
-                slogs[vatype_] = log
-
-            # Update column-level granularity log.
-            log = pd.DataFrame(col_Ds, index=cols)
-            slogs = self.logs.setdefault(self.stage, {})
-            if rctype_ in slogs:
-                slogs[rctype_] = pd.concat([slogs[rctype_], log], axis=1)
-            else:
-                slogs[rctype_] = log
-
-            return ret
-        return wrapper
-
-    @staticmethod
-    def malog(func: callable = None, type_: str = MA_NAME):
-        """Decorator logging for mapping of values.
-
-        1. `serdiffm` will be called to build the mapping relations between
-          the data before and after processed by func.
-        2. Mostly the mapping could be represented by a 1-to-1 mapper, which
-          will be the format:
-                    from_       to_
-            Col_1   val_1       new_1
-                    val_2       new_2
-                    ...
-            Col_2   ...
-            ...
-        3. But the mapping for numeric columns may be from interval to scalar,
-          which will be stored seperately with the format:
-                    start       end         to_
-            Col_1   s1[         e1)        new_1
-                    e1[         e2)        new_2
-                    ...
-                    e_n-1[      e_n]       new_n
-            Col_2   ...
-            ...
-
-        Params(keyword-only) added for the decorated:
-        ----------------
-        new_stage: str
-          New stage name.
-        to_interval: bool
-          If to build the mapping from interval to a scalar.
-
-        Params:
-        ------------------
-        type_: Log type.
-          Log type indicates the content in the log.
-          Only the latest log of the same type in the same stage will be kept.
-        """
-        if func is None:
-            return partial(__class__.malog, type_=type_)
-
-        @wraps(func)
-        def wrapper(self, *args, **kwargs):
-            # Update stage and make a copy of the original data.
-            to_interval = kwargs.pop("to_interval", False)
-            new_stage = kwargs.pop("new_stage", None)
-            if new_stage is not None:
-                self.stage = new_stage
-            df_ori = self.data.copy()
-
-            ret = func(self, *args[1:], **kwargs)
-
-            # Build the mappings DataFrame.
-            df_new = self.data
-            cols = df_new.columns
-            colmaps_cat = {}
-            colmaps_num = {}
-            for colname in cols:
-                colmap = serdiffm(df_ori[colname], df_new[colname],
-                                  to_interval=to_interval)
-                if colmap is None:
-                    continue
-                elif colmap.index.nlevels == 1:
-                    colmaps_cat[colname] = colmap
-                elif colmap.index.nlevels == 2:
-                    colmaps_num[colname] = colmap
-
-            # Set log for categorical and numeric columns seperately.
-            slogs = self.logs.setdefault(self.stage, {})
-            if colmaps_cat:
-                slogs[f"{type_}_{CAT_NAME}"] = pd.concat(
-                    colmaps_cat.values(),
-                    keys=colmaps_cat.keys())
-            if colmaps_num:
-                slogs[f"{type_}_{NUM_NAME}"] = pd.concat(
-                    colmaps_num.values(),
-                    keys=colmaps_num.keys())
-
-            return ret
-        return wrapper
-
-    def log2excel(self, dest: str) -> None:
-        """Output logs to excel.
-
-        Each sheet will store only one log type of one stage with stage and
-        log type as its name.
-
-        Params:
-        ----------------------
-        dest: File name.
-        """
-        xlwriter = pd.ExcelWriter(dest, mode="w")
-        for stage, slogs in self.logs.items():
-            for log_type, log in slogs.items():
-                log.to_excel(xlwriter, f"{stage}_{log_type}")
-        xlwriter.save()
-
-    @staticmethod
-    def read_dflog_file(filename: str) -> dict[str, pd.DataFrame]:
-        """Read logs from excel.
-
-        Params:
-        ----------------------
-        filename: File name.
-
-        Return:
-        -----------------------
-        dict["stage_type", DataFrame of log]
-        """
-        xlr = pd.ExcelFile(filename)
-        logdfs = {}
-        for sheet_name in xlr.sheet_names:
-            stage, type_s = sheet_name.split("_")
-            slog = logdfs.setdefault(stage, {})
-            slog["_".join(type_s)] = pd.read_excel(xlr, sheet_name)
-        return slog
-
-
-# %%
-# TODO: Check flags.
-def serlog(ser: pd.Series, label: pd.Series = None,
-           with_woe: bool = True,
-           with_lift: bool = True):
-    """Decribe Series.
+    Description of factors and the whole sequences will be returned
+    seperately.
 
     Params:
     ---------------------
-    ser: Series to be described.
+    seq: Series to be described.
     label: Label.
     with_woe: If to calculate WOEs and related etc.
     with_lift: If to calculate Lift and related etc.
 
     Return:
     ---------------------
-    uni_df: DataFrame of factor-level granularity index.
-            labels...     freqr       WOEs    IVs     Lifts     AccLifts
-        f1
-        f2
-        ...
-    col_D: Dict of column-level granularity index.
-        chi_2: Chi-square.
-        chi2_pv: P-value of Chi-square.
-        IV: IV,
-        t1_lift: Maximum lift.
-        t1_acl: Maximum accumulating lift.
-        acc_kcorr: Kendell correlations for lifts and values.
-        acc_kpv: P-value of Kendell correlations.
-        pearson: Pearson correltions for values and labels.
-        kendall: Ditto.
-        spearman: Ditto.
+    factor_log: DataFrame of factor-level granularity index.
+          labels_Cnt    FreqR   WOEs    IVs     Lifts     AccLifts  AccLiftsR
+      F1
+      F2
+      ...
+    seq_log: Series of column-level granularity index.
+      Chi2: Chi-square.
+      Chi2PV: P-value of Chi-square.
+      IV: IV,
+      T1Lift: Maximum lift.
+      T1Acc: Maximum accumulating lift.
+      T1AccR: Maximum accumulating lift in reversed order.
+      AccKenCorr: Kendell correlations for lifts and values.
+      AccKenPV: P-value of Kendell correlations.
+      Pearson: Pearson correltions for values and labels.
     """
-    # 1. `contingency.crosstab` can only handle sortable array, namely NA and
-    #   mixture dtype are not allowed.
-    # 2. `pd.crosstab` will ignore NA.
-    # 3. `contigency.crosstab` is 20 times faster than `pd.crosstab`.
-    #
-    # BUG: `contigency.crosstab` depends on `np.unique`, but `np.unqiue` may
-    #   return duplicate elements when np.ndarray.dtype is objects and np.nan
-    #   exists.
-    # >>> a = np.array([1, np.nan, 1], dtype=object)
-    # >>> np.unique(a)
-    # [1, np.nan, 1]
-    try:
-        (ux, uy), ctab = contingency.crosstab(ser.values, label.values)
-        uni_df = pd.DataFrame(ctab, index=ux, columns=uy)
-    except TypeError as e:
-        logger.warning(f"{e}. And an encoder will applied silently.")
+    if label is None:
+        larr = np.ones(len(ser), dtype=np.int32)
+    else:
+        larr = np.asarray(label)
+    seq = np.asarray(ser)
 
-        codesx, fux = pd.factorize(ser, sort=True)
-        fux = fux.insert(len(fux), pd.NA)
-        codesy, fuy = pd.factorize(label, sort=True)
-        fuy = fuy.insert(len(fuy), pd.NA)
+    seq_log = {}
+    # Factorize if not numeric so to `contingency.crosstab`.
+    # As `pd.factorize` will always encode `pd.isna` with -1, so insert
+    # `np.nan` to the end of `fux` and `fuy` will be compatiable to recover
+    # the orginal values back in construct DataFrame of crosstab.
+    # 1. No matter `pd.isna` exists or not.
+    # 2. All `pd.isna` will be treated as the same `np.nan`, including `None`,
+    #   `pd.NA` and etc.
+    fux, fuy = None, None
+    if not is_numeric_dtype(seq):
+        seq, fux = pd.factorize(seq, sort=True)
+        fux = np.concatenate([fux, [np.nan,]])
+    if not is_numeric_dtype(larr):
+        larr, fuy = pd.factorize(larr, sort=True)
+        fuy = np.concatenate([fuy, [np.nan,]])
 
-        (ux, uy), ctab = contingency.crosstab(codesx, codesy)
-        uni_df = pd.DataFrame(ctab, index=fux.take(ux), columns=fuy.take(uy))
-    col_D = {}
-
+    (ux, uy), ctab = contingency.crosstab(seq, larr)
+    factor_log = pd.DataFrame(ctab,
+                              index=fux.take(ux) if fux is not None else ux,
+                              columns=fuy.take(uy) if fuy is not None else uy)
     # Frequency.
-    uni_df["freqr"] = ctab.sum(axis=1) / ctab.sum()
+    factor_log["FreqR"] = ctab.sum(axis=1) / ctab.sum()
 
     # Chi-square stats.
-    chi2, chi2_pv, chi2_dof, *ii = contingency.chi2_contingency(ctab)
-    col_D["chi2"] = chi2
-    col_D["chi2_pv"] = chi2_pv
+    if len(uy) > 1:
+        chi2, chi2_pv, chi2_dof, *ii = contingency.chi2_contingency(ctab)
+        seq_log["Chi2"] = chi2
+        seq_log["Chi2PV"] = chi2_pv
 
     # Crosstab, woes, and lifts for binary label.
-    if len(uy) == 2:
-        if with_woe:
-            woes, ivs = cal_woes_from_ctab(ctab)
-            uni_df["woes"] = woes
-            uni_df["ivs"] = ivs
-            col_D["IV"] = ivs.sum()
-
-        if with_lift:
-            lifts, acc_lifts, lkcorr, lkpv = cal_lifts_from_ctab(ctab)
-            uni_df["lifts"] = lifts
-            if lkcorr > 0:
-                uni_df["acc_lifts"] = acc_lifts
-            else:
-                uni_df["acc_lifts"] = acc_lifts[::-1]
-            col_D["acl_kcorr"] = lkcorr
-            col_D["acl_kpv"] = lkpv
-            col_D["t1_lift"] = lifts.max()
-            col_D["t1_acl"] = acc_lifts.max()
+    if len(uy) == 2 and with_woe:
+        woes, ivs = cal_woes_from_ctab(ctab)
+        factor_log["WOEs"] = woes
+        factor_log["IVs"] = ivs
+        seq_log["IV"] = ivs.sum()
+    if len(uy) == 2 and with_lift:
+        lifts, acc_lifts, acc_lifts_r, lkcorr, lkpv = cal_lifts_from_ctab(ctab)
+        factor_log["Lifts"] = lifts
+        factor_log["AccLifts"] = acc_lifts
+        factor_log["AccLiftsR"] = acc_lifts_r
+        seq_log["AccKenCorr"] = lkcorr
+        seq_log["AccKenPV"] = lkpv
+        seq_log["T1Lift"] = lifts.max()
+        seq_log["T1Acc"] = acc_lifts.max()
+        seq_log["T1RAcc"] = acc_lifts_r.max()
 
     # Correlation rate, outliers for numeric series.
-    if (infer_dtype(ser) in ["integer", "floating"]
-            and infer_dtype(label) in ["integer", "floating"]):
-        for m in ["pearson", "kendall", "spearman"]:
-            # Integers with None will be inferred as `integer`, but Error will
-            # be raised when calculating correlations.
-            col_D[m] = ser.astype(float).corr(label.astype(float), method=m)
+    if is_numeric_dtype(ser) and is_numeric_dtype(label):
+        seq_log["Pearson"] = np.corrcoef(seq, larr)[0, 1]
 
-    return uni_df, col_D
+    return factor_log, pd.Series(seq_log, dtype=np.float64)
 
 
 # %%
-def serdiffm(sero: pd.Series, sern: pd.Series,
-             to_interval:bool = False) -> pd.Series:
-    """Match, compare and build mapping between 2 series.
+def serdiffm(
+    sero: np.ndarray | pd.Series,
+    sern: np.ndarray | pd.Series,
+    to_interval: bool = False,
+) -> pd.Series:
+    """Match, compare and build mapping between 2 sequences.
 
-    1. 2 Series should share the same index.
+    Series with 2-level index will be returned if `to_interval` is set and
+    `sero` is numeric.
+    And the cutting edges, as the values in index, will the middle point of
+    the changine points in `sero`.
 
     Params:
     --------------------
@@ -462,59 +161,299 @@ def serdiffm(sero: pd.Series, sern: pd.Series,
 
     Return:
     --------------------
-    Series representing the mapping from `sero` to `sern`.
-    Series[factor from `sero`, factor from `sern`]
-    Series[interval from `sero`, factor from `sern`]
+    Series representing the mapping from `sero` to `sern` with index:
+      1. `FROM`: `to_interval` unset.
+      2. `LEFT, `RIGHT`: `to_interval` set.
     """
-    assert len(sero) == len(sern)
-    # (uo, un), ctab = contingency.crosstab(sero.values, sern.values)
+    if isinstance(sero, pd.Series) and isinstance(sern, pd.Series):
+        dt = pd.concat([sero, sern], axis=1)
+        sero, sern = dt.values[:, 0], dt.values[:, 1]
+    elif len(sero) != len(sern):
+        logger.warning("Diffmap can't be applied on no-Series sequences of"
+                       " different length.")
+        return None
 
-    # `np.unique` bases on sort which will:
-    # 1. Cast data type to down to the same.
-    # 2. Can't handle no-comparable value, `None` for example.
-    #
-    # `pd.unique` instead of `set` directly is used to filter repeated
-    # `np.nan`.
-    mapper = (pd.Series(sern.values, index=sero.values)
-              .groupby(level=0, dropna=False, sort=True)
-              .aggregate(lambda x:tuple(pd.unique(x))))
-
-    # Check if one value will be map to multiple value.
-    mapper_1n = mapper.apply(len) > 1
-    if mapper_1n.sum() > 0:
-        logger.warning(f"Invalid 1-N mapping {mapper[mapper_1n]}.")
-    else:
-        dest = [ele[0] for ele in mapper]
-        if np.all(mapper.index == dest):
-            return None
+    # Construct mapper from `sero` to `sern`.
+    mapper = {}
+    changed = False
+    for vo, vn in zip(sero, sern):
+        # Unify all `nan` to `np.nan`, as `float("nan")` are not equal.
+        # ATTENTION: `np.isnan` only accept numeric value.
+        if pd.isna(vo):
+            vo = np.nan
+            if not pd.isna(vn):
+                changed = True
+        elif vo != vn:
+            changed = True
+        vr = mapper.setdefault(vo, vn)
+        if vr != vn and vr is not vn:
+            logger.warning(f"The value {vo} has been mapped to multiple values"
+                           f": {vn}, {vr}.")
+    if not changed:
+        return None
 
     # Set intervals for numeric series.
-    if to_interval and (infer_dtype(sero) in
-                        ["integer", "floating", "mixed-integer-floating"]):
+    if to_interval and is_numeric_dtype(sero):
+        mapper = pd.Series(mapper).sort_index()
         range_mapper = {}
         ti = iter(mapper.items())
-        start, (last, *ele) = next(ti)
-        end = start
-        for cur_edge, (cur, *ele) in ti:
-            # Break when encountering `nan`.
-            # ATTENTION: It's assumed that `nan` will always be the last item
-            # in `mapper` from `ser.groupby`.
+        left, last = next(ti)
+        right = left
+        for cur_edge, cur in ti:
+            # It's assumed that `nan` will always be the last item in
+            # `pd.Series.sort_index`.
+            # So break and set for `np.nan` when encountering `np.nan`.
             if np.isnan(cur_edge):
-                range_mapper[(start, end)] = last
+                range_mapper[(left, right)] = last
                 range_mapper[(cur_edge, cur_edge)] = cur
                 break
+            # Continue for continuous mapping result.
             if last == cur:
+                right = cur_edge
                 continue
-            end = cur_edge
 
-            range_mapper[(start, end - EPSILON)] = last
-            start = end - EPSILON
+            mid = (right + cur_edge) / 2
+            range_mapper[(left, mid)] = last
+            left, right = mid, cur_edge
             last = cur
         else:
-            range_mapper[(start, end)] = last
+            range_mapper[(left, right)] = last
 
-        return (pd.Series(range_mapper)
-                .rename_axis(["left[", "right)(EXCEPT_LAST)"])
-                .rename("to"))
-    else:
-        return mapper.map(lambda x:x[0]).rename_axis("from").rename("to")
+        ret = (pd.Series(range_mapper)
+               .rename_axis(["LEFT", "RIGHT"])
+               .rename("TO"))
+        return ret
+
+    ret = pd.Series(mapper, name="TO").rename_axis("FROM")
+    return ret
+
+
+# %%
+def dfdesc(
+    data: pd.DataFrame,
+    label: pd.Series | np.ndarray = None,
+    with_woe: bool = True,
+    with_lift: bool = True
+) -> tuple[pd.DataFrame, pd.Series]:
+    """Describe the DataFrame.
+
+    Description of both column-level and factor-level granularity will
+    be calculated and returned seperately.
+
+    Params:
+    ---------------------
+    data: DataFrame to be described.
+    label: Label.
+    with_woe: If to calculate WOEs and related etc.
+    with_lift: If to calculate Lift and related etc.
+
+    Return:
+    ---------------------
+    factor_df: DataFrame of factor-level granularity description.
+                labels_Cnt  FreqR   WOEs    IVs     Lifts     AccLifts  AccLiftsR
+      Col1  F1
+            F2
+            ...
+      Col2  ...
+    col_log: DataFrame of column-level granularity description.
+            Chi2  Chi2PV  IV  T1Lift  T1Acc   T1AccR  AccKenCorr  AccKenPV    Pearson
+      Col1
+      Col2
+      ...
+    """
+    factor_logs, ser_logs = [], []
+    # Log for each column.
+    for coln in data.columns:
+        fl, sl = serdesc(data[coln], label)
+        factor_logs.append(fl)
+        ser_logs.append(sl)
+
+    # Construct DataFrame of log.
+    fdf = pd.concat(factor_logs, axis=0, keys=data.columns)
+    sdf = pd.DataFrame.from_records(ser_logs, index=data.columns)
+
+    return fdf, sdf
+
+
+# %%
+def dfdiffm(
+    dfo: np.ndarray | pd.Series,
+    dfn: np.ndarray | pd.Series,
+    to_interval: bool = False,
+) -> tuple[pd.Series, pd.Series]:
+    """Match, compare and build mapping between columns from 2 DataFrame.
+
+    1. Series with 2-level index will be returned if `to_interval` is set and
+      `sero` is numeric.
+      1.1 And the cutting edges, as the values in index, will the middle point of
+      the changine points in `sero`.
+      1.2 `num_df` returned will always be empty if `to_interval` not set.
+    2. Columns with no change and columns that don't exist in both DataFrame
+      will be ignored.
+
+    Params:
+    --------------------
+    dfo: Source DataFrame to be compared.
+    dfn: Destinated DataFrame to be compared.
+    to_interval: If to build the mapping from interval to a scalar.
+
+    Return:
+    --------------------
+    Series representing the mapping from `sero` to `sern` with index:
+      `cat_df`: 1-to-1 mapper
+                FROM
+         Col1   Val1    New1
+                Val2    New2
+                ...
+         Col2   ...
+         ...
+      `num_df`: interval-to-1 mapper for numeric with `to_interval` set
+                LEFT        RIGHT
+         Col_1  MIN[        E1)         New1
+                E1[         E2)         New2
+                ...
+                En[         MAX]        NewN
+         Col_2  ...
+         ...
+    """
+    # Build the mappings DataFrame.
+    cat_map = {}
+    num_map = {}
+    for colname in dfn.columns:
+        if colname not in dfo.columns:
+            logger.info(f"Column {colname} doesn't exists in original"
+                        f" DataFrame.")
+            continue
+        colmap = serdiffm(dfo[colname], dfn[colname],
+                          to_interval=to_interval)
+        if colmap is None:
+            continue
+        elif colmap.index.nlevels == 1:
+            cat_map[colname] = colmap
+        elif colmap.index.nlevels == 2:
+            num_map[colname] = colmap
+
+    cat_df = (pd.Series(dtype=object, name="TO") if len(cat_map) == 0
+              else pd.concat(cat_map.values(), keys=cat_map.keys()))
+    num_df = (pd.Series(dtype=object, name="TO") if len(num_map) == 0
+              else pd.concat(num_map.values(), keys=num_map.keys()))
+
+    return cat_df, num_df
+
+
+# %%
+class ProcessLogger:
+    """Logger for DataFrame processing.
+
+    1. DataFrames will be used to record the information.
+
+    Attrs:
+    -----------------------------
+    proc_logs: Dict[str, DataFrame]
+      Dict storing DataFrame recording the information.
+    log_cnt: Counter
+      Counter dict records the number of each type of the logs.
+    """
+    def __init__(self):
+        self.proc_logs = {}
+        self.log_cnt = Counter()
+
+    def maplog(self, dfo: pd.DataFrame,
+               dfn: pd.DataFrame,
+               to_interval: bool = True,
+               ltag: str = "TRANS") -> None:
+        """Match, compare and build mapping between columns from 2 DataFrame.
+
+        Series representing the mapping from `sero` to `sern` with index:
+          1. `cat_df`: 1-to-1 mapper
+                    FROM
+             Col1   Val1    New1
+                    Val2    New2
+                    ...
+             Col2   ...
+             ...
+          2. `num_df`: interval-to-1 mapper for numeric with `to_interval` set
+                    LEFT        RIGHT
+             Col1   MIN[        E1)         New1
+                    E1[         E2)         New2
+                    ...
+                    En[         MAX]        NewN
+             Col2   ...
+             ...
+        will be stored in `proc_logs` with key constructed from `ltag`
+        seperately.
+
+        Params:
+        --------------------
+        dfo: Source DataFrame to be compared.
+        dfn: Destinated DataFrame to be compared.
+        to_interval: If to build the mapping from interval to a scalar.
+        ltag: The key of the log Series in `proc_logs`.
+
+        Return:
+        --------------------
+        None
+        """
+        proc_logs = self.proc_logs
+        log_cnt = self.log_cnt
+        log_cnt[ltag] += 1
+        ltag_cnt = log_cnt[ltag]
+        cat_df, num_df = dfdiffm(dfo, dfn, to_interval)
+        if not cat_df.empty:
+            proc_logs[f"catmap_{ltag}_{ltag_cnt}"] = cat_df
+        if not num_df.empty:
+            proc_logs[f"nummap_{ltag}_{ltag_cnt}"] = num_df
+
+    def vallog(self, data: pd.DataFrame,
+               label: pd.Series | np.ndarray,
+               with_woe: bool = True,
+               with_lift: bool = True,
+               ltag: str = "ABST"):
+        """Describe the DataFrame.
+
+        DataFrame of description:
+          1. factor_df: DataFrame of factor-level granularity description.
+                      labels_Cnt  FreqR   WOEs    IVs     Lifts...
+            Col1  F1
+                  F2
+                  ...
+            Col2  ...
+          2. col_log: DataFrame of column-level granularity description.
+                  Chi2  Chi2PV  IV  T1Lift  T1Acc   T1AccR  AccKenCorr...
+            Col1
+            Col2
+            ...
+          3. Pearson corelations matrix.
+        will be stored in `proc_logs` with key constructed from `ltag`
+        seperately.
+
+        Params:
+        ---------------------
+        data: DataFrame to be described.
+        label: Label.
+        with_woe: If to calculate WOEs and related etc.
+        with_lift: If to calculate Lift and related etc.
+        ltag: The key of the log Series in `proc_logs`.
+
+        Return:
+        --------------------
+        None
+        """
+        proc_logs = self.proc_logs
+        log_cnt = self.log_cnt
+        log_cnt[ltag] += 1
+        ltag_cnt = log_cnt[ltag]
+        fdesc, cdesc = dfdesc(data, label, True, True)
+        if not fdesc.empty:
+            proc_logs[f"fdesc_{ltag}_{ltag_cnt}"] = fdesc
+        if not cdesc.empty:
+            proc_logs[f"cdesc_{ltag}_{ltag_cnt}"] = cdesc
+
+        # Pearson correlation.
+        pcorr = data.select_dtypes(include=np.number).corr(method="pearson")
+        if not pcorr.empty:
+            proc_logs[f"pcorr_{ltag}_{ltag_cnt}"] = pcorr
+
+    def log2excel(self, fname: str = "proclog/proc_log.xlsx") -> Path:
+        """Save DataFrame of log as excel."""
+        return save_with_excel(self.proc_logs, fname)
