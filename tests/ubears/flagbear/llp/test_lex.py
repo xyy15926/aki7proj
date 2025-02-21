@@ -3,7 +3,7 @@
 #   Name: test_lex.py
 #   Author: xyy15926
 #   Created: 2023-12-12 12:35:39
-#   Updated: 2025-01-14 20:12:20
+#   Updated: 2025-02-21 17:50:11
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,7 +11,9 @@
 import pytest
 if __name__ == "__main__":
     from importlib import reload
+    from ubears.flagbear.const import tokens as tokenm
     from ubears.flagbear.llp import lex
+    reload(tokenm)
     reload(lex)
 
 from ubears.flagbear.llp.lex import Token, Lexer
@@ -35,6 +37,16 @@ def test_lexer():
     assert tokens[0] == Token("ID", "var1", 2, 4)
     assert tokens[7] == Token("STRING", "233xs熊", 3, 8)
     assert tokens[8] == Token("IF", "if", 4, 2)
+
+    tokens = list(lexer.input('[1, ",", ":"]'))
+    assert tokens[1] == Token("INT", 1, 1, 1)
+    assert tokens[3] == Token("STRING", ",", 1, 3)
+    assert tokens[5] == Token("STRING", ":", 1, 3)
+
+    tokens = list(lexer.input("[1, \",\", \":\"]"))
+    assert tokens[1] == Token("INT", 1, 1, 1)
+    assert tokens[3] == Token("STRING", ",", 1, 3)
+    assert tokens[5] == Token("STRING", ":", 1, 3)
 
 
 # %%

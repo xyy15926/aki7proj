@@ -3,7 +3,7 @@
 #   Name: calender.py
 #   Author: xyy15926
 #   Created: 2024-11-09 21:35:31
-#   Updated: 2024-11-09 21:36:48
+#   Updated: 2025-02-21 11:17:46
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,12 +11,13 @@
 from __future__ import annotations
 import logging
 from typing import Any, TypeVar, Tuple
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 try:
     from typing import NamedTuple, Self
 except ImportError:
     from typing_extensions import NamedTuple, Self
 
+import numpy as np
 from pandas.tseries.holiday import AbstractHolidayCalendar, Holiday
 from chinese_calendar import holidays
 
@@ -28,6 +29,20 @@ logging.basicConfig(
     force=(__name__ == "__main__"))
 logger = logging.getLogger()
 logger.info("Logging Start.")
+
+
+# %%
+ChnBusdayCalendar = np.busdaycalendar("1111100", list(holidays.keys()))
+
+
+def is_chn_busday(date: str | Sequence):
+    date = np.asarray(date, dtype="M8[D]")
+    return np.is_busday(date, busdaycal=ChnBusdayCalendar)
+
+
+def not_chn_busday(date: str | Sequence):
+    date = np.asarray(date, dtype="M8[D]")
+    return ~(np.isnat(date) | np.is_busday(date, busdaycal=ChnBusdayCalendar))
 
 
 # %%

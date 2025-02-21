@@ -3,7 +3,7 @@
 #   Name: test_pandas.py
 #   Author: xyy15926
 #   Created: 2024-05-06 14:44:03
-#   Updated: 2025-01-22 19:52:40
+#   Updated: 2025-02-21 22:44:36
 #   Description:
 # ---------------------------------------------------------
 
@@ -233,21 +233,30 @@ def test_concat_nan_index():
 
 
 # %%
-@pytest.mark.skipif(Version(pd.__version__) > Version("2.0"),
-                    reason="Pandas change the way to handle datetime dtype.")
+# Datetime differences.
 @pytest.mark.pkgs
 def test_empty_datetime_seris_pd14():
+    # 1. `gap` won't inherit the dtype from `a` and `b` with M8 dtype.
+    #                   Pandas2.0               Pandas1.4
+    # default dtype     M8[s]                   M8[ns]
+    #                   m8[s]                   m8[ns]
     a = pd.Series(["2024-01-01", "2024-01-02"], dtype="M8[s]")
     b = pd.Series(["2023-01-01", "2023-01-02"], dtype="M8[s]")
     gap = a - b
-    # `gap` won't inherit the dtype from `a` and `b`.
-    assert gap.dtype == "m8[ns]"
+    if Version(pd.__version__) < Version("2.0"):
+        assert gap.dtype == "m8[ns]"
+    else:
+        assert gap.dtype == "m8[s]"
 
     a = pd.Series(dtype="M8[s]")
     b = pd.Series(dtype="M8[s]")
     gap = a - b
-    assert gap.dtype == "m8[ns]"
+    if Version(pd.__version__) < Version("2.0"):
+        assert gap.dtype == "m8[ns]"
+    else:
+        assert gap.dtype == "m8[s]"
 
+    # 2. `gap` for Period[M] is even more strange.
     a = pd.Series(["2024-01-01", "2024-01-02"], dtype="M8[s]").dt.to_period("M")
     b = pd.Series(["2023-01-01", "2023-01-02"], dtype="M8[s]").dt.to_period("M")
     gap = a - b
@@ -255,51 +264,43 @@ def test_empty_datetime_seris_pd14():
 
     a = pd.Series(dtype="M8[s]").dt.to_period("M")
     gap = a - b
-    assert gap.dtype == "M8[ns]"
+    if Version(pd.__version__) < Version("2.0"):
+        assert gap.dtype == "M8[ns]"
+    else:
+        assert gap.dtype == "O"
 
     b = pd.Series(dtype="M8[s]").dt.to_period("M")
-    # The `gap.dtype` will be float if both are empty for Pandas == 1.4.4.
-    gap = a - b
-    assert gap.dtype == "float"
-
-
-# %%
-@pytest.mark.skipif(Version(pd.__version__) < Version("2.0"),
-                    reason="Pandas change the way to handle datetime dtype.")
-@pytest.mark.pkgs
-def test_empty_datetime_seris_pd20():
-    a = pd.Series(["2024-01-01", "2024-01-02"], dtype="M8[s]")
-    b = pd.Series(["2023-01-01", "2023-01-02"], dtype="M8[s]")
-    gap = a - b
-    assert gap.dtype == "m8[s]"
-
-    a = pd.Series(dtype="M8[s]")
-    b = pd.Series(dtype="M8[s]")
-    gap = a - b
-    assert gap.dtype == "m8[s]"
-
-    a = pd.Series(["2024-01-01", "2024-01-02"], dtype="M8[s]").dt.to_period("M")
-    b = pd.Series(["2023-01-01", "2023-01-02"], dtype="M8[s]").dt.to_period("M")
-    gap = a - b
-    assert gap.dtype == "O"
-
-    a = pd.Series(dtype="M8[s]").dt.to_period("M")
-    gap = a - b
-    assert gap.dtype == "O"
-
-    b = pd.Series(dtype="M8[s]").dt.to_period("M")
-    # And the additional dtype check leads to TypeError for Pandas == 2.2.3.
-    with pytest.raises(TypeError):
+    if Version(pd.__version__) < Version("2.0"):
         gap = a - b
+        # The `gap.dtype` will be float if both are empty for Pandas == 1.4.4.
+        assert gap.dtype == "float"
+    else:
+        with pytest.raises(TypeError):
+            gap = a - b
+
+    # 3. Pandas == 2.2.3 can't handle mixed format datetime string.
+    x = ["2021-11-11T11:11:12", "2025-01-01 13:12:12"]
+    y = ["2021-11-11 11:11:12", "2025-01-01 13:12:12"]
+    if Version(pd.__version__) < Version("2.0"):
+        retx = pd.to_datetime(x)
+        rety = pd.to_datetime(y)
+        assert np.all(retx == rety)
+    else:
+        rety = pd.to_datetime(y)
+        with pytest.raises(ValueError):
+            retx = pd.to_datetime(x)
+            assert np.all(retx == rety)
 
 
 # %%
+# All-NA wannings.
 @pytest.mark.pkgs
 def test_na_argmax():
     a = pd.Series([np.nan] * 3, index=[5, 6, 7])
     with pytest.warns(RuntimeWarning, match="All-NaN"):
         assert np.isnan(np.nanmax(a))
 
+    # Warning will be raised in higher version.
     if Version(pd.__version__) > Version("2.0"):
         with pytest.warns(FutureWarning, match="argmax/argmin"):
             assert a.argmax() == -1
@@ -312,5 +313,3 @@ def test_na_argmax():
     # Pandas will skip NA automatically.
     a = pd.Series([1, np.nan, np.nan], index=[5, 6, 7])
     assert a.argmax() == 0
-    
-    
