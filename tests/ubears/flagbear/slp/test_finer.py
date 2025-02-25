@@ -3,7 +3,7 @@
 #   Name: test_finer.py
 #   Author: xyy15926
 #   Created: 2024-10-24 20:18:21
-#   Updated: 2024-11-11 11:48:14
+#   Updated: 2025-02-25 18:42:21
 #   Description:
 # ---------------------------------------------------------
 
@@ -59,6 +59,9 @@ def tmpfile(request):
 # %%
 def test_tmp_file(tmpfile):
     assert tmpfile.is_file()
+    # Raise error if mkdir failed.
+    with pytest.raises(FileExistsError):
+        tmp_file(tmpfile / "any_file")
     ordix = re.search(r"_(\d{4})\.", tmpfile.name).groups()[0]
     nbname = tmpfile.name.replace(ordix, f"{int(ordix) + 1:04}")
     assert tmp_file(TMP_FNAME).name == nbname

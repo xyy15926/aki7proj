@@ -3,7 +3,7 @@
 #   Name: finer.py
 #   Author: xyy15926
 #   Created: 2024-06-24 14:04:14
-#   Updated: 2025-02-08 17:13:56
+#   Updated: 2025-02-25 17:24:12
 #   Description:
 # ---------------------------------------------------------
 
@@ -16,6 +16,7 @@ import logging
 import os
 import sys
 import re
+from collections import deque
 from pathlib import Path
 from functools import lru_cache
 from datetime import datetime, date
@@ -66,17 +67,17 @@ def get_root_path() -> Path:
 
 
 @lru_cache
-def get_tmp_path() -> Path:
+def get_tmp_path(dest: str = "tmp") -> Path:
     """Get the absolute path of the `tmp` of the currrent working project.
     """
-    return get_root_path() / "tmp"
+    return get_root_path() / dest
 
 
 @lru_cache
-def get_assets_path() -> Path:
+def get_assets_path(dest: str = "assets") -> Path:
     """Get the absolute path of the `assets` of the current working project.
     """
-    return get_root_path() / "assets"
+    return get_root_path() / dest
 
 
 # %%
@@ -152,6 +153,10 @@ def tmp_file(
 ) -> Path:
     """Generate file absolute path in TMP dir.
 
+    The filename will be consist of the date and inscreasing order mark so
+    that the file with the same key name won't be overlapped, as this is
+    mainly used to generate the temp filename and so to track the changes.
+
     Params:
     ----------------------
     fname: The identical part of the file name.
@@ -170,12 +175,8 @@ def tmp_file(
     """
     # Mkdir if necessary.
     tfname = get_tmp_path() / fname
-    if not tfname.parent.exists():
-        tfname.parent.mkdir()
-    elif not tfname.parent.is_dir():
-        newfd = tfname.parent.with_name(tfname.parent.name + "_bak")
-        newfd.mkdir()
-        tfname = newfd / tfname.name
+    if not tfname.parent.is_dir():
+        tfname.parent.mkdir(parents=True)
 
     # Split basename and extname.
     basename, extname = os.path.splitext(tfname.name)

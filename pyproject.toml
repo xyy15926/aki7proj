@@ -1,6 +1,6 @@
 [project]
 name = "ubears"
-version = "0.2.3"
+version = "0.2.4"
 authors = [
 	{name = "UBeaRLy", email = "ubearly@outlook.com"},
 ]
@@ -59,4 +59,4 @@ include-package-data = true
 where = ["src"]
 include = ["ubears*"]
 exclude = []
-namespaces = true
+namespaces = false

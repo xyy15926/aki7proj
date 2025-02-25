@@ -3,7 +3,7 @@
 #   Name: display.py
 #   Author: xyy15926
 #   Created: 2024-11-04 16:41:52
-#   Updated: 2024-11-08 16:27:43
+#   Updated: 2025-02-25 18:33:37
 #   Description:
 # ---------------------------------------------------------
 
@@ -17,7 +17,6 @@ import pandas as pd
 from pyecharts import options as opts
 from pyecharts.charts import Graph
 
-from ubears.flagbear.slp.finer import tmp_file
 from ubears.suitbear.kgraph.kgenum import NodeType
 
 # %%
@@ -30,11 +29,28 @@ logger.info("Logging Start.")
 
 
 # %%
-def save_as_html(
+def draw_rels(
     rel_df: pd.DataFrame,
     node_df: pd.DataFrame = None,
-    fname: str = "kgraph/graph.html"
+    fname: str = None,
 ) -> Graph:
+    """Draw relation graph.
+
+    Params:
+    --------------------
+    rel_df: DataFrame[source, target] representing the relations:
+      source: Source node ids.
+      target: Target node ids.
+    node_df: DataFrame[id, ntype] representing the node:
+      nid: Node identifier.
+      ntype: Node type.
+      NOTE: Nodes will be extracted from `ref_df` is not provided.
+    fname: Filename for saving html render.
+
+    Return:
+    --------------------
+    Graph
+    """
     if node_df is not None:
         # Display only the nodes in the relations.
         node_df = node_df[node_df["nid"].isin(rel_df["source"])
@@ -95,7 +111,9 @@ def save_as_html(
             )
         )
     )
-    ghtml = g.render(tmp_file(fname, incr=0).with_suffix(".html"))
-    logger.info(f"Graph saved at {ghtml}.")
+
+    if fname is not None:
+        ghtml = g.render(fname)
+        logger.info(f"Graph saved at {ghtml}.")
 
     return g

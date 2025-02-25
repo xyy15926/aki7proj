@@ -3,7 +3,7 @@
 #   Name: confgraph.py
 #   Author: xyy15926
 #   Created: 2024-09-24 21:33:27
-#   Updated: 2024-12-11 19:22:11
+#   Updated: 2025-02-25 18:14:14
 #   Description:
 # ---------------------------------------------------------
 
@@ -913,14 +913,14 @@ def build_graph_df(
 
     Return:
     ----------------------------
-    node_df: DataFrame representing the node:
-      id: Node identifier.
-      ntype: Node type.
     rel_df: DataFrame representing the relations:
       source: Source node ids.
       target: Target node ids.
       source_role: The role of the source.
       target_role: The role of the target.
+    node_df: DataFrame representing the node:
+      nid: Node identifier.
+      ntype: Node type.
     """
     import pandas as pd
 

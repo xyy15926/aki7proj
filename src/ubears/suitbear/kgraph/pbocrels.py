@@ -3,7 +3,7 @@
 #   Name: pbocrels.py
 #   Author: xyy15926
 #   Created: 2024-10-15 21:02:53
-#   Updated: 2024-11-11 11:16:30
+#   Updated: 2025-02-25 18:14:29
 #   Description:
 # ---------------------------------------------------------
 
@@ -484,14 +484,14 @@ def build_graph_df(
 
     Return:
     ----------------------------
-    node_df: DataFrame representing the node:
-      id: Node identifier
-      ntype: Node type
     rel_df: DataFrame representing the relations:
       source: Source node id
       target: Target node id
       src_role: The role of the source
       tgt_role: The role of the target
+    node_df: DataFrame representing the node:
+      nid: Node identifier
+      ntype: Node type
     """
     import pandas as pd
 

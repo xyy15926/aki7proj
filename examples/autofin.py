@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2025-02-25 13:47:20
+#   Updated: 2025-02-25 18:12:12
 #   Description:
 # ---------------------------------------------------------
 
@@ -47,12 +47,12 @@ from collections import ChainMap
 from IPython.core.debugger import set_trace
 
 from ubears.flagbear.llp.parser import EnvParser
-from ubears.flagbear.slp.finer import get_tmp_path, get_assets_path
+from ubears.flagbear.slp.finer import get_tmp_path, get_assets_path, tmp_file
 from ubears.flagbear.slp.pdsl import (save_with_excel,
                                       save_with_pickle,
                                       load_from_pickle)
 from ubears.suitbear.kgraph.kgenum import NodeType, df_enum_confs
-from ubears.suitbear.kgraph.display import save_as_html
+from ubears.suitbear.kgraph.display import draw_rels
 from ubears.suitbear.dirt.exdf import (flat_ft_dfs, trans_from_dfs,
                                        agg_from_dfs, agg_from_graphdf)
 from ubears.suitbear.autofin.confflat import df_flat_confs as af_flat_confs
@@ -245,4 +245,4 @@ if __name__ == "__main__":
 
     save_with_excel(agg_rets, "autofin/autofin_aggs.xlsx")
     save_with_excel(dfs, "autofin/autofin_flats.xlsx")
-    save_as_html(rel_df, node_df, "autofin/autofin_graph.xlsx")
+    draw_rels(rel_df, node_df, tmp_file("autofin/autofin_graph.html"))
