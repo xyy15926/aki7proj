@@ -3,7 +3,7 @@
 #   Name: test_numpy.py
 #   Author: xyy15926
 #   Created: 2025-02-08 18:36:44
-#   Updated: 2025-02-11 11:55:20
+#   Updated: 2025-02-24 19:18:43
 #   Description:
 # ---------------------------------------------------------
 
@@ -52,19 +52,26 @@ def test_str_numarr_comparison_ge20():
 # --------------------------------------------------------------
 #               * * * FEATURE TESTS * * *
 # --------------------------------------------------------------
-# `np.isclose` only support numeric dtype.
 def test_isclose():
     a = np.array([1, np.nan], dtype=object)
+    # `np.isclose` only support numeric dtype.
     with pytest.raises(TypeError):
         np.isclose(a, a)
     assert isinstance(a[0], int)
     assert isinstance(a[1], float)
 
 
-# So is the `np.isnan`
 def test_isnan():
+    # The `np.isnan` can't also support non-numeric dtype.
     with pytest.raises(TypeError):
         np.isnan("a")
+
+    # `np.nan` can't `in` np.darray with np.nan.
+    x = np.array([1, 2, 3, np.nan])
+    assert np.nan not in x
+    # But list.
+    x = [1, 2, 3, np.nan]
+    assert np.nan in x
 
 
 # %%

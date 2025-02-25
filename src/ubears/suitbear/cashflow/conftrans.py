@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-08-25 15:28:52
-#   Updated: 2024-12-17 11:56:51
+#   Updated: 2025-02-25 11:59:05
 #   Description:
 # ---------------------------------------------------------
 
@@ -139,8 +139,8 @@ WEIXIN_TRANSECTION_TYPE = [
     ("tf_out"        , '(transection_type == "转账") & (cash_inout == "支出")', "转出"),
     ("qrc_in"        , 'transection_type == "二维码收款"', "扫码收款"),
     ("qrc_out"       , 'transection_type == "扫二维码付款"', "扫码付款"),
-    ("hb_in"         , 'contains(transection_type, "微信红包") & (cash_inout == "收入")', "收红包"),
-    ("hb_out"        , 'contains(transection_type, "微信红包") & (cash_inout == "支出")', "发红包"),
+    ("hb_in"         , 'isin("微信红包", transection_type) & (cash_inout == "收入")', "收红包"),
+    ("hb_out"        , 'isin("微信红包", transection_type) & (cash_inout == "支出")', "发红包"),
     ("group_in"      , '(transection_type == "群收款") & (cash_inout == "收入")', "群收款收入"),
     ("group_out"     , '(transection_type == "群收款") & (cash_inout == "支出")', "群收款支出"),
     ("comsu"         , 'transection_type == "商户消费"', "商户消费"),
@@ -159,8 +159,8 @@ def cond_weixin_ttype(field: str = "ttype"):
 
 # %%
 WEIXIN_TRANSECTION_METHOD = [
-    ("credit_card"   , 'contains(transection_method, "信用卡")', "信用卡"),
-    ("debit_card"    , 'contains(transection_method, "储蓄卡")', "借记卡"),
+    ("credit_card"   , 'isin("信用卡", transection_method)', "信用卡"),
+    ("debit_card"    , 'isin("储蓄卡", transection_method)', "借记卡"),
     ("change"        , '(transection_method == "零钱") | (transection_method == "零钱通")', "零钱"),
     ("biz_acc"       , 'transection_method == "经营账户"', "经营账户"),
 ]
@@ -178,8 +178,8 @@ ALIPAY_TRANSECTION_TYPE = {
     ("comsu"    , 'retailer_id != ""', "消费"),
     ("tf_in"    , '(retailer_id == "") & (cash_inout == "收入")', "转入"),
     ("tf_out"   , '(retailer_id == "") & (cash_inout == "支出")', "转出"),
-    ("qrc_out"  , 'contains(commodity_desc, "付款") & (cash_inout == "支出")', "扫码付款"),
-    ("qrc_in"   , 'contains(commodity_desc, "收款") & (cash_inout == "收入")', "扫码收款"),
+    ("qrc_out"  , 'isin("付款", commodity_desc) & (cash_inout == "支出")', "扫码付款"),
+    ("qrc_in"   , 'isin("收款", commodity_desc) & (cash_inout == "收入")', "扫码收款"),
     ("outof"    , 'transection_method == "不计收支"', "不记收支"),
 }
 

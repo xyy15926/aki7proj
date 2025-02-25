@@ -21,7 +21,6 @@ import pandas as pd
 # from IPython.core.debugger import set_trace
 
 from ubears.flagbear.llp.parser import EnvParser
-from ubears.modsbear.dflater.exenv import EXGINE_ENV
 
 # %%
 logging.basicConfig(
@@ -65,11 +64,7 @@ def trans_on_df(
     --------------------
     DataFrame with transformation columns.
     """
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
     envp.bind_env(df)
 
     # Make a copy if transformation is not applied on `df`.
@@ -139,11 +134,7 @@ def agg_on_df(
     --------------------
     Series with Index[KEY from rules].
     """
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     ret = {}
     # set_trace()

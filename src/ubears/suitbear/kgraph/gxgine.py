@@ -20,7 +20,6 @@ import pandas as pd
 # from IPython.core.debugger import set_trace
 
 from ubears.flagbear.llp.parser import EnvParser
-from ubears.modsbear.dflater.exenv import EXGINE_ENV
 from ubears.suitbear.kgraph.kgenum import NodeType, ROLE_TYPE_MAPPER
 
 # %%
@@ -89,11 +88,7 @@ def gagg_on_dfs(
     --------------------------
     pd.Series with `nid` and the aggregation results as the index.
     """
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     node_df = dfs[GRAPH_NODE]
     rel_df = dfs[GRAPH_REL]

@@ -21,7 +21,6 @@ import pandas as pd
 
 from ubears.flagbear.llp.parser import EnvParser
 from ubears.flagbear.str2.fliper import rebuild_dict
-from ubears.modsbear.dflater.exenv import EXGINE_ENV
 
 # %%
 logging.basicConfig(
@@ -93,11 +92,7 @@ def rebuild_rec2df(
     DataFrame with Columns[KEY in `val_rules`] and Index named with
       [KEY in `index_rules`].
     """
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     # Return totally empty DF if no valid index-rule nor value-rule.
     if ((val_rules is None or len(val_rules) == 0)
@@ -204,11 +199,7 @@ def compress_hierarchy(
     Series[(idx[, idkey_1, idkey_2, ...]), partitions]
     """
     # Init EnvParser.
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     REC2DF_COL = None
     range_index = False
@@ -317,11 +308,7 @@ def flat_records(
     Exploded DataFrame: Column[keys], Index[(src.index, Range(N))]
     """
     # Init EnvParser.
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     ret = src.apply(rebuild_rec2df,
                     val_rules=confs,

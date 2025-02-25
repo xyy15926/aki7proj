@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-10-06 15:02:13
-#   Updated: 2025-01-23 21:21:51
+#   Updated: 2025-02-25 13:47:20
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,15 +18,18 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from ubears.modsbear.dflater import ex2df, ex4df, exenv
+    from ubears.flagbear.const import callables
+    from ubears.flagbear.llp import parser
+    from ubears.modsbear.dflater import ex2df, ex4df
     from ubears.suitbear.dirt import crosconf, exdf
     from ubears.suitbear.autofin import confflat, conftrans, confagg
     from ubears.suitbear.pboc import confflat as pboc_confflat
     from ubears.suitbear.kgraph import kgenum, afrels, pbocrels, display, gxgine
     from ubears.suitbear.autofin import graphagg
+    reload(callables)
+    reload(parser)
     reload(ex2df)
     reload(ex4df)
-    reload(exenv)
     reload(crosconf)
     reload(exdf)
     reload(confflat)
@@ -48,7 +51,6 @@ from ubears.flagbear.slp.finer import get_tmp_path, get_assets_path
 from ubears.flagbear.slp.pdsl import (save_with_excel,
                                       save_with_pickle,
                                       load_from_pickle)
-from ubears.modsbear.dflater.exenv import EXGINE_ENV
 from ubears.suitbear.kgraph.kgenum import NodeType, df_enum_confs
 from ubears.suitbear.kgraph.display import save_as_html
 from ubears.suitbear.dirt.exdf import (flat_ft_dfs, trans_from_dfs,
@@ -153,17 +155,13 @@ def autofin_vars(
     Dict[part-name, aggregation result]
     """
     # Init EnvParser.
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     # 1. Apply transformation on DataFrames in `dfs`.
     # Transfrom with `auto` or `inplace` will be all fine, as the `from_`s in
     # `trans_pconfs` are all len-1 list.
     tpconfs, tfconfs = df_trans_confs()
-    trans_from_dfs(dfs, tpconfs, tfconfs, how="auto", envp=envp)
+    trans_ret = trans_from_dfs(dfs, tpconfs, tfconfs, how="auto", envp=envp)
 
     # 2. Construct and apply aggregation config.
     agg_rets = {}
@@ -180,7 +178,7 @@ def autofin_vars(
         gfconfs = gfconfs[gfconfs["key"].isin(agg_key_mark)]
     agg_from_graphdf(dfs, gpconfs, gfconfs, envp=envp, agg_rets=agg_rets)
 
-    return dfs, agg_rets
+    return dfs, trans_ret, agg_rets
 
 
 # %%
@@ -195,12 +193,19 @@ if __name__ == "__main__":
         df = pd.read_excel(xlr, sheet_name=shname)
         dfs[shname] = df
 
+    # Get mapper from customed infocode to standard approval code cats.
+    immap = dict(pd.read_excel(INFOCODE_MAPPER_FILE).dropna(subset="code_cat")
+                 [["code", "code_cat"]].values)
+    MAPPERS_CODE["appr_cats_mapper_lv21"] = immap
+    MAPPERS_CODE["today"] = pd.Timestamp("20241101")
+    envp = EnvParser(MAPPERS_CODE)
+
     # Flat the data.
     af_flat_pconfs, af_flat_fconfs = af_flat_confs()
     pboc_flat_pconfs, pboc_flat_fconfs = pboc_flat_confs()
     flat_pconfs = pd.concat([af_flat_pconfs, pboc_flat_pconfs], axis=0)
     flat_fconfs = pd.concat([af_flat_fconfs, pboc_flat_fconfs], axis=0)
-    flat_rets = flat_ft_dfs(dfs, flat_pconfs, flat_fconfs)
+    flat_rets = flat_ft_dfs(dfs, flat_pconfs, flat_fconfs, envp=envp)
 
     # Build graph DF.
     afrel_df, afnode_df = afrels.build_graph_df(dfs)
@@ -219,20 +224,24 @@ if __name__ == "__main__":
     dfs["autofin_pretrial"] = merge_certno_perday(dfs["autofin_pretrial"])
     dfs["autofin_sectrial"] = merge_certno_perday(dfs["autofin_sectrial"])
 
-    # Get mapper from customed infocode to standard approval code cats.
-    immap = dict(pd.read_excel(INFOCODE_MAPPER_FILE).dropna(subset="code_cat")
-                 [["code", "code_cat"]].values)
-    MAPPERS_CODE["appr_cats_mapper_lv21"] = immap
-
     # Set `today` with the date in the `mock_file`.
-    MAPPERS_CODE["today"] = pd.Timestamp("20241101")
-    dfs, agg_rets = autofin_vars(dfs, None, env=MAPPERS_CODE)
-    # save_with_pickle(agg_rets, "autofin/agg_dfs")
+    dfs, trans_ret, agg_rets = autofin_vars(dfs, None, envp=envp)
+
+    # old_dfs = load_from_pickle("autofin/flat_dfs")
+    # for key in dfs:
+    #     ndf = dfs[key]
+    #     odf = old_dfs[key]
+    #     eqs = ((ndf == odf) | (pd.isna(ndf) & pd.isna(odf))
+    #            | (ndf.applymap(type) == tuple))
+    #     assert np.all(eqs)
+    # save_with_pickle(dfs, "autofin/flat_dfs")
+
     # old_agg_rets = load_from_pickle("autofin/agg_dfs")
     # for key in agg_rets:
     #     ndf = agg_rets[key]
     #     odf = old_agg_rets[key]
     #     assert np.all(np.isclose(ndf.values, odf.values, equal_nan=True))
+    # save_with_pickle(agg_rets, "autofin/agg_dfs")
 
     save_with_excel(agg_rets, "autofin/autofin_aggs.xlsx")
     save_with_excel(dfs, "autofin/autofin_flats.xlsx")

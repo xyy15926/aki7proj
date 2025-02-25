@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-04-22 10:13:57
-#   Updated: 2025-02-14 21:30:35
+#   Updated: 2025-02-25 11:40:18
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,16 +18,19 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
+    from ubears.flagbear.const import callables
+    from ubears.flagbear.llp import parser
     from ubears.flagbear.str2 import dtyper, fliper
-    from ubears.modsbear.dflater import ex2df, ex4df, exenv, exoptim
+    from ubears.modsbear.dflater import ex2df, ex4df, exoptim
     from ubears.modsbear.spanner import manidf
     from ubears.suitbear.dirt import exdf
     from ubears.suitbear.pboc import confflat, confagg, conftrans, confmark
+    reload(callables)
+    reload(parser)
     reload(dtyper)
     reload(fliper)
     reload(ex2df)
     reload(ex4df)
-    reload(exenv)
     reload(exoptim)
     reload(manidf)
     reload(exdf)
@@ -46,7 +49,6 @@ from ubears.flagbear.slp.finer import get_assets_path, get_tmp_path
 from ubears.flagbear.slp.pdsl import (save_with_excel,
                                       save_with_pickle,
                                       load_from_pickle)
-from ubears.modsbear.dflater.exenv import EXGINE_ENV
 from ubears.suitbear.dirt.exdf import (flat_ft_dfs, trans_from_dfs,
                                        agg_from_dfs, dep_from_fconfs)
 from ubears.suitbear.pboc.confflat import df_flat_confs
@@ -141,11 +143,7 @@ def pboc_vars(
     mark_ret: Dict[part-name, DF of mark]
     """
     # Init EnvParser.
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     trans_pconfs, trans_fconfs = df_trans_confs()
     agg_pconfs, agg_fconfs = df_agg_confs(PBOC_AGG_CONF)
@@ -170,10 +168,10 @@ def pboc_vars(
     # 2. Construct and apply aggregation config.
     # Only transformed parts will be registered in `trans_ret`, so the original
     # `dfs` with transformed parts will be used.
-    agg_ret = agg_from_dfs(dfs, agg_pconfs, cfconfs, envp=envp)
-    # agg_ret = {}
-    # agg_ret = agg_from_dfs(dfs, agg_pconfs, agg_fconfs, envp=envp,
-    #                        agg_rets=agg_ret)
+    # agg_ret = agg_from_dfs(dfs, agg_pconfs, cfconfs, envp=envp)
+    agg_ret = {}
+    agg_ret = agg_from_dfs(dfs, agg_pconfs, agg_fconfs, envp=envp,
+                           agg_rets=agg_ret)
 
     # 3. Generate marks.
     mark_ret = trans_from_dfs(ChainMap(agg_ret, dfs),
@@ -189,11 +187,12 @@ if __name__ == "__main__":
     pboc_conf_file = "pboc/pboc_conf.xlsx"
     write_pboc_confs(pboc_conf_file)
 
+    envp = EnvParser(MAPPERS_CODE)
     # Read and flatten reports.
     files = list((get_assets_path() / "pboc_reports").iterdir())
     report_recs = [open(file, "r", encoding="utf8").read() for file in files]
     flat_pconfs, flat_fconfs = df_flat_confs()
-    dfs = flat_ft_dfs(report_recs, flat_pconfs, flat_fconfs)
+    dfs = flat_ft_dfs(report_recs, flat_pconfs, flat_fconfs, envp=envp)
 
     basic_info = dfs["pboc_basic_info"]
     report_dates = basic_info.set_index("PA01AI01")["PA01AR01"].rename("today")
@@ -204,20 +203,23 @@ if __name__ == "__main__":
                       left_on="rid", right_index=True)
         dfs[part_name] = df
 
-    # old_dfs = load_from_pickle("pboc/flat_dfs")
-    # for key in dfs:
-    #     ndf = dfs[key]
-    #     odf = old_dfs[key]
-    #     assert np.all(np.isclose(ndf.values, odf.values, equal_nan=True))
-    # save_with_pickle(dfs, "pboc/flat_dfs")
-
     # Read aggregation keys.
     # agg_keys = get_assets_path() / "pboc_aggconf_mark.xlsx"
     # if isinstance(agg_keys, (str, os.PathLike)) and os.path.isfile(agg_keys):
     #     agg_keys = pd.read_excel(agg_keys)["key"]
     key_mark = "max"
-    dfs, trans_ret, agg_ret, mark_ret = pboc_vars(dfs, key_mark)
+    dfs, trans_ret, agg_ret, mark_ret = pboc_vars(dfs, key_mark, envp=envp)
+
     assert len(trans_ret.keys() - dfs.keys()) == 0
+    # old_dfs = load_from_pickle("pboc/flat_dfs")
+    # trans_pconfs, trans_fconfs = df_trans_confs()
+    # for key in dfs:
+    #     trans_col = trans_fconfs.loc[trans_fconfs["part"] == key, "key"].tolist()
+    #     ndf = dfs[key][trans_col]
+    #     odf = old_dfs[key][trans_col]
+    #     assert np.all(np.isclose(ndf.values, odf.values, equal_nan=True))
+    # save_with_pickle(dfs, "pboc/flat_dfs")
+
     # old_agg_ret = load_from_pickle("pboc/agg_dfs")
     # for key in agg_ret:
     #     ndf = agg_ret[key]

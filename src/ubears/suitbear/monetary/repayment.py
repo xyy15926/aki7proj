@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2025-01-17 17:10:25
+#   Updated: 2025-02-24 21:39:47
 #   Description:
 # ---------------------------------------------------------
 
@@ -25,7 +25,6 @@ from tqdm import tqdm
 
 from ubears.flagbear.llp.parser import EnvParser
 from ubears.modsbear.dflater.ex4df import trans_on_df, agg_on_df
-from ubears.modsbear.dflater.exenv import EXGINE_ENV
 from ubears.ringbear.timser.ovdd import month_date, snap_ovd
 from ubears.modsbear.spanner.manidf import group_addup_apply
 
@@ -325,7 +324,7 @@ def mob_align(
     __NONE__ = "__NONE__"
     if agg_rules is None:
         agg_rules = [(__NONE__, cond, agg)]
-    envp = EnvParser(EXGINE_ENV)
+    envp = EnvParser()
     tqdm.pandas(desc="MOB Alignment")
     agg_ret = (mob_recs.groupby(["rectag", "MOB"])[mob_recs.columns]
                .progress_apply(agg_on_df, rules=agg_rules, envp=envp))

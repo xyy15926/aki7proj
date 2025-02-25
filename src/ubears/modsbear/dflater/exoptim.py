@@ -21,7 +21,6 @@ import pandas as pd
 
 from ubears.flagbear.llp.lex import Token
 from ubears.flagbear.llp.parser import EnvParser
-from ubears.modsbear.dflater.exenv import EXGINE_ENV
 
 # %%
 logging.basicConfig(

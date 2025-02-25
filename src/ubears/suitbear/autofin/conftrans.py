@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-23 09:57:58
-#   Updated: 2025-01-23 19:50:19
+#   Updated: 2025-02-24 09:32:59
 #   Description:
 # ---------------------------------------------------------
 
@@ -335,14 +335,14 @@ def appr_catlv1_reprs(field: str = "appr_catlv1"):
     for part, (klv0, dlv0, items) in APPR_CODE_CATS.items():
         for klv1, dlv1 in items:
             if klv1 in cats:
-                reprs.append((klv1, f'contains({field}, "{klv1}")', dlv1))
+                reprs.append((klv1, f'isin("{klv1}", {field})', dlv1))
     return reprs
 
 
 def appr_catlv0_reprs(field: str = "appr_catlv0"):
     reprs = []
     for part, (klv0, dlv0, items) in APPR_CODE_CATS.items():
-        reprs.append((klv0, f'contains({field}, "{klv0}")', dlv0))
+        reprs.append((klv0, f'isin("{klv0}", {field})', dlv0))
     return reprs
 
 
@@ -409,9 +409,9 @@ TRANS_AUTOFIN_PRETRIAL = {
         ("cert_prov"        , 'map(certno, prov_code_map, "unknown")'   , None  , "身份证省"),
         ("apply_doi"        , "day_itvl(apply_date, today)"             , None  , "申请距今日"),
         ("appr_doi"         , "day_itvl(approval_date, today)"          , None  , "决策距今日"),
-        ("appr_res"         , "map(approval_result, appr_res_mapper)"          , None  , "决策结果"),
+        ("appr_res"         , "map(approval_result, appr_res_mapper)"               , None  , "决策结果"),
         ("appr_catlv1"      , "sep_map(approval_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
-        ("appr_catlv0"      , "list_map(appr_catlv1, appr_cats_mapper_lv10)"    , None  , "标签分类LV0"),
+        ("appr_catlv0"      , "sep_map(appr_catlv1, appr_cats_mapper_lv10)"         , None  , "标签分类LV0"),
     ],
 }
 
@@ -427,9 +427,9 @@ TRANS_AUTOFIN_SECTRIAL = {
     "trans": [
         ("apply_doi"        , "day_itvl(apply_date, today)"             , None  , "申请距今日"),
         ("appr_doi"         , "day_itvl(approval_date, today)"          , None  , "决策距今日"),
-        ("appr_res"         , "map(approval_result, appr_res_mapper)"          , None  , "决策结果"),
+        ("appr_res"         , "map(approval_result, appr_res_mapper)"               , None  , "决策结果"),
         ("appr_catlv1"      , "sep_map(approval_codes, appr_cats_mapper_lv21)"      , None  , "标签分类LV1"),
-        ("appr_catlv0"      , "list_map(appr_catlv1, appr_cats_mapper_lv10)"    , None  , "标签分率LV0"),
+        ("appr_catlv0"      , "sep_map(appr_catlv1, appr_cats_mapper_lv10)"         , None  , "标签分率LV0"),
     ],
 }
 

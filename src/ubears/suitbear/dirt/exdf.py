@@ -40,7 +40,6 @@ from ubears.flagbear.str2.dtyper import stype_spec
 from ubears.modsbear.spanner.manidf import merge_dfs
 from ubears.modsbear.dflater.ex2df import compress_hierarchy, flat_records
 from ubears.modsbear.dflater.ex4df import trans_on_df, agg_on_df
-from ubears.modsbear.dflater.exenv import EXGINE_ENV
 from ubears.modsbear.dflater.exoptim import compile_deps
 from ubears.suitbear.kgraph.gxgine import gagg_on_dfs, GRAPH_NODE
 
@@ -83,11 +82,7 @@ def flat_ft_dfs(
     Dict[part-name, DataFrame of values of parts]
     """
     # Init EnvParser.
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     # Unify list to pd.Series for flation.
     if isinstance(src, list):
@@ -180,11 +175,7 @@ def trans_from_dfs(
     Dict[part, DataFrame of transformation]
     """
     # Init EnvParser.
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     trans_rets = {} if trans_rets is None else trans_rets
     # Both the source DataFrames and results in process will be used as the
@@ -266,11 +257,7 @@ def agg_from_dfs(
     Dict[part, DataFrame of aggregation]
     """
     # Init EnvParser.
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     agg_rets = {} if agg_rets is None else agg_rets
     # Both the source DataFrames and results in process will be used as the
@@ -333,11 +320,7 @@ def agg_from_graphdf(
     DataFrame of aggregation result of all nodes.
     """
     # Init EnvParser.
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     node_df = dfs[GRAPH_NODE]
     agg_rets = {} if agg_rets is None else agg_rets

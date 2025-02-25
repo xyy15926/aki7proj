@@ -3,7 +3,7 @@
 #   Name: procedure.py
 #   Author: xyy15926
 #   Created: 2024-12-17 08:55:39
-#   Updated: 2024-12-17 15:31:08
+#   Updated: 2025-02-25 11:42:56
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,13 +18,16 @@ import pandas as pd
 
 if __name__ == "__main__":
     from importlib import reload
-    from ubears.modsbear.dflater import ex2df, ex4df, exenv, exoptim
+    from ubears.flagbear.const import callables
+    from ubears.flagbear.llp import parser
+    from ubears.modsbear.dflater import ex2df, ex4df, exoptim
     from ubears.modsbear.spanner import manidf
     from ubears.suitbear.dirt import exdf
     from ubears.suitbear.cashflow import confflat, confagg, conftrans
+    reload(callables)
+    reload(parser)
     reload(ex2df)
     reload(ex4df)
-    reload(exenv)
     reload(exoptim)
     reload(manidf)
     reload(exdf)
@@ -43,9 +46,8 @@ from ubears.flagbear.str2.fliper import extract_field
 from ubears.flagbear.slp.finer import get_assets_path, get_tmp_path
 from ubears.flagbear.slp.pdsl import save_with_excel
 from ubears.modsbear.docer.pdframe import extract_tables, format_table
-from ubears.modsbear.dflater.exenv import EXGINE_ENV
 from ubears.suitbear.dirt.exdf import (flat_ft_dfs, trans_from_dfs,
-                                agg_from_dfs, dep_from_fconfs)
+                                       agg_from_dfs, dep_from_fconfs)
 from ubears.suitbear.cashflow.confflat import df_flat_confs
 from ubears.suitbear.cashflow.conftrans import df_trans_confs, TRANS_ENV
 from ubears.suitbear.cashflow.confagg import df_agg_confs
@@ -99,11 +101,7 @@ def cashflow_vars(
     mark_ret: Dict[part-name, DF of mark]
     """
     # Init EnvParser.
-    if envp is None:
-        if env is None:
-            envp = EnvParser(EXGINE_ENV)
-        else:
-            envp = EnvParser(ChainMap(env, EXGINE_ENV))
+    envp = EnvParser(env) if envp is None else envp
 
     trans_pconfs, trans_fconfs = df_trans_confs()
     agg_pconfs, agg_fconfs = df_agg_confs()
