@@ -46,6 +46,7 @@ all = [
 	"PyMySQL",
 	"cx-Oracle",
 	"TA-Lib",
+	"streamlit",
 ]
 
 [build-system]

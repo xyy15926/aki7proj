@@ -800,7 +800,7 @@ ACC_INFO = {
         (["cnt", "lmt_sum", "lmt_max", "mixed_ots_sum", "mixed_ots_max",
           "last_prd_max",
           "mixed_folw_monthly_repay_sum"],
-         ["biz_cat", "mixed_acc_status"]),
+         ["biz_cat", "mixed_acc_status", "mois_start"]),
         # 所有类型账户
         (["cnt", "repay_cnt", "org_cnt",
           "lmt_sum", "lmt_max", "lmt_min", "lmt_avg",

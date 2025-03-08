@@ -33,12 +33,12 @@ def test_serdesc():
     label = np.array([1, 0, 0, 1, 0, 1])
     factor_log, seq_log = serdesc(ser, label)
     uni_label = pd.unique(label)
-    assert len(factor_log.columns) == len(uni_label) + 6
+    assert len(factor_log.columns) == len(uni_label) + 9
     assert len(seq_log) == 9
 
     # Only Freq will be calculated if label is not passed.
     factor_log, seq_log = serdesc(ser)
-    assert len(factor_log.columns) == 2
+    assert len(factor_log.columns) == 4
     assert len(seq_log) == 0
 
     # Uncomparable Series will be factorized first.
@@ -47,7 +47,7 @@ def test_serdesc():
     label = np.array([1, 0, 0, 1, 0, 1])
     factor_log, seq_log = serdesc(ser, label)
     uni_label = pd.unique(label)
-    assert len(factor_log.columns) == len(uni_label) + 6
+    assert len(factor_log.columns) == len(uni_label) + 9
     assert len(seq_log) == 8
 
 

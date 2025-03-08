@@ -65,7 +65,7 @@ def cal_lifts_from_ctab(
 
     # Kendall-tau test.
     corr_ken, pv = kendalltau(acc_lifts, np.arange(len(acc_lifts), 0, -1))
-    acc_ctab_r = np.add.accumulate(ctab[::-1], axis=0)
+    acc_ctab_r = np.add.accumulate(ctab[::-1], axis=0)[::-1]
     acc_lifts_r = (acc_ctab_r[:, 1] / acc_ctab_r.sum(axis=1) / cavg)
 
     return lifts, acc_lifts, acc_lifts_r, corr_ken, pv

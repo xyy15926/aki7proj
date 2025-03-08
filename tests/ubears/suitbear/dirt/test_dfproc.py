@@ -3,7 +3,7 @@
 #   Name: test_dfproc.py
 #   Author: xyy15926
 #   Created: 2025-02-17 14:42:36
-#   Updated: 2025-02-19 15:44:49
+#   Updated: 2025-03-08 19:20:01
 #   Description:
 # ---------------------------------------------------------
 
@@ -151,6 +151,15 @@ def test_trans_arr():
     ]
     retp2 = trans_arr(retp1, label, num_conf_2)
     assert len(np.unique(retp2)) == 5
+    num_conf_3 = [
+        {
+            "ttype": "map",
+            "ref": lambda x: x + 1,
+        }
+    ]
+    retp3 = trans_arr(retp2, label, num_conf_3)
+    p23gap = retp3 - retp2
+    assert np.all(p23gap[~np.isnan(p23gap)] == 1)
 
     # Just like pipline?
     num_conf = num_conf_1 + num_conf_2
@@ -161,7 +170,7 @@ def test_trans_arr():
     # Non-Numeric Series.
     ser = data["nan_float_010"]
     nbin = [-999999, 0, 3, 6, 10]
-    cat_conf = [
+    cat_conf_1 = [
         {
             "ttype": "ordinize",
             "nafill": -999999,
@@ -169,11 +178,20 @@ def test_trans_arr():
             "ttype": "binize",
             "nbin": nbin,
         }, {
+            "ttype": "map",
+            "ref": dict(zip(range(len(nbin)), range(1, len(nbin) + 1))),
+        }
+    ]
+    ret3 = trans_arr(ser, label, cat_conf_1)
+    assert len(np.unique(ret3)) == len(nbin) - 1
+    assert np.all(ret3 >= 1)
+    cat_conf_2 = [
+        {
             "ttype": "woe",
         }
     ]
-    ret3 = trans_arr(ser, label, cat_conf)
-    assert len(np.unique(ret3)) == len(nbin) - 1
+    ret4 = trans_arr(ret3, label, cat_conf_2)
+    assert len(np.unique(ret4)) == len(nbin) - 1
 
 
 # %%
@@ -205,14 +223,25 @@ def test_trans_df():
             {
                 "ttype": "binize",
                 "nbin": 5,
-            },{
-                "ttype": "woe"
-            }
+            }, {
+                "ttype": "woe",
+            }, {
+                "ttype": "map",
+                "ref": lambda x: x - 1,
+            },
         ],
         "__CAT__": [
             {
                 "ttype": "ordinize",
                 "nafill": -999999,
+            }, {
+                "ttype": "map",
+                "ref": {
+                    "0": 1,
+                    "1": 2,
+                    "2": 3,
+                },
+                "default": 99,
             }, {
                 "ttype": "binize",
                 "nbin": nbin,

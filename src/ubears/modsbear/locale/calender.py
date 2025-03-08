@@ -3,7 +3,7 @@
 #   Name: calender.py
 #   Author: xyy15926
 #   Created: 2024-11-09 21:35:31
-#   Updated: 2025-02-21 11:17:46
+#   Updated: 2025-02-28 10:40:37
 #   Description:
 # ---------------------------------------------------------
 
@@ -29,6 +29,16 @@ logging.basicConfig(
     force=(__name__ == "__main__"))
 logger = logging.getLogger()
 logger.info("Logging Start.")
+
+
+# %%
+_holidates = list(holidays.keys())
+_starty = _holidates[0].year
+_endy = _holidates[-1].year
+logger.info(f"Holidays from {_starty} to {_endy} are considered.")
+if np.datetime64(_holidates[-1], "Y") < np.datetime64("today", "Y"):
+    logger.warning("Chinese calender is outdated. "
+                   "You may updated the module with pip first.")
 
 
 # %%

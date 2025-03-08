@@ -3,7 +3,7 @@
 #   Name: dfproc.py
 #   Author: xyy15926
 #   Created: 2025-02-15 21:06:34
-#   Updated: 2025-02-19 15:37:11
+#   Updated: 2025-03-08 18:49:34
 #   Description:
 # ---------------------------------------------------------
 
@@ -65,6 +65,12 @@ VALUE_TRANS_CONF = {
             "nafill": -999999,
         },{
             "ttype": "woe",
+        },{
+            "ttype": "map",
+            "ref": {
+                "NA": "ZNA",
+            },
+            "default": None,
         }
     ],
 }
@@ -123,10 +129,11 @@ def fixup_df(
 
     # Sort.
     sort_keys = conf.get("sort_keys", None)
-    if sort_keys is not None:
+    if sort_keys is not None and len(sort_keys) > 0:
         sort_by = list(sort_keys.keys())
         sort_ascs = list(sort_keys.values())
         data = data.sort_values(by=sort_by, ascending=sort_ascs)
+        logger.info(f"Sort data by: {sort_by}.")
 
     # Rename duplicated column names.
     rename_dupcol = conf.get("rename_dupcol", None)
@@ -134,11 +141,12 @@ def fixup_df(
         colns = rename_duplicated(data.columns)
         if colns is not None:
             data.columns = colns
+        logger.info("Rename duplicated column names.")
 
     # Drop duplicates.
     uni_keys = conf.get("uni_keys", None)
     uni_keep = conf.get("uni_keep", "first")
-    if uni_keys is not None:
+    if uni_keys is not None and len(uni_keys) > 0:
         # Use default aggregation powered by `drop_duplicates` if possible.
         if uni_keep in ["first", "last", False]:
             data = data.drop_duplicates(subset=uni_keys, keep=uni_keep)
@@ -149,6 +157,8 @@ def fixup_df(
         # Sort again since groupby will shuffle the order.
         if sort_keys:
             data = data.sort_values(by=sort_by, ascending=sort_ascs)
+        logger.info(f"Drop duplicated records according to "
+                    f"primary keys: {uni_keys}.")
 
     # Drop columns with too many NAs or single value.
     na_thresh = conf.get("na_thresh", None)
@@ -169,10 +179,12 @@ def fixup_df(
                 drop_cols.append(colname)
         if drop_cols:
             data = data.drop(drop_cols, axis=1)
+            logger.info(f"Drop columns with to many NAs or single value: "
+                        f"{drop_cols}.")
 
     # Fill NAs for specified columns.
     fillna = conf.get("fillna", None)
-    if fillna is not None:
+    if fillna is not None and len(fillna) > 0:
         data = data.fillna(fillna)
         # Fill NAs for numeric and non-numeric columns seperately.
         num_fna = fillna.get("__NUM__", None)
@@ -181,6 +193,7 @@ def fixup_df(
         cat_fna = fillna.get("__CAT__", None)
         if cat_fna is not None and len(cat_cols):
             data = data.fillna({col: cat_fna for col in cat_cols})
+        logger.info("Fill NAs.")
 
     return data
 
@@ -231,6 +244,12 @@ def trans_arr(
             woes, ivs = cal_woes_from_ctab(ctab)
             # Pandas requires to cast to compatiable dtype explicitly first.
             arr = woes[np.searchsorted(ux, arr)]
+        elif ttype == "map":
+            ref = tconf.get("ref", {})
+            z = tconf.get("default", None)
+            arr = np.asarray([ref.get(ele, z) for ele in arr]
+                             if hasattr(ref, "get")
+                             else [ref(ele) for ele in arr])
         else:
             logger.warning(f"Unrecognized transformation: {ttype}.")
     return arr

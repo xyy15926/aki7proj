@@ -3,7 +3,7 @@
 #   Name: dlog.py
 #   Author: xyy15926
 #   Created: 2023-12-05 08:55:37
-#   Updated: 2025-02-15 18:31:33
+#   Updated: 2025-02-28 20:16:53
 #   Description:
 # ---------------------------------------------------------
 
@@ -104,11 +104,16 @@ def serdesc(
         fuy = np.concatenate([fuy, [np.nan,]])
 
     (ux, uy), ctab = contingency.crosstab(seq, larr)
-    factor_log = pd.DataFrame(ctab,
-                              index=fux.take(ux) if fux is not None else ux,
-                              columns=fuy.take(uy) if fuy is not None else uy)
+    df_index = fux.take(ux) if fux is not None else ux
+    label_cols = fuy.take(uy) if fuy is not None else uy
+    factor_log = pd.DataFrame(ctab, index=df_index, columns=label_cols)
+    factor_log.index.set_names("Factors", inplace=True)
+
     # Frequency.
     factor_log["FreqR"] = ctab.sum(axis=1) / ctab.sum()
+    acc_label_cols = [f"AccF: {ele}" for ele in label_cols]
+    factor_log[acc_label_cols] = np.add.accumulate(ctab, axis=0)
+    factor_log["AccFreqR"] = np.add.accumulate(factor_log["FreqR"])
 
     # Chi-square stats.
     if len(uy) > 1:

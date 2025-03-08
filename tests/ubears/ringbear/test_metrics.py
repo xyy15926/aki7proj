@@ -45,8 +45,8 @@ def test_lifts():
     lifts, acl, racl, kcorr, pv = cal_lifts(aa, b)
     assert np.all(np.isclose(wlifts, lifts))
     assert np.all(np.isclose(lifts, [0.4, 0.6, 2]))
-    assert np.all(np.isclose(wacl, racl))
-    assert np.all(np.isclose(racl, [2, 1.3, 1]))
+    assert np.all(np.isclose(wacl, racl[::-1]))
+    assert np.all(np.isclose(wacl, [2, 1.3, 1]))
     assert kcorr < 0
 
     wux, wlifts, wax, wacl, wasc = cal_lifts_weighted(a, b, acc_keys=[2, 3])
@@ -62,8 +62,8 @@ def test_lifts():
     lifts, acl, racl, kcorr, pv = cal_lifts(a, b, acc_keys=[3, 2])
     assert np.all(np.isclose(wlifts, lifts))
     assert np.all(np.isclose(lifts, [2, 0.6, 0.4]))
-    assert np.all(np.isclose(wacl, racl))
-    assert np.all(np.isclose(racl, [0.6, 0.5]))
+    assert np.all(np.isclose(wacl, racl[::-1]))
+    assert np.all(np.isclose(wacl, [0.6, 0.5]))
     assert wasc
     assert kcorr < 0
 
