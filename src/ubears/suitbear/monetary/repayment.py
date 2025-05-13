@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2025-05-13 10:58:20
+#   Updated: 2025-05-13 22:14:14
 #   Description:
 # ---------------------------------------------------------
 
@@ -87,13 +87,14 @@ def ob4ovd(
     ovd_days = recs["ovd_days"].values if "ovd_days" in recs else None
     due_amt = recs["due_amt"].values if "due_amt" in recs else None
     rem_amt = recs["rem_amt"].values if "rem_amt" in recs else None
-    ovdt, ovda, stop_recs = snap_ovd(due_date, rep_date, ovd_days,
-                                     obd, due_amt, rem_amt)
+    ovdt, ovda, mob, stop_recs = snap_ovd(due_date, rep_date, ovd_days,
+                                          obd, due_amt, rem_amt)
     ever_ovdd, ever_ovdp, stop_ovdd, stop_ovdp = ovdt.T
     ever_rema, ever_ovda, ever_duea, stop_rema, stop_ovda, stop_duea = ovda.T
 
     ret_recs = pd.DataFrame({
         "ob_date": obd,
+        "ob_mob": mob,
         "ever_ovdd": ever_ovdd,
         "ever_ovdp": ever_ovdp,
         "ever_rema": ever_rema,
@@ -169,6 +170,7 @@ def addup_obovd(
            else np.asarray(ob_date, dtype="M8[D]"))
     obd.sort()
     ovd_recs = ob4ovd(recs, obd, True)
+    ovd_recs.index = recs.index
 
     # Add dummy month.
     if "DUMMY" in recs:
@@ -178,7 +180,7 @@ def addup_obovd(
         ovd_recs.loc[due_date >= dum_date, "ever_ovdp"] = dum_ovdp
         ovd_recs.loc[due_date >= dum_date, "stop_ovdp"] = dum_ovdp
 
-    recs[ovd_recs.columns] = ovd_recs.values
+    recs[ovd_recs.columns] = ovd_recs
 
     # Convert dtype to categorical so to keep null rows and columns in crosstab.
     # cats = pd.CategoricalDtype([f"M{i}" for i in range(8)])

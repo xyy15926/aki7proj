@@ -103,9 +103,10 @@ def test_ob4ovd():
 # %%
 def test_addup_obovd():
     recs = ovd_recs()
+    recs.index = list(range(100, 118))
     df = addup_obovd(recs)
-    assert df.loc[0, "ever_ovdd"] == np.timedelta64(0, "D")
-    assert df.loc[0, "ever_ovdp"] == 0
+    assert df.loc[100, "ever_ovdd"] == np.timedelta64(0, "D")
+    assert df.loc[100, "ever_ovdp"] == 0
     assert np.all(df["MOB"].values == np.arange(len(df)))
 
     recs["START"] = pd.Timestamp("2021-10")
@@ -119,6 +120,7 @@ def test_addup_obovd():
     assert np.all(noend_df.iloc[-1, noend_df.columns.get_loc("ever_ovdd")]
                   > end_df.iloc[-1, end_df.columns.get_loc("ever_ovdd")])
 
+    recs = ovd_recs()
     recs["DUMMY"] = pd.Timestamp("2022-09")
     dum_df = addup_obovd(recs)
     assert np.all(dum_df.loc[10:, "ever_ovdd"] == DUM_OVDD)

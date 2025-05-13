@@ -34,7 +34,7 @@ dependencies = [
 	"jieba",
 	"pdfplumber",
 	"numpy_financial",
-	"importlib-resource; python_version < '3.9'",
+	"importlib-resources; python_version < '3.9'",
 ]
 
 [project.optional-dependencies]

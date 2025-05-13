@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-05-13 16:04:27
+#   Updated: 2025-05-13 22:28:43
 #   Description:
 # ---------------------------------------------------------
 
@@ -13,7 +13,7 @@ import logging
 from typing import Any, TypeVar
 from collections import deque
 from collections.abc import Callable, Iterator, Sequence, Container
-from IPython.core.debugger import set_trace
+# from IPython.core.debugger import set_trace
 try:
     from typing import NamedTuple, Self
 except ImportError:
@@ -58,6 +58,10 @@ def snap_ovd(
       `rep_date = due_date + ovd_days`.
       So anyone of `rep_date` and `ovd_days` passed will be fine, and
       `rep_date` will be used if both passed.
+    4. `due_amt` and `rem_amt` could be 2D-NDA with the the same shape, of
+      which the correspondant columns represent one pair of process-volume and
+      status-volume. And `XXX_rema`, `XXX_ovda`, `XXX_duea` will spawned in
+      `ovd-amount` as the result.
 
     Assumption:
     ----------------------
@@ -78,7 +82,9 @@ def snap_ovd(
       If no argument passed, this will be the `due_date` after shifting
       out the first duepay date and including a faraway date.
     due_amt: Sequence of duepay amount.
+      None: All zeros will be used.
     rem_amt: Sequence of remaining amount after the duepay amount.
+      None: All zeros will be used.
 
     Return:
     ----------------------
@@ -90,13 +96,17 @@ def snap_ovd(
         of each of month is not the same.
       stop_ovdd: NDArray of overdue days at the point of observation.
       stop_ovdp: Ditto.
-    ovd-amount: NDArray[N, 6]
-      ever_rema: Maximum (or the first) remainal amount ever.
-      ever_ovda: Maximum (or the first) overdue amount ever.
-      ever_duea: Maximum (or the first) duepay amount ever.
-      stop_rema: Ditto.
-      stop_ovda: Ditto.
-      stop_duea: Ditto.
+    ovd-amount: NDArray[N, 6 * M], M is the number of columns of `due_amt`.
+      ever_rema * M: Maximum (or the first) remainal amount ever.
+      ever_ovda * M: Maximum (or the first) overdue amount ever.
+      ever_duea * M: Maximum (or the first) duepay amount ever.
+      stop_rema * M: Ditto.
+      stop_ovda * M: Ditto.
+      stop_duea * M: Ditto.
+    MOB: The index of the last period before the oberservation.
+      -1: No period before the observation.
+    stop_recs: List of the records that affect the observation point.
+      Record: Tuple[duei, dued, repd, ovdd, duea, rema].
     """
     # Prepare the data.
     dueds = np.asarray(due_date, dtype="M8[D]")
@@ -112,10 +122,14 @@ def snap_ovd(
     else:
         repds = np.asarray(rep_date, dtype="M8[D]")
         ovdds = repds - dueds
-    das = [0] * len(ovd_days) if due_amt is None else np.asarray(due_amt)
-    ras = [0] * len(ovd_days) if rem_amt is None else np.asarray(rem_amt)
 
-    ovdt, ovda = [], []
+    # Align due_amt and rem_amt.
+    das = (np.zeros((ovdds.shape[0], 1)) if due_amt is None
+           else np.asarray(due_amt).reshape(ovdds.shape[0], -1))
+    ras = (np.zeros((ovdds.shape[0], 1)) if rem_amt is None
+           else np.asarray(rem_amt).reshape(ovdds.shape[0], -1))
+
+    mob, ovdt, ovda = [], [], []
     stop_recs = []
     duei = 0
     # Actually, `sconti_recs` ares just used to store the records with
@@ -138,45 +152,46 @@ def snap_ovd(
         else:
             ever_rema = conti_recs[0][-2] + conti_recs[0][-1]
 
-        ever_ovdd, ever_ovdp, ever_ovda, ever_duea = 0, 0, 0, 0
+        ever_ovdd, ever_ovdp = 0, 0
+        ever_ovda, ever_duea = np.zeros(das.shape[1]), np.zeros(das.shape[1])
         # Traverse all the duepayments before or on the obdate to get the EVERs.
         while duei < len(dueds) and dueds[duei] <= obd:
             dued, repd, ovdd = dueds[duei], repds[duei], ovdds[duei]
             duea, rema = das[duei], ras[duei]
             if len(conti_recs) == 0:
-                conti_recs.append((dued, repd, ovdd, duea, rema))
-                sconti_recs.append((dued, repd, ovdd, duea, rema))
+                conti_recs.append((duei, dued, repd, ovdd, duea, rema))
+                sconti_recs.append((duei, dued, repd, ovdd, duea, rema))
             else:
-                hdued, hrepd, hovdd, hduea, hrema = conti_recs[0]
-                tdued, trepd, tovdd, tduea, trema = conti_recs[-1]
+                hduei, hdued, hrepd, hovdd, hduea, hrema = conti_recs[0]
+                tduei, tdued, trepd, tovdd, tduea, trema = conti_recs[-1]
                 if hrepd < dued:
                     if tdued == trepd:
                         ever_ovdd = max(hovdd, ever_ovdd)
                         ever_ovdp = max(len(conti_recs) - 1, ever_ovdp)
-                        va = sum([i[-2] for i in conti_recs])
-                        ever_ovda = max(va - tduea, ever_ovda)
-                        ever_duea = max(va, ever_duea)
+                        va = np.sum([i[-2] for i in conti_recs], axis=0)
+                        ever_ovda = np.max([va - tduea, ever_ovda], axis=0)
+                        ever_duea = np.max([va, ever_duea], axis=0)
                     else:
                         ever_ovdd = max(hovdd, ever_ovdd)
                         ever_ovdp = max(len(conti_recs), ever_ovdp)
-                        va = sum([i[-2] for i in conti_recs])
-                        ever_ovda = max(va, ever_ovda)
-                        ever_duea = max(va, ever_duea)
+                        va = np.sum([i[-2] for i in conti_recs], axis=0)
+                        ever_ovda = np.max([va, ever_ovda], axis=0)
+                        ever_duea = np.max([va, ever_duea], axis=0)
                 # As `trepd >= hrepd == dued > tdued`,
                 # Don't need to compared `trepd` and `tdued`.
                 elif hrepd == dued:
                     ever_ovdd = max(hovdd, ever_ovdd)
                     ever_ovdp = max(len(conti_recs), ever_ovdp)
-                    va = sum([i[-2] for i in conti_recs])
-                    ever_ovda = max(va, ever_ovda)
-                    ever_duea = max(va + duea, ever_duea)
+                    va = np.sum([i[-2] for i in conti_recs], axis=0)
+                    ever_ovda = np.max([va, ever_ovda], axis=0)
+                    ever_duea = np.max([va + duea, ever_duea], axis=0)
                 # Pop uncontinuous overdue periods out.
-                while len(conti_recs) > 0 and conti_recs[0][1] <= dued:
+                while len(conti_recs) > 0 and conti_recs[0][2] <= dued:
                     conti_recs.popleft()
-                while len(sconti_recs) > 0 and sconti_recs[0][1] < dued:
+                while len(sconti_recs) > 0 and sconti_recs[0][2] < dued:
                     sconti_recs.popleft()
-                conti_recs.append((dued, repd, ovdd, duea, rema))
-                sconti_recs.append((dued, repd, ovdd, duea, rema))
+                conti_recs.append((duei, dued, repd, ovdd, duea, rema))
+                sconti_recs.append((duei, dued, repd, ovdd, duea, rema))
             duei += 1
 
         # TODO
@@ -185,37 +200,36 @@ def snap_ovd(
         # 2. Or observe before all records.
         # 3. Or observe after all records and no repdate overpass the former
         #   obdate.
+        # set_trace()
         if len(conti_recs) == 0:
             if duei < len(dueds):
                 if len(ovdt) == 0:
                     logger.warning("Observe before all records.")
                 else:
                     logger.warning("Adjacent obdates with no records cutting in.")
-            ever_ovdd = 0
-            ever_ovdp = 0
-            ever_ovda = 0
-            ever_duea = 0
+            ever_ovdd, ever_ovdp = 0, 0
+            ever_ovda, ever_duea = np.zeros(das.shape[1]), np.zeros(das.shape[1])
         else:
             # Check the last continuous overdued periods to update EVERs.
-            hdued, hrepd, hovdd, hduea, hrema = conti_recs[0]
-            tdued, trepd, tovdd, tduea, trema = conti_recs[-1]
+            hduei, hdued, hrepd, hovdd, hduea, hrema = conti_recs[0]
+            tduei, tdued, trepd, tovdd, tduea, trema = conti_recs[-1]
             # TODO: No-equal gap between obdates.
             ever_ovdd = max(min(hrepd, obd) - hdued, ever_ovdd)
             if tdued == trepd or tdued == obd:
                 ever_ovdp = max(len(conti_recs) - 1, ever_ovdp)
-                va = sum([i[-2] for i in conti_recs])
-                ever_ovda = max(va - tduea, ever_ovda)
-                ever_duea = max(va, ever_duea)
+                va = np.sum([i[-2] for i in conti_recs], axis=0)
+                ever_ovda = np.max([va - tduea, ever_ovda], axis=0)
+                ever_duea = np.max([va, ever_duea], axis=0)
             else:
                 ever_ovdp = max(len(conti_recs), ever_ovdp)
-                va = sum([i[-2] for i in conti_recs])
-                ever_ovda = max(va, ever_ovda)
-                ever_duea = max(va, ever_duea)
+                va = np.sum([i[-2] for i in conti_recs], axis=0)
+                ever_ovda = np.max([va, ever_ovda], axis=0)
+                ever_duea = np.max([va, ever_duea], axis=0)
 
             # Pop out records repayed before obdate.
             # TODO: No-equal gap may be solved here.
-            while len(conti_recs) > 0 and conti_recs[0][1] <= obd:
-                hdued, hrepd, hovdd, hduea, hrema = conti_recs.popleft()
+            while len(conti_recs) > 0 and conti_recs[0][2] <= obd:
+                hduei, hdued, hrepd, hovdd, hduea, hrema = conti_recs.popleft()
                 ever_ovdd = max(hovdd, ever_ovdd)
 
         if len(sconti_recs) == 0:
@@ -225,41 +239,47 @@ def snap_ovd(
                 stop_rema = das[duei] + ras[duei]
             else:
                 stop_rema = ras[-1]
-            stop_ovdd = 0
-            stop_ovdp = 0
-            stop_ovda = 0
-            stop_duea = 0
+            stop_ovdd, stop_ovdp = 0, 0
+            stop_ovda, stop_duea = np.zeros(das.shape[1]), np.zeros(das.shape[1])
         else:
             # Try init `stop_rema` with latest `rem_amt` first.
             # If no the continuous overdue record achieve the obdate, this
             #   will be kept unchanged.
             # Else continuous overdue records will be used to update.
             stop_rema = sconti_recs[-1][-1]
-            while len(sconti_recs) > 0 and sconti_recs[0][1] < obd:
+            while len(sconti_recs) > 0 and sconti_recs[0][2] < obd:
                 sconti_recs.popleft()
 
             # Check current records in queue to get the STOPs.
             if len(sconti_recs) == 0:
-                stop_ovdd, stop_ovdp, stop_ovda, stop_duea = 0, 0, 0, 0
+                stop_ovdd, stop_ovdp = 0, 0
+                stop_ovda, stop_duea = np.zeros(das.shape[1]), np.zeros(das.shape[1])
             else:
-                stop_ovdd = obd - sconti_recs[0][0]
+                stop_ovdd = obd - sconti_recs[0][1]
                 stop_rema = sconti_recs[0][-2] + sconti_recs[0][-1]
-                va = sum([i[-2] for i in sconti_recs])
-                stop_duea = va
-                stop_ovda = va
+                va = np.sum([i[-2] for i in sconti_recs], axis=0)
+                # ATTENTION:
+                # Copy is required or `stop_duea` will be exactly the `stop_ovda`.
+                stop_duea = va.copy()
+                stop_ovda = va.copy()
                 stop_ovdp = len(sconti_recs)
                 # Check the if the last period is overdued.
                 if dued == repd or dued == obd:
                     stop_ovda -= duea
                     stop_ovdp -= 1
 
+        # set_trace()
         ovdt.append((ever_ovdd, ever_ovdp, stop_ovdd, stop_ovdp))
-        ovda.append((ever_rema, ever_ovda, ever_duea,
-                     stop_rema, stop_ovda, stop_duea))
+        ovda.append(np.concatenate([ever_rema, ever_ovda, ever_duea,
+                                    stop_rema, stop_ovda, stop_duea]))
         stop_recs.append(list(sconti_recs))
+        mob.append(duei - 1)
 
+    # `dtype` is passed to `np.asarray` here because `TypeError` will be raised
+    # for the `np.timedelta64` in `ovdt`.
     return (np.asarray(ovdt).astype(np.int_),
-            np.asarray(ovda).astype(np.float64),
+            np.asarray(ovda, dtype=np.float64),
+            np.asarray(mob, dtype=np.int_),
             stop_recs)
 
 
