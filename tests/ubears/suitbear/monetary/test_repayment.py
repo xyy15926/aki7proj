@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2024-04-09 20:02:08
-#   Updated: 2025-01-21 21:36:53
+#   Updated: 2025-05-13 10:39:22
 #   Description:
 # ---------------------------------------------------------
 
@@ -16,12 +16,17 @@ if __name__ == "__main__":
     from importlib import reload
     from ubears.ringbear.timser import ovdd
     from ubears.suitbear.monetary import repayment
+    from ubears.modsbear.spanner import manidf
     reload(ovdd)
     reload(repayment)
+    reload(manidf)
 
+from ubears.ringbear.timser.ovdd import month_date
+from ubears.modsbear.spanner.manidf import merge_dfs
 from ubears.suitbear.monetary.repayment import (
     DUM_OVDD,
     DUM_OVDP,
+    ob4ovd,
     addup_obovd,
     addup_obrec,
     edge_crosstab,
@@ -61,6 +66,38 @@ def ovd_recs():
     recs["due_date"] = recs["due_date"].astype("M8[s]")
 
     return recs
+
+
+# %%
+def test_ob4ovd():
+    recs = ovd_recs()
+    due_date = np.asarray(recs["due_date"], "M8[D]")
+    obd = np.concatenate([due_date + 1,
+                          due_date + 16,
+                          month_date(due_date, "monthend")])
+    obd.sort()
+    obret = ob4ovd(recs, obd)
+    assert obd.shape[0] == obret.shape[0]
+
+    recs["rep_date"] = recs["due_date"] + recs["ovd_days"].astype("m8[D]")
+    recs_rep = recs.sort_values("rep_date")
+    # Merge observation records with the correspondant records that really
+    # determine the overdue days.
+    merged_pd = pd.merge_asof(obret, recs_rep,
+                              left_on="ob_date",
+                              right_on="rep_date",
+                              direction="forward")
+    merged_ubears = merge_dfs([obret, recs_rep],
+                              ["ob_date", "rep_date"],
+                              direction="forward",
+                              tolerance=None)
+    assert np.all(merged_pd == merged_ubears)
+    # One wrong verfication was placed knowingly for `2022-04-11`, which this
+    # bill was written off before `2022-03-11`.
+    # So the date must excluded first.
+    right_merged = merged_ubears[merged_ubears["due_date"]
+                                 != pd.Timestamp("2022-04-11")]
+    assert np.all(right_merged["ovd_days"] >= right_merged["stop_ovdd"])
 
 
 # %%

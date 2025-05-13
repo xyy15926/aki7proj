@@ -3,7 +3,7 @@
 #   Name: repayment.py
 #   Author: xyy15926
 #   Created: 2023-10-07 14:46:51
-#   Updated: 2025-02-24 21:39:47
+#   Updated: 2025-05-13 10:58:20
 #   Description:
 # ---------------------------------------------------------
 
@@ -42,9 +42,77 @@ DUM_OVDP = 7
 
 
 # %%
+def ob4ovd(
+    records: pd.DataFrame,
+    ob_date: np.ndarray,
+    sorted_: bool = False,
+) -> pd.DataFrame:
+    """Observe at observation dates.
+
+    1. This should be applied only upon one account's repayment records. Use
+      `groupby(oid).apply(addup_ob_records)` for records will multiple
+      accounts.
+    2. `rep_date` and `ovd_days` in `records` should always satisfy:
+      `rep_date = due_date + ovd_days`.
+      So anyone of `rep_date` and `ovd_days` passed will be fine, and
+      `rep_date` will be used if both passed.
+
+    Params:
+    ------------------------
+    records: DataFrame[due_date, ovd_days, due_amt, rem_amt]
+      due_date: Datetime64 convertable sequence representing the duepayment
+        dates.
+      rep_date: Repayment dates.
+      ovd_days: Day past due for each duepay dates.
+      due_amt: Duepay amount.
+      rem_amt: Remaining amount.
+    ob_date: Array of observation dates.
+    sorted_: If records and obdates are sorted.
+
+    Return:
+    ------------------------
+    DataFrame of with only obdates, ever/stop overdue days/periods and
+      duepay/remaining amounts.
+    """
+    # Sort by due date.
+    recs = records if sorted_ else records.sort_values("due_date")
+    obd = np.asarray(ob_date, dtype="M8[D]")
+    if not sorted_:
+        obd.sort()
+    due_date = recs["due_date"]
+
+    # Add observer records.
+    due_date = recs["due_date"].values
+    rep_date = recs["rep_date"].values if "rep_date" in recs else None
+    ovd_days = recs["ovd_days"].values if "ovd_days" in recs else None
+    due_amt = recs["due_amt"].values if "due_amt" in recs else None
+    rem_amt = recs["rem_amt"].values if "rem_amt" in recs else None
+    ovdt, ovda, stop_recs = snap_ovd(due_date, rep_date, ovd_days,
+                                     obd, due_amt, rem_amt)
+    ever_ovdd, ever_ovdp, stop_ovdd, stop_ovdp = ovdt.T
+    ever_rema, ever_ovda, ever_duea, stop_rema, stop_ovda, stop_duea = ovda.T
+
+    ret_recs = pd.DataFrame({
+        "ob_date": obd,
+        "ever_ovdd": ever_ovdd,
+        "ever_ovdp": ever_ovdp,
+        "ever_rema": ever_rema,
+        "ever_ovda": ever_ovda,
+        "ever_duea": ever_duea,
+        "stop_ovdd": stop_ovdd,
+        "stop_ovdp": stop_ovdp,
+        "stop_rema": stop_rema,
+        "stop_ovda": stop_ovda,
+        "stop_duea": stop_duea,
+    })
+
+    return ret_recs
+
+
+# %%
 def addup_obovd(
     records: pd.DataFrame,
-    ob_date: str = "monthend",
+    ob_date: str | np.ndarray = "monthend",
     dum_ovdd: int = DUM_OVDD,
     dum_ovdp: int = DUM_OVDP,
 ) -> pd.DataFrame:
@@ -71,6 +139,7 @@ def addup_obovd(
       DUMMY: The date when the account turns into being dummy.
     ob_date: Observation dates rules passed to `month_date` to generate the
       actually observations dates.
+      Or array of observations dates with the same length of the records.
     dum_ovdd: The overdue days filled for the periods after being dummy.
     dum_ovdp: The overdue periods filled for the periods after being dummy.
 
@@ -96,36 +165,20 @@ def addup_obovd(
         mobs = recs["MOB"]
 
     # Add observer records.
-    obd = month_date(due_date, ob_date)
-    recs["ob_date"] = obd
-    due_date = recs["due_date"].values
-    rep_date = recs["rep_date"].values if "rep_date" in recs else None
-    ovd_days = recs["ovd_days"].values if "ovd_days" in recs else None
-    due_amt = recs["due_amt"].values if "due_amt" in recs else None
-    rem_amt = recs["rem_amt"].values if "rem_amt" in recs else None
-    ovdt, ovda = snap_ovd(due_date, rep_date, ovd_days, obd, due_amt, rem_amt)
-    ever_ovdd, ever_ovdp, stop_ovdd, stop_ovdp = ovdt.T
-    ever_rema, ever_ovda, ever_duea, stop_rema, stop_ovda, stop_duea = ovda.T
+    obd = (month_date(due_date, ob_date) if np.isscalar(ob_date)
+           else np.asarray(ob_date, dtype="M8[D]"))
+    obd.sort()
+    ovd_recs = ob4ovd(recs, obd, True)
 
     # Add dummy month.
-    if "DUMMY" in records:
+    if "DUMMY" in recs:
         dum_date = recs["DUMMY"]
-        ever_ovdd[due_date >= dum_date] = dum_ovdd
-        stop_ovdd[due_date >= dum_date] = dum_ovdd
-        ever_ovdp[due_date >= dum_date] = dum_ovdp
-        stop_ovdp[due_date >= dum_date] = dum_ovdp
+        ovd_recs.loc[due_date >= dum_date, "ever_ovdd"] = dum_ovdd
+        ovd_recs.loc[due_date >= dum_date, "stop_ovdd"] = dum_ovdd
+        ovd_recs.loc[due_date >= dum_date, "ever_ovdp"] = dum_ovdp
+        ovd_recs.loc[due_date >= dum_date, "stop_ovdp"] = dum_ovdp
 
-    recs["ever_ovdd"] = ever_ovdd
-    recs["ever_ovdp"] = ever_ovdp
-    recs["ever_rema"] = ever_rema
-    recs["ever_ovda"] = ever_ovda
-    recs["ever_duea"] = ever_duea
-
-    recs["stop_ovdd"] = stop_ovdd
-    recs["stop_ovdp"] = stop_ovdp
-    recs["stop_rema"] = stop_rema
-    recs["stop_ovda"] = stop_ovda
-    recs["stop_duea"] = stop_duea
+    recs[ovd_recs.columns] = ovd_recs.values
 
     # Convert dtype to categorical so to keep null rows and columns in crosstab.
     # cats = pd.CategoricalDtype([f"M{i}" for i in range(8)])
@@ -176,7 +229,7 @@ def addup_obrec(
         start_date.index.name = "oid"
         records = records.join(start_date, on="oid")
     if dum_date is not None:
-        dum_date = dum_date.rename("START")
+        dum_date = dum_date.rename("DUMMY")
         dum_date.index.name = "oid"
         records = records.join(dum_date, on="oid")
 

@@ -3,7 +3,7 @@
 #   Name: manidf.py
 #   Author: xyy15926
 #   Created: 2024-06-06 11:17:46
-#   Updated: 2025-01-21 21:27:34
+#   Updated: 2025-05-13 10:10:38
 #   Description:
 # ---------------------------------------------------------
 
@@ -98,7 +98,8 @@ def merge_dfs(
       DataFrames.
       This will only take effect in fuzzy match join situation.
     hows: How to merge.
-    tolerance: Tolerance for fuzzy match.
+    tolerance: Tolerance for fuzzy match. Must be compatible with merge field.
+      None for no limit.
     direction: How to find the match for join key.
       backward:
       forward:

@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-01-21 14:56:03
+#   Updated: 2025-05-13 16:04:27
 #   Description:
 # ---------------------------------------------------------
 
@@ -13,6 +13,7 @@ import logging
 from typing import Any, TypeVar
 from collections import deque
 from collections.abc import Callable, Iterator, Sequence, Container
+from IPython.core.debugger import set_trace
 try:
     from typing import NamedTuple, Self
 except ImportError:
@@ -53,6 +54,10 @@ def snap_ovd(
         overdue records.
     2. Be careful with following corner cases:
       2.1 duedate == obdate or duedate == repdate: not overdue
+    3. `rep_date` and `ovd_days` should always satisfy:
+      `rep_date = due_date + ovd_days`.
+      So anyone of `rep_date` and `ovd_days` passed will be fine, and
+      `rep_date` will be used if both passed.
 
     Assumption:
     ----------------------
@@ -67,7 +72,7 @@ def snap_ovd(
     due_date: Sequence[N] of duepayment dates, which should be datetime64 or
       string that could be casted into datetime64 by NumPy.
     rep_date: Sequence[N] of repayment dates.
-      This will calculated from the `due_date` and `ovd_days` is not passed.
+      This will calculated from the `due_date` and `ovd_days` if not passed.
     ovd_days: Sequence[N] of overdue days of each repayments.
     ob_date: Sequence[M] of observation dates.
       If no argument passed, this will be the `due_date` after shifting
@@ -111,6 +116,7 @@ def snap_ovd(
     ras = [0] * len(ovd_days) if rem_amt is None else np.asarray(rem_amt)
 
     ovdt, ovda = [], []
+    stop_recs = []
     duei = 0
     # Actually, `sconti_recs` ares just used to store the records with
     # `rep-date(former) == due-date == ob-date`, so to calculate the STOPs.
@@ -250,8 +256,11 @@ def snap_ovd(
         ovdt.append((ever_ovdd, ever_ovdp, stop_ovdd, stop_ovdp))
         ovda.append((ever_rema, ever_ovda, ever_duea,
                      stop_rema, stop_ovda, stop_duea))
+        stop_recs.append(list(sconti_recs))
 
-    return np.asarray(ovdt).astype(np.int_), np.asarray(ovda).astype(np.float64)
+    return (np.asarray(ovdt).astype(np.int_),
+            np.asarray(ovda).astype(np.float64),
+            stop_recs)
 
 
 # %%
