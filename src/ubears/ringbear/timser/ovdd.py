@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-05-13 22:28:43
+#   Updated: 2025-05-14 15:09:39
 #   Description:
 # ---------------------------------------------------------
 
@@ -123,11 +123,24 @@ def snap_ovd(
         repds = np.asarray(rep_date, dtype="M8[D]")
         ovdds = repds - dueds
 
-    # Align due_amt and rem_amt.
-    das = (np.zeros((ovdds.shape[0], 1)) if due_amt is None
-           else np.asarray(due_amt).reshape(ovdds.shape[0], -1))
-    ras = (np.zeros((ovdds.shape[0], 1)) if rem_amt is None
-           else np.asarray(rem_amt).reshape(ovdds.shape[0], -1))
+    # Align `due_amt` and `rem_amt`.
+    if due_amt is None and rem_amt is None:
+        das = np.zeros(ovdds.shape[0], 1)
+        ras = np.zeros(ovdds.shape[0], 1)
+    elif due_amt is None:
+        ras = np.asarray(rem_amt)
+        das = np.zeros_like(ras)
+    elif rem_amt is None:
+        das = np.asarray(due_amt)
+        ras = np.zeros_like(das)
+    else:
+        das = np.asarray(due_amt)
+        ras = np.asarray(rem_amt)
+    if len(ras.shape) == 1:
+        ras = ras.reshape(-1, 1)
+    if len(das.shape) == 1:
+        das = das.reshape(-1, 1)
+    amt_n = das.shape[1]
 
     mob, ovdt, ovda = [], [], []
     stop_recs = []
@@ -153,7 +166,7 @@ def snap_ovd(
             ever_rema = conti_recs[0][-2] + conti_recs[0][-1]
 
         ever_ovdd, ever_ovdp = 0, 0
-        ever_ovda, ever_duea = np.zeros(das.shape[1]), np.zeros(das.shape[1])
+        ever_ovda, ever_duea = np.zeros(amt_n), np.zeros(amt_n)
         # Traverse all the duepayments before or on the obdate to get the EVERs.
         while duei < len(dueds) and dueds[duei] <= obd:
             dued, repd, ovdd = dueds[duei], repds[duei], ovdds[duei]
@@ -208,7 +221,7 @@ def snap_ovd(
                 else:
                     logger.warning("Adjacent obdates with no records cutting in.")
             ever_ovdd, ever_ovdp = 0, 0
-            ever_ovda, ever_duea = np.zeros(das.shape[1]), np.zeros(das.shape[1])
+            ever_ovda, ever_duea = np.zeros(amt_n), np.zeros(amt_n)
         else:
             # Check the last continuous overdued periods to update EVERs.
             hduei, hdued, hrepd, hovdd, hduea, hrema = conti_recs[0]
@@ -240,7 +253,7 @@ def snap_ovd(
             else:
                 stop_rema = ras[-1]
             stop_ovdd, stop_ovdp = 0, 0
-            stop_ovda, stop_duea = np.zeros(das.shape[1]), np.zeros(das.shape[1])
+            stop_ovda, stop_duea = np.zeros(amt_n), np.zeros(amt_n)
         else:
             # Try init `stop_rema` with latest `rem_amt` first.
             # If no the continuous overdue record achieve the obdate, this
@@ -253,7 +266,7 @@ def snap_ovd(
             # Check current records in queue to get the STOPs.
             if len(sconti_recs) == 0:
                 stop_ovdd, stop_ovdp = 0, 0
-                stop_ovda, stop_duea = np.zeros(das.shape[1]), np.zeros(das.shape[1])
+                stop_ovda, stop_duea = np.zeros(amt_n), np.zeros(amt_n)
             else:
                 stop_ovdd = obd - sconti_recs[0][1]
                 stop_rema = sconti_recs[0][-2] + sconti_recs[0][-1]
