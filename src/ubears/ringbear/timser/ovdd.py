@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-05-14 15:09:39
+#   Updated: 2025-05-15 11:33:15
 #   Description:
 # ---------------------------------------------------------
 
@@ -55,9 +55,12 @@ def snap_ovd(
     2. Be careful with following corner cases:
       2.1 duedate == obdate or duedate == repdate: not overdue
     3. `rep_date` and `ovd_days` should always satisfy:
-      `rep_date = due_date + ovd_days`.
-      So anyone of `rep_date` and `ovd_days` passed will be fine, and
-      `rep_date` will be used if both passed.
+      `rep_date = due_date + ovd_days` if no NaN existing, so that either
+      `rep_date` or `ovd_days` passed will be fine.
+      But `ovd_days` will be used firstly if both of them passed, as NaN may
+      be in the `rep_date` especially when the repayment records belong to
+      no-cancelled account, which is hard to handle, while NaN should rarely
+      be in `ovd_days` and could be filled with 0 conveniently.
     4. `due_amt` and `rem_amt` could be 2D-NDA with the the same shape, of
       which the correspondant columns represent one pair of process-volume and
       status-volume. And `XXX_rema`, `XXX_ovda`, `XXX_duea` will spawned in
@@ -78,6 +81,7 @@ def snap_ovd(
     rep_date: Sequence[N] of repayment dates.
       This will calculated from the `due_date` and `ovd_days` if not passed.
     ovd_days: Sequence[N] of overdue days of each repayments.
+      NaN will be filled with 0.
     ob_date: Sequence[M] of observation dates.
       If no argument passed, this will be the `due_date` after shifting
       out the first duepay date and including a faraway date.
@@ -115,13 +119,22 @@ def snap_ovd(
             [dueds[1:], np.array(["2999-12-31"], dtype="M8[D]")])
     else:
         obds = np.asarray(ob_date, dtype="M8[D]")
-    if rep_date is None:
-        ovdds = np.asarray(ovd_days, dtype="m8[D]")
-        ovdds[np.isnat(ovdds)] = np.timedelta64(0, "D")
-        repds = dueds + ovdds
-    else:
+    if ovd_days is None:
         repds = np.asarray(rep_date, dtype="M8[D]")
+        if np.isnan(repds).sum() > 0:
+            logger.warning("NaT will be replaced with today in repayment dates.")
+            # Copy before modified.
+            repds = repds.copy()
+            repds[np.isnat(repds)] = np.datetime64("today", "D")
         ovdds = repds - dueds
+    else:
+        ovdds = np.array(ovd_days, dtype="m8[D]")
+        if np.isnan(ovdds).sum() > 0:
+            logger.warning("NaT will be replaced with 0 in overdue days.")
+            # Copy before modified.
+            ovdds = ovdds.copy()
+            ovdds[np.isnat(ovdds)] = np.timedelta64(0, "D")
+        repds = dueds + ovdds
 
     # Align `due_amt` and `rem_amt`.
     if due_amt is None and rem_amt is None:

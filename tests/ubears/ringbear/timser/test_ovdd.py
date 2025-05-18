@@ -3,7 +3,7 @@
 #   Name: test_finarr.py
 #   Author: xyy15926
 #   Created: 2024-04-11 09:11:58
-#   Updated: 2025-05-14 15:15:28
+#   Updated: 2025-05-15 11:46:31
 #   Description:
 # ---------------------------------------------------------
 
@@ -163,6 +163,101 @@ def test_snap_ovd_precisely():
     ])
     novdt, novda = nextdue_ret[:, :4], nextdue_ret[:, 4:]
     assert np.all(ovdt == novdt)
+    assert np.all(ovda == novda)
+
+
+# %%
+def test_snap_ovd_precisely_ovdd_and_repd_conflicts():
+    recs = ovd_recs()
+    due_date = np.asarray(pd.to_datetime(recs["due_date"]), dtype="datetime64[D]")
+    ovd_days = np.asarray(recs["ovd_days"], dtype="timedelta64[D]")
+    rep_date = due_date + ovd_days
+    due_amt = recs["due_amt"]
+    rem_amt = recs["rem_amt"]
+    rep_date[-1] = np.datetime64("nat")
+
+    ob_date = month_date(due_date, "monthend")
+    ovdt, ovda, mob, stop_recs = snap_ovd(due_date, rep_date, ovd_days, ob_date, due_amt, rem_amt)
+    stop_recn = []
+    for obd, srec in zip(ob_date, stop_recs):
+        ovdn = len(list(filter(lambda x: x[1] < obd, srec)))
+        stop_recn.append(ovdn)
+    assert np.all(ovdt[:, -1] == np.asarray(stop_recn))
+    monthend_ret = np.array([
+        [0  , 0 , 0     , 0 , 2300  , 0     , 0     , 2300  , 0     , 0],
+        [20 , 1 , 20    , 1 , 2300  , 100   , 100   , 2300  , 100   , 100],
+        [23 , 1 , 0     , 0 , 2300  , 100   , 100   , 2100  , 0     , 0],
+        [20 , 1 , 20    , 1 , 2100  , 100   , 100   , 2100  , 100   , 100],
+        [37 , 2 , 0     , 0 , 2100  , 200   , 200   , 1900  , 0     , 0],
+        [20 , 1 , 20    , 1 , 1900  , 100   , 100   , 1900  , 100   , 100],
+        [35 , 2 , 19    , 1 , 1900  , 200   , 200   , 1800  , 100   , 100],
+        [50 , 2 , 50    , 2 , 1800  , 200   , 200   , 1800  , 200   , 200],
+        [75 , 3 , 51    , 2 , 1800  , 300   , 300   , 1700  , 200   , 200],
+        [81 , 3 , 81    , 3 , 1700  , 300   , 300   , 1700  , 300   , 300],
+        [98 , 4 , 20    , 1 , 1700  , 400   , 400   , 1400  , 100   , 100],
+        [0  , 0 , 0     , 0 , 1300  , 0     , 100   , 1200  , 0     , 0],
+        [17 , 1 , 0     , 0 , 1200  , 100   , 100   , 1100  , 0     , 0],
+        [17 , 1 , 0     , 0 , 1100  , 100   , 100   , 1000  , 0     , 0],
+        [17 , 1 , 17    , 1 , 1000  , 100   , 100   , 1000  , 100   , 100],
+        [28 , 1 , 20    , 1 , 1000  , 100   , 200   , 900   , 100   , 100],
+        [31 , 1 , 0     , 0 , 900   , 100   , 200   , 700   , 0     , 0],
+        [20 , 1 , 20    , 1 , 700   , 100   , 100   , 700   , 100   , 100],
+    ])
+    movdt, movda = monthend_ret[:, :4], monthend_ret[:, 4:]
+    assert np.all(ovdt == movdt)
+    assert np.all(ovda == movda)
+
+    # month-end `ob_date` V.S. today `rep_date`.
+    ovdt, ovda, mob, stop_recs = snap_ovd(due_date, rep_date, None, ob_date, due_amt, rem_amt)
+    stop_recn = []
+    for obd, srec in zip(ob_date, stop_recs):
+        ovdn = len(list(filter(lambda x: x[1] < obd, srec)))
+        stop_recn.append(ovdn)
+    assert np.all(ovdt[:, -1] == np.asarray(stop_recn))
+    assert np.all(ovdt == movdt)
+    assert np.all(ovda == movda)
+
+    ob_date = month_date(due_date, "nextdue_noend")
+    ovdt, ovda, mob, stop_recs = snap_ovd(due_date, rep_date, ovd_days, ob_date, due_amt, rem_amt)
+    stop_recn = []
+    for obd, srec in zip(ob_date, stop_recs):
+        ovdn = len(list(filter(lambda x: x[1] < obd, srec)))
+        stop_recn.append(ovdn)
+    assert np.all(ovdt[:, -1] == np.asarray(stop_recn))
+    nextdue_noend_ret = np.array([
+        [0  , 0 , 0     , 0 , 2300  , 0     , 100   , 2300  , 0     , 100],
+        [23 , 1 , 0     , 0 , 2300  , 100   , 100   , 2200  , 0     , 100],
+        [0  , 0 , 0     , 0 , 2100  , 0     , 100   , 2100  , 0     , 100],
+        [31 , 1 , 31    , 1 , 2100  , 100   , 200   , 2100  , 100   , 200],
+        [37 , 2 , 0     , 0 , 2100  , 200   , 200   , 1900  , 0     , 100],
+        [31 , 1 , 31    , 1 , 1900  , 100   , 200   , 1900  , 100   , 200],
+        [35 , 2 , 30    , 1 , 1900  , 200   , 200   , 1800  , 100   , 200],
+        [61 , 2 , 61    , 2 , 1800  , 200   , 300   , 1800  , 200   , 300],
+        [75 , 3 , 62    , 2 , 1800  , 300   , 300   , 1700  , 200   , 300],
+        [92 , 3 , 92    , 3 , 1700  , 300   , 400   , 1700  , 300   , 400],
+        [98 , 4 , 0     , 0 , 1700  , 400   , 400   , 1300  , 0     , 100],
+        [0  , 0 , 0     , 0 , 1200  , 0     , 100   , 1200  , 0     , 100],
+        [17 , 1 , 0     , 0 , 1200  , 100   , 100   , 1100  , 0     , 100],
+        [17 , 1 , 0     , 0 , 1100  , 100   , 100   , 1000  , 0     , 100],
+        [28 , 1 , 28    , 1 , 1000  , 100   , 200   , 1000  , 100   , 200],
+        [31 , 1 , 31    , 1 , 900   , 100   , 200   , 900   , 100   , 200],
+        [0  , 0 , 0     , 0 , 700   , 0     , 100   , 700   , 0     , 100],
+        [34 , 1 , 0     , 0 , 700   , 100   , 100   , 600   , 0     , 0],
+    ])
+    novdt, novda = nextdue_noend_ret[:, :4], nextdue_noend_ret[:, 4:]
+    assert np.all(ovdt == novdt)
+    assert np.all(ovda == novda)
+
+    # 2099-12-31 `ob_date` V.S. today `rep_date`
+    ovdt, ovda, mob, stop_recs = snap_ovd(due_date, rep_date, None, ob_date, due_amt, rem_amt)
+    stop_recn = []
+    for obd, srec in zip(ob_date, stop_recs):
+        ovdn = len(list(filter(lambda x: x[1] < obd, srec)))
+        stop_recn.append(ovdn)
+    assert np.all(ovdt[:, -1] == np.asarray(stop_recn))
+    assert np.all(ovdt[:-1] == novdt[:-1])
+    repn = np.datetime64("today", "D") - recs["due_date"].iloc[-1]
+    assert np.all(ovdt[-1] == np.array([repn.days, 1, 0, 0]))
     assert np.all(ovda == novda)
 
 
