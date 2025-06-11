@@ -117,7 +117,7 @@ def flat_ft_dfs(
                 continue
             # Copy if not to covnert dtypes inplace.
             df = (src[part_name] if how == "inplace"
-                  else src["part_name"].copy())
+                  else src[part_name].copy())
             fconfs_ = flat_fconfs.loc[flat_fconfs["part"] == part_name]
             for idx, fconf in fconfs_.iterrows():
                 field_name = fconf["key"]

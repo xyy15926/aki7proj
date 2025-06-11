@@ -452,7 +452,7 @@ def test_flat_record():
         ["PD01AD03", "PD01AD03", "VARCHAR(31)", "基本信息_业务种类"],
         ["PD01AD04", "PD01AD04", "VARCHAR(31)", "基本信息_币种"],
         ["PD01AI01", "PD01AI01", "VARCHAR(255)", "基本信息_账户编号"],
-        ["PD01AR01", "PD01AR01", "DATE", "基本信息_开日日期"],
+        ["PD01AR01", "PD01AR01", "DATE", "基本信息_开立日期"],
         ["PD01AR02", "PD01AR02", "DATE", "基本信息_到期日期"],
     ]
 

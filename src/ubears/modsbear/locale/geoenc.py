@@ -3,7 +3,7 @@
 #   Name: geoenc.py
 #   Author: xyy15926
 #   Created: 2024-07-25 14:01:53
-#   Updated: 2025-01-20 16:31:20
+#   Updated: 2025-06-10 15:16:44
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,7 +18,10 @@ import jieba
 from jieba import posseg
 
 from pathlib import Path
-from importlib_resources import files
+try:
+    from importlib.resources import files
+except ModuleNotFoundError:
+    from importlib_resources import files
 from ubears.flagbear.slp.finer import get_data, get_tmp_path
 
 # %%
@@ -70,7 +73,9 @@ class CHNGovEncoder:
                         .drop_duplicates("ext_name")
                         .copy())
             reg_exts["deep"] = 150000000 // (reg_exts["deep"] + 1) ** 2
-            reg_exts.set_axis(["name", "deep", "pos"], axis=1, inplace=True)
+            # Parameter `copy` replaces `inplace` in Pandas > 2.0.
+            # And neither `copy` nor `inplace` is used here for compatabilty.
+            reg_exts = reg_exts.set_axis(["name", "deep", "pos"], axis=1)
 
             # Write regions name to word dict file.
             reg_names = (pd.concat([reg_names, reg_exts])
