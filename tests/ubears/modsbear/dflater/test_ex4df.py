@@ -3,7 +3,7 @@
 #   Name: test_ex4df.py
 #   Author: xyy15926
 #   Created: 2024-04-15 18:17:58
-#   Updated: 2025-01-21 21:51:34
+#   Updated: 2025-06-14 15:47:08
 #   Description:
 # ---------------------------------------------------------
 
@@ -13,11 +13,10 @@ import pytest
 if __name__ == "__main__":
     from importlib import reload
     from ubears.flagbear.str2 import fliper
-    from ubears.modsbear.dflater import ex2df, ex4df, exenv
+    from ubears.modsbear.dflater import ex2df, ex4df
     reload(fliper)
     reload(ex2df)
     reload(ex4df)
-    reload(exenv)
 
 import numpy as np
 import pandas as pd
@@ -26,7 +25,11 @@ import json
 
 from ubears.flagbear.str2.fliper import extract_field, rebuild_dict
 from ubears.modsbear.dflater.ex2df import rebuild_rec2df
-from ubears.modsbear.dflater.ex4df import agg_on_df, trans_on_df
+from ubears.modsbear.dflater.ex4df import (
+    agg_on_df,
+    trans_on_df,
+    DFKGraph,
+)
 
 
 # %%
@@ -279,3 +282,223 @@ def test_agg_on_df():
     assert agged["c1_acc_cat_cnt"] == (src["acc_cat"] == 99).sum()
     assert agged["d1r41_acc_cat_cnt"] == (src["acc_cat"] <= 3).sum()
     assert agged["d1r4_acc_cat_cnt"] == (src["acc_cat"] <= 2).sum()
+
+
+# %%
+def autofin_graphdf():
+    # Only fields `nid`, `ntype` are necessary.
+    node_df = pd.DataFrame.from_records([
+        ["Node1"    , "NType1"  , 100],
+        ["Node2"    , "NType1"  , 200],
+        ["Node3"    , "NType1"  , 1000],
+        ["Node4"    , "NType1"  , 2000],
+        ["Node5"    , "NType2"  , 10],
+        ["Node6"    , "NType2"  , 100],
+        ["Node7"    , "NType2"  , 1000],
+        ["Node8"    , "NType2"  , 10000],
+    ], columns=["nid", "ntype", "weight"])
+    # Only fields `source`, `target` are necessary.
+    edge_df = pd.DataFrame.from_records([
+        ["Node1"    , "Node2"   , "RType1"  , "2021-01-01"],
+        ["Node1"    , "Node3"   , "RType1"  , "2023-01-01"],
+        ["Node7"    , "Node1"   , "RType2"  , "2021-01-01"],
+        ["Node1"    , "Node8"   , "RType2"  , "2022-01-01"],
+        ["Node4"    , "Node6"   , "RType2"  , "2023-01-01"],
+        ["Node4"    , "Node5"   , "RType1"  , "2021-01-01"],
+        ["Node3"    , "Node8"   , "RType1"  , "2022-01-01"],
+    ], columns=["source", "target", "etype", "update"])
+    edge_df["update"] = edge_df["update"].astype("M8[s]")
+
+    return node_df, edge_df
+
+
+# %%
+def test_DFKGraph_init_with_only_nedf():
+    fnid = "nid"
+    fsrc = "source"
+    ftgt = "target"
+    fntype = "ntype"
+    fetype = "etype"
+    edge_joinkey = [fsrc, ftgt]
+
+    node_df, edge_df = autofin_graphdf()
+    kg = DFKGraph(node_df, edge_df)
+    node_ref = kg.node_ref
+    edge_ref = kg.edge_ref
+    ref_dfs = kg.ref_dfs
+
+    # All reference DFs are all the original node-DF or edge-DF.
+    all_ntypes = np.unique(node_ref[fntype])
+    all_etypes = np.unique(edge_ref[fetype])
+    for a, b in zip(all_ntypes[:-1], all_ntypes[1:]):
+        assert kg.ref_dfs[a] is kg.ref_dfs[b]
+    for a, b in zip(all_etypes[:-1], all_etypes[1:]):
+        assert kg.ref_dfs[a] is kg.ref_dfs[b]
+
+    # Check the `__iloc__` and the `ntype`
+    for netype, rdf in ref_dfs.items():
+        if rdf is node_df or rdf is edge_df:
+            continue
+        if fnid in rdf:
+            merged = pd.merge(rdf, node_ref, on=fnid, how="inner")
+            assert np.all(merged["__iloc__"] == np.arange(rdf.shape[0]))
+        else:
+            merged = pd.merge(rdf, edge_ref, on=edge_joinkey, how="inner")
+            assert np.all(merged["__iloc__"] == np.arange(rdf.shape[0]))
+
+
+# %%
+def test_DFKGraph_init_with_only_nedf_notype():
+    fnid = "nid"
+    fsrc = "source"
+    ftgt = "target"
+    fntype = "ntype1"
+    fetype = "etype1"
+    edge_joinkey = [fsrc, ftgt]
+
+    node_df, edge_df = autofin_graphdf()
+    kg = DFKGraph(node_df, edge_df, fntype=fntype, fetype=fetype)
+    node_ref = kg.node_ref
+    edge_ref = kg.edge_ref
+    ref_dfs = kg.ref_dfs
+
+    # All reference DFs are all the original node-DF or edge-DF.
+    all_ntypes = np.unique(node_ref[fntype])
+    all_etypes = np.unique(edge_ref[fetype])
+    for a, b in zip(all_ntypes[:-1], all_ntypes[1:]):
+        assert kg.ref_dfs[a] is kg.ref_dfs[b]
+    for a, b in zip(all_etypes[:-1], all_etypes[1:]):
+        assert kg.ref_dfs[a] is kg.ref_dfs[b]
+
+    # Check the `__iloc__` and the `ntype`
+    for netype, rdf in ref_dfs.items():
+        if rdf is node_df or rdf is edge_df:
+            continue
+        if fnid in rdf:
+            merged = pd.merge(rdf, node_ref, on=fnid, how="inner")
+            assert np.all(merged["__iloc__"] == np.arange(rdf.shape[0]))
+        else:
+            merged = pd.merge(rdf, edge_ref, on=edge_joinkey, how="inner")
+            assert np.all(merged["__iloc__"] == np.arange(rdf.shape[0]))
+
+
+# %%
+def test_DFKGraph_init_with_only_ref_dfs():
+    fnid = "nid"
+    fsrc = "source"
+    ftgt = "target"
+    fntype = "ntype"
+    fetype = "etype"
+    edge_joinkey = [fsrc, ftgt]
+    node_df, edge_df = autofin_graphdf()
+
+    _ref_dfs = {}
+    for x, y in node_df.groupby(fntype):
+        _ref_dfs[x] = y
+    for x, y in edge_df.groupby(fetype):
+        _ref_dfs[x] = y
+
+    kg = DFKGraph(ref_dfs=_ref_dfs)
+    node_ref = kg.node_ref
+    edge_ref = kg.edge_ref
+    ref_dfs = kg.ref_dfs
+
+    # The original reference DFs is the DF in `DFKGraph.ref_dfs`.
+    for netype, rdf in ref_dfs.items():
+        if netype in _ref_dfs:
+            assert rdf is _ref_dfs[netype], (
+                "The original reference DFs is the DF in `DFKGraph.ref_dfs`.")
+
+    # Check the `__iloc__` and the `ntype`
+    for netype, rdf in ref_dfs.items():
+        if rdf is node_df or rdf is edge_df:
+            continue
+        if fnid in rdf:
+            merged = pd.merge(rdf, node_ref, on=fnid, how="inner")
+            assert np.all(merged["__iloc__"] == np.arange(rdf.shape[0]))
+        else:
+            merged = pd.merge(rdf, edge_ref, on=edge_joinkey, how="inner")
+            assert np.all(merged["__iloc__"] == np.arange(rdf.shape[0]))
+
+
+# %%
+def test_DFKGraph_init_with_both_nedf_ref_dfs():
+    fnid = "nid"
+    fsrc = "source"
+    ftgt = "target"
+    fntype = "ntype"
+    fetype = "etype"
+    edge_joinkey = [fsrc, ftgt]
+    node_df, edge_df = autofin_graphdf()
+
+    _ref_dfs = {}
+    for x, y in node_df.groupby(fntype):
+        _ref_dfs[x] = y
+        break
+    for x, y in edge_df.groupby(fetype):
+        _ref_dfs[x] = y
+        break
+
+    kg = DFKGraph(node_df, edge_df, _ref_dfs)
+    node_ref = kg.node_ref
+    edge_ref = kg.edge_ref
+    ref_dfs = kg.ref_dfs
+
+    # The original reference DFs is the DF in `DFKGraph.ref_dfs`.
+    for netype, rdf in ref_dfs.items():
+        if netype in _ref_dfs:
+            assert rdf is _ref_dfs[netype], (
+                "The original reference DFs is the DF in `DFKGraph.ref_dfs`.")
+        elif fnid in rdf:
+            assert rdf is node_df, (
+                "Newly added refernece DFs must be node-df or edge-df.")
+        elif fsrc in rdf:
+            assert rdf is edge_df, (
+                "Newly added refernece DFs must be node-df or edge-df.")
+        else:
+            assert False, "Unexpected reference DF."
+
+    # Check the `__iloc__` and the `ntype`.
+    for netype, rdf in ref_dfs.items():
+        if rdf is node_df or rdf is edge_df:
+            continue
+        if fnid in rdf:
+            merged = pd.merge(rdf, node_ref, on=fnid, how="inner")
+            assert np.all(merged["__iloc__"] == np.arange(rdf.shape[0]))
+        else:
+            merged = pd.merge(rdf, edge_ref, on=edge_joinkey, how="inner")
+            assert np.all(merged["__iloc__"] == np.arange(rdf.shape[0]))
+
+
+# %%
+def test_DFKGraph_agg_on_nodes():
+    fnid = "nid"
+    fsrc = "src"
+    ftgt = "tgt"
+    fntype = "ntype"
+    fetype = "etype"
+    edge_joinkey = [fsrc, ftgt]
+    node_df, edge_df = autofin_graphdf()
+    edge_df["upm_itvl"] = (np.datetime64("2025-06-14") - edge_df["update"]).dt.days
+
+    _ref_dfs = {}
+    for x, y in node_df.groupby(fntype):
+        _ref_dfs[x] = y
+        break
+    for x, y in edge_df.groupby(fetype):
+        _ref_dfs[x] = y
+        break
+
+    kg = DFKGraph(node_df, edge_df, _ref_dfs)
+    nids = "Node1"
+    rules = [
+        ("dp1_ncnt", [("both", "upm_itvl < 1000", ""), ], "count(_)"),
+        ("dp1_ws1", [("both", "upm_itvl < 2000", ""), ], "sum(weight)"),
+        ("dp1_ws2", [("source", "upm_itvl < 2000", "weight > 200"), ], "sum(weight)"),
+        ("dp2_ws", [("both", "upm_itvl < 2000", "weight > 200"),
+                    ("target", "", "")], "sum(weight)"),
+        ("dp2_ws2", [("both", "upm_itvl < 2000", "weight > 200"),
+                     ("target", "etype == \"RType1\"", "weight > 100")], "sum(weight)"),
+    ]
+    ret = kg.agg_on_nodes(nids, rules)
+    assert np.all(ret.values == [1, 12200, 11000, 1100, 1000])
