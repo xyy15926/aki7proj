@@ -3,14 +3,13 @@
 #   Name: test_attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 15:58:08
-#   Updated: 2025-06-18 20:21:47
+#   Updated: 2025-07-01 14:10:26
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 import pytest
 from pytest import mark
-from importlib import reload
 import numpy as np
 import torch
 from torch import nn
@@ -20,12 +19,13 @@ from torch.nested._internal import sdpa
 from torch.backends.cuda import SDPAParams
 
 if __name__ == "__main__":
-    from ubears.modsbear.nn import attention
+    from importlib import reload
+    from ubears.nutsbear import attention
     reload(attention)
 
-from ubears.modsbear.nn.attention import (
-    MultiheadAttention,
+from ubears.nutsbear.attention import (
     scaled_dot_product_attention,
+    MultiheadAttention,
 )
 
 
@@ -36,12 +36,12 @@ def test_scaled_dot_product_attention():
     value = torch.randn(3, 6, 5, dtype=torch.float64)
     attn_mask = torch.randint(0, 2, (4, 6)).to(torch.bool)
 
-    outp = scaled_dot_product_attention(query, key, value, attn_mask=attn_mask)
+    outp, ws = scaled_dot_product_attention(query, key, value, attn_mask=attn_mask)
     foutp = F.scaled_dot_product_attention(
         query, key, value, attn_mask=attn_mask)
     assert torch.all(torch.isclose(outp, foutp))
 
-    outp = scaled_dot_product_attention(query, key, value, is_causal=True)
+    outp, ws = scaled_dot_product_attention(query, key, value, is_causal=True)
     foutp = F.scaled_dot_product_attention(query, key, value, is_causal=True)
     assert torch.all(torch.isclose(outp, foutp))
 
@@ -105,15 +105,24 @@ def test_MultiHeadAttention():
     value = torch.randn(3, 6, 8, dtype=torch.float32)
 
     nnmha = nn.MultiheadAttention(8, 1, batch_first=True)
-    nnattn, nnw = nnmha(query, key, value)
     nn_sd = nnmha.state_dict()
+    mha = MultiheadAttention(8, 1)
     sd = {
         "packed_proj.weight": nn_sd["in_proj_weight"],
         "packed_proj.bias": nn_sd["in_proj_bias"],
         "out_proj.weight": nn_sd["out_proj.weight"],
         "out_proj.bias": nn_sd["out_proj.bias"],
     }
-    mha = MultiheadAttention(8, 1)
     mha.load_state_dict(sd)
-    attn = mha(query, key, value)
+
+    nnattn, nnw = nnmha(query, key, value)
+    attn, attn_ws = mha(query, key, value)
     assert torch.all(torch.isclose(nnattn, attn))
+
+    key_padding_mask = torch.tensor([[1, 1, 1, 1, 1, 0],
+                                     [1, 1, 0, 0, 1, 1],
+                                     [1, 1, 1, 1, 1, 1]], dtype=torch.bool)
+    nnattn, nnw = nnmha(query, key, value, key_padding_mask=key_padding_mask.logical_not())
+    attn, attn_ws = mha(query, key, value, key_padding_mask=key_padding_mask)
+    assert torch.all(torch.isclose(nnattn, attn))
+
