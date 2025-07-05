@@ -3,7 +3,7 @@
 #   Name: attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 12:01:06
-#   Updated: 2025-07-04 20:08:12
+#   Updated: 2025-07-05 20:18:30
 #   Description:
 # ---------------------------------------------------------
 
@@ -41,6 +41,11 @@ def scaled_dot_product_attention(
     """Scaled dot product attention.
 
     1. Doesn't support NestedTensor.
+    2. True represents to mask the correspondant position, which is
+      controversary to `F.scaled_dot_product_attention`, so to keep up with
+      `nn.MultiheadAttention` behavior.
+    3. NaN will be filled with 0, for masked positions mostly, so to keep up
+      with `F.scaled_dot_product_attention`.
 
     Ref:
     ---------------------------
@@ -54,7 +59,7 @@ def scaled_dot_product_attention(
     query: Query input Tensor
     key: Key input Tensor.
     value: Value input Tensor.
-    attn_mask: Padding mask with **False** representing the masked.
+    attn_mask: Mask for relations between query and key sequences.
     is_causal: If to enforce causality, namely tokens can only attend to
       previous tokens.
 
@@ -95,7 +100,7 @@ def scaled_dot_product_attention(
             attn_bias.unsqueeze_(0)
         # Convert bool mask to float mask with ninf for softmax.
         if attn_mask.dtype == torch.bool:
-            attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
+            attn_bias.masked_fill_(attn_mask, float("-inf"))
         else:
             attn_bias = attn_mask + attn_bias
 
@@ -198,8 +203,9 @@ class MultiheadAttention(nn.Module):
         self.hsz = tsz // heads_n
         self.dropout_p = dropout_p
         self._qkv_same_embed_dim = qsz == ksz and ksz == vsz
+        # Pack inner projection up.
         if self._qkv_same_embed_dim:
-            self.packed_proj = nn.Linear(
+            self.in_proj = nn.Linear(
                 qsz, tsz * 3, bias=bias, **factory_kwargs)
         else:
             self.q_proj = nn.Linear(qsz, tsz, bias=bias, **factory_kwargs)
@@ -223,6 +229,9 @@ class MultiheadAttention(nn.Module):
           3 linear projection for query, key and value input seperately if
           query, key and value are the exact one tensor.
           (NestedTensor excluded.)
+        2. NaN will be filled with 0, for masked positions mostly so to keep up
+          with `F.scaled_dot_product_attention`, while the
+          `nn.MultiheadAttention` will keep NaN untouched.
 
         Ref:
         --------------------------
@@ -238,14 +247,17 @@ class MultiheadAttention(nn.Module):
         query: Query input Tensor
         key: Key input Tensor.
         value: Value input Tensor.
-        attn_mask:
-        is_causal:
+        key_padding_mask: Padding mask for key sequence.
+        attn_mask: Mask for the attending relations between query and key.
+        is_causal: If to enforce causality, namely tokens can only attend to
+          previous tokens.
 
         Shape:
         --------------------------
         query: (bsz, query_seq_len, qsz)
         key: (bsz, kv_seq_len, ksz)
         value: (bsz, kv_seq_len, vsz)
+        key_padding_mask: (bsz, kv_seq_len)
         attn_mask: (query_seq_len, kv_seq_len)
         RETURN: (bsz, query_seq_len, qsz)
 
@@ -259,12 +271,12 @@ class MultiheadAttention(nn.Module):
             # contiguous isn't compatiable with `F.SPDA`, namely simple
             # `NJT.contiguous` doesn't work.
             if query is key and key is value and not query.is_nested:
-                result = self.packed_proj(query)
+                result = self.in_proj(query)
                 query, key, value = torch.chunk(result, 3, dim=-1)
             else:
-                qw, kw, vw = torch.chunk(self.packed_proj.weight, 3, dim=0)
+                qw, kw, vw = torch.chunk(self.in_proj.weight, 3, dim=0)
                 if self.bias:
-                    qb, kb, vb = torch.chunk(self.packed_proj.bias, 3, dim=0)
+                    qb, kb, vb = torch.chunk(self.in_proj.bias, 3, dim=0)
                 else:
                     qb, kb, vb = None, None, None
                 query = F.linear(query, qw, qb)
@@ -303,15 +315,20 @@ class MultiheadAttention(nn.Module):
 
         return self.out_proj(attn_val), attn_ws
 
+    @classmethod
     def merge_masks(
-        self,
+        cls,
         key_padding_mask: torch.Tensor,
         attn_mask: torch.Tensor,
     ) -> torch.Tensor:
         """Combine padding mask and attenion mask.
 
-        1. Why not `query_padding_mask`???
-        #TODO
+        1. `query_padding_mask` isn't added, which is the same with the
+          `nn.MultiheadAttention`, since the query's mask will be handled by
+          users lately somehow.
+        2. True represents to mask the correspondant position, which is
+          controversary to `F.scaled_dot_product_attention`, so to keep up with
+          `nn.MultiheadAttention` behavior.
 
         Ref:
         --------------------------
@@ -345,14 +362,14 @@ class MultiheadAttention(nn.Module):
         if key_padding_mask is not None:
             if key_padding_mask.dtype == torch.bool:
                 bias_mask.masked_fill_(
-                    key_padding_mask.view(bsz, 1, kslen).logical_not(),
+                    key_padding_mask.view(bsz, 1, kslen),
                     float("-inf"))
             else:
                 bias_mask += key_padding_mask.view(bsz, 1, kslen)
         if attn_mask is not None:
             if attn_mask.dtype == torch.bool:
                 bias_mask.masked_fill_(
-                    attn_mask.view(1, qslen, kslen).logical_not(),
+                    attn_mask.view(1, qslen, kslen),
                     float("-inf"))
             else:
                 bias_mask += attn_mask.view(1, qslen, kslen)
@@ -420,14 +437,14 @@ class TransformerEncoderLayer(nn.Module):
     def _sa_block(
         self,
         inp: torch.Tensor,
-        key_padding_mask: torch.Tensor = None,
+        src_key_padding_mask: torch.Tensor = None,
         attn_mask: torch.Tensor = None,
         is_causal: bool = False,
     ) -> torch.Tensor:
         """Self-Attention block."""
         attn_val, attn_ws = self.self_attn(
             inp, inp, inp,
-            key_padding_mask=key_padding_mask,
+            key_padding_mask=src_key_padding_mask,
             attn_mask=attn_mask,
             is_causal=is_causal,
         )
@@ -438,14 +455,14 @@ class TransformerEncoderLayer(nn.Module):
         inp: torch.Tensor,
     ) -> torch.Tensor:
         """Feed-Forward Network block."""
-        outp = self.ffn_dropout1(self.activation(self.ffn_linear1(inp)))
+        outp = self.ffn_dropout1(self.ffn_activation(self.ffn_linear1(inp)))
         outp = self.ffn_dropout2(self.ffn_linear2(outp))
         return outp
 
     def forward(
         self,
         src: torch.Tensor,
-        key_padding_mask: torch.Tensor = None,
+        src_key_padding_mask: torch.Tensor = None,
         attn_mask: torch.Tensor = None,
         is_causal: bool = False,
     ) -> torch.Tensor:
@@ -457,7 +474,7 @@ class TransformerEncoderLayer(nn.Module):
             src
             + self._sa_block(
                 src,
-                padding_mask=key_padding_mask,
+                src_key_padding_mask=src_key_padding_mask,
                 attn_mask=attn_mask,
                 is_causal=is_causal
             )
@@ -472,11 +489,9 @@ class TransformerEncoder(nn.Module):
     """
     def __init__(
         self,
-        embed_sz: int,
-        heads_n: int,
-        ffn_sz: int,
+        encoder_layer: "TransformerEncoderLayer",
+        layers_n: int = 6,
         dropout_p: float = 0.0,
-        layers_n: int = 2,
     ):
         """Init Transformer Encoder.
 
@@ -489,27 +504,25 @@ class TransformerEncoder(nn.Module):
         is_causal: If the attention should be causal.
         """
         super().__init__()
-        enc_layer = TransformerEncoderLayer(
-            embed_sz, heads_n, ffn_sz, dropout_p)
         # `copy.deepcopy` may be more time-efficient than sequent init.
         self.enc_layers = nn.ModuleList(
-            [copy.deepcopy(enc_layer) for i in range(layers_n)])
+            [copy.deepcopy(encoder_layer) for i in range(layers_n)])
         self.layers_n = layers_n
 
     def forward(
         self,
         src: torch.Tensor,
-        key_padding_mask: torch.Tensor = None,
+        src_key_padding_mask: torch.Tensor = None,
         attn_mask: torch.Tensor = None,
         is_causal: bool = False,
     ) -> torch.Tensor:
         """Transformer Encoder part forward."""
         outp = src
         # Merge the `key_padding_mask` and `attn_mask` only once.
-        if key_padding_mask is not None:
-            bias_mask = self.enc_layers[0].merge_masks(key_padding_mask, attn_mask)
+        if src_key_padding_mask is not None:
+            bias_mask = MultiheadAttention.merge_masks(src_key_padding_mask, attn_mask)
         else:
             bias_mask = attn_mask
         for mod in self.enc_layers:
-            outp = mod(outp, None, bias_mask, is_causal)
+            outp = mod(outp, attn_mask=bias_mask, is_causal=is_causal)
         return outp

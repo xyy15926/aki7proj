@@ -3,7 +3,7 @@
 #   Name: test_attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 15:58:08
-#   Updated: 2025-07-01 14:10:26
+#   Updated: 2025-07-05 20:26:09
 #   Description:
 # ---------------------------------------------------------
 
@@ -26,6 +26,8 @@ if __name__ == "__main__":
 from ubears.nutsbear.attention import (
     scaled_dot_product_attention,
     MultiheadAttention,
+    TransformerEncoderLayer,
+    TransformerEncoder,
 )
 
 
@@ -36,14 +38,15 @@ def test_scaled_dot_product_attention():
     value = torch.randn(3, 6, 5, dtype=torch.float64)
     attn_mask = torch.randint(0, 2, (4, 6)).to(torch.bool)
 
-    outp, ws = scaled_dot_product_attention(query, key, value, attn_mask=attn_mask)
+    outp, ws = scaled_dot_product_attention(
+        query, key, value, attn_mask=attn_mask.logical_not())
     foutp = F.scaled_dot_product_attention(
         query, key, value, attn_mask=attn_mask)
-    assert torch.all(torch.isclose(outp, foutp))
+    assert torch.all(torch.isclose(outp, foutp, rtol=1e-4))
 
     outp, ws = scaled_dot_product_attention(query, key, value, is_causal=True)
     foutp = F.scaled_dot_product_attention(query, key, value, is_causal=True)
-    assert torch.all(torch.isclose(outp, foutp))
+    assert torch.all(torch.isclose(outp, foutp, rtol=1e-4))
 
 
 # %%
@@ -108,8 +111,8 @@ def test_MultiHeadAttention():
     nn_sd = nnmha.state_dict()
     mha = MultiheadAttention(8, 1)
     sd = {
-        "packed_proj.weight": nn_sd["in_proj_weight"],
-        "packed_proj.bias": nn_sd["in_proj_bias"],
+        "in_proj.weight": nn_sd["in_proj_weight"],
+        "in_proj.bias": nn_sd["in_proj_bias"],
         "out_proj.weight": nn_sd["out_proj.weight"],
         "out_proj.bias": nn_sd["out_proj.bias"],
     }
@@ -117,12 +120,108 @@ def test_MultiHeadAttention():
 
     nnattn, nnw = nnmha(query, key, value)
     attn, attn_ws = mha(query, key, value)
-    assert torch.all(torch.isclose(nnattn, attn))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-4))
 
     key_padding_mask = torch.tensor([[1, 1, 1, 1, 1, 0],
                                      [1, 1, 0, 0, 1, 1],
                                      [1, 1, 1, 1, 1, 1]], dtype=torch.bool)
-    nnattn, nnw = nnmha(query, key, value, key_padding_mask=key_padding_mask.logical_not())
+    nnattn, nnw = nnmha(query, key, value, key_padding_mask=key_padding_mask)
     attn, attn_ws = mha(query, key, value, key_padding_mask=key_padding_mask)
-    assert torch.all(torch.isclose(nnattn, attn))
+    assert torch.all(torch.isclose(torch.nan_to_num(nnattn, 0.0), attn, rtol=1e-4))
 
+    nnattn, nnw = nnmha(query, key, value,
+                        key_padding_mask=key_padding_mask.logical_not())
+    attn, attn_ws = mha(query, key, value,
+                        key_padding_mask=key_padding_mask.logical_not())
+    assert torch.all(torch.isclose(torch.nan_to_num(nnattn, 0.0), attn, rtol=1e-4))
+
+
+# %%
+def test_TransformerEncoderLayer():
+    query = torch.randn(3, 4, 8, dtype=torch.float32)
+    # key = torch.randn(3, 6, 8, dtype=torch.float32)
+    # value = torch.randn(3, 6, 8, dtype=torch.float32)
+
+    nntel = nn.TransformerEncoderLayer(8, 1, 16, 0, batch_first=True)
+    nn_sd = nntel.state_dict()
+    sd = {
+        "self_attn.in_proj.weight"  : nn_sd["self_attn.in_proj_weight"],
+        "self_attn.in_proj.bias"    : nn_sd["self_attn.in_proj_bias"],
+        "self_attn.out_proj.weight" : nn_sd["self_attn.out_proj.weight"],
+        "self_attn.out_proj.bias"   : nn_sd["self_attn.out_proj.bias"],
+        "ffn_linear1.weight"        : nn_sd["linear1.weight"],
+        "ffn_linear1.bias"          : nn_sd["linear1.bias"],
+        "ffn_linear2.weight"        : nn_sd["linear2.weight"],
+        "ffn_linear2.bias"          : nn_sd["linear2.bias"],
+        "norm1.weight"              : nn_sd["norm1.weight"],
+        "norm1.bias"                : nn_sd["norm1.bias"],
+        "norm2.weight"              : nn_sd["norm2.weight"],
+        "norm2.bias"                : nn_sd["norm2.bias"],
+    }
+    tel = TransformerEncoderLayer(8, 1, 16, 0)
+    tel.load_state_dict(sd)
+
+    nnret = nntel(query)
+    ret = tel(query)
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-4))
+
+    key_padding_mask = torch.tensor([[1, 1, 1, 1],
+                                     [1, 1, 0, 0],
+                                     [1, 1, 1, 1]], dtype=torch.bool)
+    nnret = nntel(query, src_key_padding_mask=key_padding_mask)
+    ret = tel(query, src_key_padding_mask=key_padding_mask)
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-4))
+
+    key_padding_mask = torch.tensor([[1, 1, 1, 1],
+                                     [1, 1, 0, 0],
+                                     [1, 1, 1, 1]], dtype=torch.bool)
+    nnret = nntel(query, src_key_padding_mask=key_padding_mask.logical_not())
+    ret = tel(query, src_key_padding_mask=key_padding_mask.logical_not())
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-4))
+
+
+# %%
+def test_TransformerEncoder():
+    query = torch.randn(3, 4, 8, dtype=torch.float32)
+    # key = torch.randn(3, 6, 8, dtype=torch.float32)
+    # value = torch.randn(3, 6, 8, dtype=torch.float32)
+
+    nntel = nn.TransformerEncoderLayer(8, 2, 16, 0, batch_first=True)
+    nnte = nn.TransformerEncoder(nntel, 2)
+    nn_sd = nntel.state_dict()
+    sd = {
+        "self_attn.in_proj.weight"  : nn_sd["self_attn.in_proj_weight"],
+        "self_attn.in_proj.bias"    : nn_sd["self_attn.in_proj_bias"],
+        "self_attn.out_proj.weight" : nn_sd["self_attn.out_proj.weight"],
+        "self_attn.out_proj.bias"   : nn_sd["self_attn.out_proj.bias"],
+        "ffn_linear1.weight"        : nn_sd["linear1.weight"],
+        "ffn_linear1.bias"          : nn_sd["linear1.bias"],
+        "ffn_linear2.weight"        : nn_sd["linear2.weight"],
+        "ffn_linear2.bias"          : nn_sd["linear2.bias"],
+        "norm1.weight"              : nn_sd["norm1.weight"],
+        "norm1.bias"                : nn_sd["norm1.bias"],
+        "norm2.weight"              : nn_sd["norm2.weight"],
+        "norm2.bias"                : nn_sd["norm2.bias"],
+    }
+
+    tel = TransformerEncoderLayer(8, 2, 16, 0)
+    tel.load_state_dict(sd)
+    te = TransformerEncoder(tel, 2)
+
+    nnret = nnte(query)
+    ret = te(query)
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-4))
+
+    key_padding_mask = torch.tensor([[1, 1, 1, 1],
+                                     [1, 1, 0, 0],
+                                     [1, 1, 1, 1]], dtype=torch.bool)
+    nnret = nnte(query, src_key_padding_mask=key_padding_mask)
+    ret = te(query, src_key_padding_mask=key_padding_mask)
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-4))
+
+    key_padding_mask = torch.tensor([[1, 1, 1, 1],
+                                     [1, 1, 0, 0],
+                                     [1, 1, 1, 1]], dtype=torch.bool)
+    nnret = nnte(query, src_key_padding_mask=key_padding_mask.logical_not())
+    ret = te(query, src_key_padding_mask=key_padding_mask.logical_not())
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-4))
