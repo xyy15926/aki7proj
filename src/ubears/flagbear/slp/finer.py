@@ -3,7 +3,7 @@
 #   Name: finer.py
 #   Author: xyy15926
 #   Created: 2024-06-24 14:04:14
-#   Updated: 2025-02-25 17:24:12
+#   Updated: 2025-07-08 19:21:53
 #   Description:
 # ---------------------------------------------------------
 
@@ -103,7 +103,8 @@ def date_order_mark(
 
     Params:
     --------------------------
-    kstr: Key mark
+    kstr: Key mark.
+      Regex will be used to search all file matched.
     alts: Alternative to get the start point of the order.
     rdmark: The date mark for the file with format `%Y%m%d`.
       "today": Today will be used as default.
@@ -122,21 +123,22 @@ def date_order_mark(
     if rdmark == "today":
         today = date.today().isoformat().replace("-", "")
         max_mark = int(today + "0000")
-        rdmark = f"({today})"
+        rdmark_ptn = f"({today})"
     elif rdmark is None:
-        rdmark = r"(20\d{2}[01]\d[0123]\d)"
+        rdmark_ptn = r"(20\d{2}[01]\d[0123]\d)"
         max_mark = int("20000101" + "0000")
     else:
         max_mark = int(rdmark + "0000")
-        rdmark = f"({rdmark})"
-    idx = r"(\d{4})"
-    fnreg = f"{kstr}_{rdmark}_{idx}"
+        rdmark_ptn = f"({rdmark})"
+    kstr_ptn = rf"({kstr})"
+    idx_ptn = r"(\d{4})"
+    fnreg = rf"{kstr_ptn}_{rdmark_ptn}_{idx_ptn}"
 
     alts = [] if alts is None else alts
     for alt in alts:
         mret = re.match(fnreg, alt)
         if mret:
-            cdate, cid = mret.groups()
+            kstr, cdate, cid = mret.groups()
             max_mark = max(max_mark, int(cdate + cid))
     max_mark += incr
     fmark = str(max_mark)
