@@ -3,7 +3,7 @@
 #   Name: attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 12:01:06
-#   Updated: 2025-07-10 09:28:53
+#   Updated: 2025-07-14 19:23:59
 #   Description:
 # ---------------------------------------------------------
 
@@ -16,7 +16,8 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-# from IPython.core.debugger import set_trace
+from torch.nn.init import constant_, xavier_normal_, xavier_uniform_
+from IPython.core.debugger import set_trace
 
 # %%
 logging.basicConfig(
@@ -29,6 +30,7 @@ logger.info("Logging Start.")
 
 
 # %%
+# TODO: `F.softmax` will return NaN for all NInf and lead to NaN in `.grad`.
 def scaled_dot_product_attention(
     query: torch.Tensor,
     key: torch.Tensor,
@@ -46,6 +48,7 @@ def scaled_dot_product_attention(
       `nn.MultiheadAttention` behavior.
     3. `is_causal` and `attn_mask` could be set together, with warning log as
       reminder, and merge will be done.
+    4. NaN won't filled with 0 after the softmax.
     **** The same with `F.scaled_dot_product_attention`:
     4. NaN will be filled with 0, for masked positions mostly, so to keep up
       with `F.scaled_dot_product_attention`.
@@ -62,7 +65,14 @@ def scaled_dot_product_attention(
     query: Query input Tensor
     key: Key input Tensor.
     value: Value input Tensor.
-    attn_mask: Mask for relations between query and key sequences.
+    attn_mask: 2D or 3D mask to prevent attention to certain position between
+      query and key sequences.
+      2D-mask: Mask that is same for all batches, which may be the mask
+        representint the relations between the query and the key, namely
+        "attention-mask".
+      3D-mask: Mask that fit for batches seperately, which should the
+        merged mask of "attention-mask" and "padding-mask",
+        or just "padding-mask" if the `.size(1) == 1`.
     is_causal: If to enforce causality, namely tokens can only attend to
       previous tokens.
 
@@ -71,7 +81,7 @@ def scaled_dot_product_attention(
     query: (..., q_seq_len, qksz)
     key: (..., kv_seq_len, qksz)
     value: (..., kv_seq_len, vsz)
-    attn_mask: (..., q_seq_len, kv_seq_len)
+    attn_mask: ([bsz,] q_seq_len, kv_seq_len)
     ...(mostly): (bsz, heads_n)
 
     Return Shape:
@@ -87,39 +97,54 @@ def scaled_dot_product_attention(
     *_____, qslen, qksz = query.size()
     *_____, kvslen, vsz = value.size()
 
-    # Perform mask.
-    attn_bias = torch.zeros(
-        qslen, kvslen, dtype=query.dtype, device=query.device)
-    # Causal mask.
-    if is_causal:
+    # Init mask with ninf.
+    if (attn_mask is not None
+            and attn_mask.dtype != torch.bool
+            and not is_causal):
+        bias_mask = attn_mask
+    else:
+        bias_mask = torch.zeros(
+            qslen, kvslen,
+            dtype=query.dtype,
+            device=query.device
+        )
+        # Causal mask.
+        if is_causal:
+            if attn_mask is not None:
+                logger.warning(
+                    "Explicit attn_mask and is_causal are be set simultaneously."
+                )
+            tril_mask = torch.ones(qslen, kvslen, dtype=torch.bool).tril(diagonal=0)
+            bias_mask.masked_fill_(tril_mask.logical_not(), float("-inf"))
+            bias_mask.to(query.dtype)
+        # Padding mask or attention mask.
+        # set_trace()
         if attn_mask is not None:
-            logger.warning(
-                "Explicit attn_mask and is_causal are be set simultaneously."
-            )
-        tmp_mask = torch.ones(qslen, kvslen, dtype=torch.bool).tril(diagonal=0)
-        attn_bias.masked_fill_(tmp_mask.logical_not(), float("-inf"))
-        attn_bias.to(query.dtype)
-    # Padding mask or attention mask.
-    # set_trace()
-    if attn_mask is not None:
-        if attn_mask.dim() == 3:
-            attn_bias.unsqueeze_(0)
-        # Convert bool mask to float mask with ninf for softmax.
-        if attn_mask.dtype == torch.bool:
-            attn_bias.masked_fill_(attn_mask, float("-inf"))
-        else:
-            attn_bias = attn_mask + attn_bias
+            # Broadcast to fit for 3D merged or padding mask.
+            if attn_mask.dim() == 3:
+                tgt_shape = torch.broadcast_shapes(
+                    (1, *(bias_mask.size())),
+                    attn_mask.size(),
+                )
+                bias_mask = torch.broadcast_to(bias_mask, tgt_shape).clone()
+            # Convert bool mask to float mask with ninf for softmax.
+            if attn_mask.dtype == torch.bool:
+                bias_mask.masked_fill_(attn_mask, float("-inf"))
+            else:
+                bias_mask = attn_mask + bias_mask
 
     # Fit mask for query and key.
-    if attn_bias.dim() == 3:
+    if bias_mask.dim() == 3:
         for _____ in range(query.dim() - 3):
-            attn_bias.unsqueeze_(1)
+            bias_mask.unsqueeze_(1)
 
     # (bsz,..., qslen, qksz) * (bsz,..., qksz, kvslen)
     # => (bsz,..., qslen, kvslen)
-    scaled_dot = (query / np.sqrt(qksz)) @ key.transpose(-2, -1)
-    scaled_dot = scaled_dot + attn_bias
+    q_scaled = query * np.sqrt(1.0 / qksz)
+    scaled_dot = q_scaled @ key.transpose(-2, -1)
+    scaled_dot += bias_mask
     attn_weight = F.softmax(scaled_dot, dim=-1)
+    # attn_weight = torch.nan_to_num(attn_weight, 0.0)
     if dropout_p:
         attn_weight = F.dropout(scaled_dot, p=dropout_p)
 
@@ -129,7 +154,6 @@ def scaled_dot_product_attention(
 
     # Fill `nan` with 0 to keep with `F.SDPA` for straight-masked-line
     #  in `attn_mask`.
-    torch.nan_to_num_(output, 0.0)
     return output, attn_weight
 
 
@@ -220,6 +244,9 @@ class MultiheadAttention(nn.Module):
         self.out_proj = nn.Linear(tsz, qsz, bias=bias, **factory_kwargs)
         self.bias = bias
 
+        # Init parameters.
+        self._reset_parameter()
+
     def forward(
         self,
         query: torch.Tensor,
@@ -228,6 +255,7 @@ class MultiheadAttention(nn.Module):
         key_padding_mask: torch.Tensor = None,
         attn_mask: torch.Tensor = None,
         is_causal: bool = False,
+        need_weights: bool = False,
     ) -> torch.Tensor:
         """Multi-head attention forward step.
 
@@ -265,6 +293,7 @@ class MultiheadAttention(nn.Module):
         attn_mask: Mask for the attending relations between query and key.
         is_causal: If to enforce causality, namely tokens can only attend to
           previous tokens.
+        need_weights: If return valid attention weights.
 
         Shape:
         --------------------------
@@ -298,8 +327,8 @@ class MultiheadAttention(nn.Module):
                 value = F.linear(value, vw, vb)
         else:
             query = self.q_proj(query)
-            key = self.q_proj(key)
-            value = self.q_proj(value)
+            key = self.k_proj(key)
+            value = self.v_proj(value)
 
         # 2. Split heads for SDPA.
         # (bsz, seq_len, heads_n * hsz)
@@ -311,17 +340,56 @@ class MultiheadAttention(nn.Module):
 
         # 3. SDPA.
         dropout_p = self.dropout_p if self.training else 0.0
-        # `attn_mask` could be passed to `scaled_dot_product_attention` directly.
-        if key_padding_mask is not None:
-            bias_mask = self.merge_masks(key_padding_mask, attn_mask)
+        # Merged `bias_mask` could be passed to `scaled_dot_product_attention`
+        # directly.
+        # if key_padding_mask is not None or is_causal:
+        #     bias_mask = self.merge_masks(
+        #         key_padding_mask,
+        #         attn_mask,
+        #         is_causal=is_causal,
+        #         query=query,
+        #     )
+        # else:
+        #     if attn_mask is None:
+        #         bias_mask = None
+        #     elif attn_mask.dtype == torch.bool:
+        #         bias_mask = (torch.zeros_like(attn_mask, dtype=query.dtype)
+        #                      .masked_fill(attn_mask, float("-inf")))
+        #     else:
+        #         bias_mask = attn_mask
+        # `merge_mask` will preprocess all masks properly.
+        bias_mask = self.merge_masks(
+            key_padding_mask,
+            attn_mask,
+            is_causal=is_causal,
+            query=query,
+            key=key,
+        )
+        if need_weights:
+            attn_val, attn_ws = scaled_dot_product_attention(
+                query, key, value,
+                attn_mask=bias_mask,
+                dropout_p=dropout_p,
+                is_causal=False,
+            )
         else:
-            bias_mask = attn_mask
-        # set_trace()
-        attn_val, attn_ws = scaled_dot_product_attention(
-            query, key, value,
-            attn_mask=bias_mask,
-            dropout_p=dropout_p,
-            is_causal=is_causal)
+            # Attention: `F.scaled_dot_product_attention`'s `attn_mask` mask logic is opposite to the all others.
+            # Match the attention mask for SPDA of (bsz, heads_n, qslen, kvslen).
+            # from (bsz, qslen, kvslen)
+            # or (qslen, kvslen)
+            if bias_mask is not None:
+                # set_trace()
+                if bias_mask.dim() == 3:
+                    bias_mask = bias_mask.unsqueeze(1)
+                elif bias_mask.dim() == 2:
+                    bias_mask = bias_mask.unsqueeze(0).unsqueeze(0)
+            attn_val = F.scaled_dot_product_attention(
+                query, key, value,
+                attn_mask=bias_mask,
+                dropout_p=dropout_p,
+                is_causal=False,
+            )
+            attn_ws = None
         # (bsz, heads_n, seq_len, hsz)
         # => (bsz, seq_len, heads_n, hsz)
         # => (bsz, seq_len, heads_n * hsz)
@@ -329,12 +397,36 @@ class MultiheadAttention(nn.Module):
 
         return self.out_proj(attn_val), attn_ws
 
+    def _reset_parameter(self):
+        """Init parameters with xavier_uniform."""
+        if self._qkv_same_embed_dim:
+            xavier_uniform_(self.in_proj.weight)
+            if self.bias:
+                constant_(self.in_proj.bias, 0.0)
+        else:
+            xavier_uniform_(self.q_proj.weight)
+            xavier_uniform_(self.k_proj.weight)
+            xavier_uniform_(self.v_proj.weight)
+            if self.bias:
+                constant_(self.q_proj.bias, 0.0)
+                constant_(self.k_proj.bias, 0.0)
+                constant_(self.v_proj.bias, 0.0)
+
+        xavier_uniform_(self.out_proj.weight)
+        if self.bias:
+            constant_(self.out_proj.bias, 0.0)
+
     @classmethod
     def merge_masks(
         cls,
         key_padding_mask: torch.Tensor,
-        attn_mask: torch.Tensor,
-    ) -> torch.Tensor:
+        attn_mask: torch.Tensor = None,
+        is_causal: bool = False,
+        query: torch.Tensor = None,
+        key: torch.Tensor = None,
+        dtype: str = None,
+        device: str = None,
+    ) -> torch.Tensor | None:
         """Combine padding mask and attenion mask.
 
         1. `query_padding_mask` isn't added, which is the same with the
@@ -353,40 +445,95 @@ class MultiheadAttention(nn.Module):
         --------------------------
         key_padding_mask: Mask for padding in key sequence.
         attn_mask: Mask to mark the position that shouldn't be attented.
+        is_causal: Generate causal mask for Q,K.
+        query: Query tensor.
+        key: Key tensor.
+        dtype:
+        device:
 
         Shape:
         --------------------------
         key_padding_mask: (batch_size, key_seq_len)
-        attn_mask: (query_seq_len, key_seq_len)
+        attn_mask: ([batch_size,]query_seq_len, key_seq_len)
+        query: (..., query_seq_len, embed_sz)
+        key: (..., key_seq_len, embed_sz)
         RETURN:(batch_size, query_seq_len, key_seq_len)
 
         Return:
         --------------------------
-        Tensor[float]
+        Tensor[ninf, 0.0] or None
         """
-        bsz, kslen = key_padding_mask.size()
+        # Return None directly if no mask need to be generated.
+        if (key_padding_mask is None
+                and attn_mask is None
+                and not is_causal):
+            return None
+        # Query length is required to generate causal mask.
+        assert not (is_causal and query is None and attn_mask is None), (
+            "Query or attn_mask is required to generate causal attention mask."
+        )
+        assert key_padding_mask is None or key_padding_mask.dim() == 2, (
+            "Only 2D key padding mask with shape(bsz, kvslen) is allowed."
+        )
+        factory_kwargs = {"device": device, "dtype": dtype}
+
+        # Get mask sizes: bsz, qslen, kslen
+        if key_padding_mask is not None:
+            bsz = key_padding_mask.size(0)
+        elif attn_mask is not None and attn_mask.dim() == 3:
+            bsz = attn_mask.size(0)
+        else:
+            bsz = 1
+
         if attn_mask is not None:
-            qslen, kslen_ = attn_mask.size()
-            assert kslen == kslen_, (
-                "Key padding mask must be compatiable with attending mask.")
+            qslen = attn_mask.size(-2)
+        elif is_causal and query is not None:
+            qslen = query.size(-2)
         else:
             qslen = 1
 
-        bias_mask = torch.zeros(bsz, qslen, kslen)
+        if key_padding_mask is not None:
+            kslen = key_padding_mask.size(-1)
+        elif attn_mask is not None:
+            kslen = attn_mask.size(-1)
+        elif is_causal and key is not None:
+            kslen = key.size(-2)
+        else:
+            kslen = qslen
 
+        # Return attention mask directly.
+        if (attn_mask is not None
+                and attn_mask.dtype != torch.bool
+                and key_padding_mask is None
+                and not is_causal):
+            if attn_mask.dim() == 3:
+                return attn_mask.to(**factory_kwargs)
+            else:
+                return attn_mask.unsqueeze(0).to(**factory_kwargs)
+
+        # Init bias mask.
+        bias_mask = torch.zeros(bsz, qslen, kslen, **factory_kwargs)
+        if is_causal:
+            # set_trace()
+            tril_mask = torch.ones(qslen, kslen, dtype=torch.bool).tril(diagonal=0)
+            bias_mask.masked_fill_(tril_mask.logical_not(), float("-inf"))
+
+        # Merge key_padding_mask and attention mask.
         if key_padding_mask is not None:
             if key_padding_mask.dtype == torch.bool:
                 bias_mask.masked_fill_(
                     key_padding_mask.view(bsz, 1, kslen),
-                    float("-inf"))
+                    float("-inf")
+                )
             else:
-                bias_mask += key_padding_mask.view(bsz, 1, kslen)
+                bias_mask += key_padding_mask.broadcast_to(bsz, qslen, kslen)
         if attn_mask is not None:
             if attn_mask.dtype == torch.bool:
                 bias_mask.masked_fill_(
                     attn_mask.view(1, qslen, kslen),
-                    float("-inf"))
+                    float("-inf")
+                )
             else:
-                bias_mask += attn_mask.view(1, qslen, kslen)
+                bias_mask += attn_mask.broadcast_to(bsz, qslen, kslen)
 
         return bias_mask

@@ -3,7 +3,7 @@
 #   Name: test_transformer.py
 #   Author: xyy15926
 #   Created: 2025-07-10 09:29:34
-#   Updated: 2025-07-10 10:30:23
+#   Updated: 2025-07-14 17:33:50
 #   Description:
 # ---------------------------------------------------------
 
@@ -70,6 +70,12 @@ def test_TransformerEncoderLayer():
     ret = tel(src, src_key_padding_mask=src_key_padding_mask)
     assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
 
+    # Forward with attention-mask only.
+    src_mask = torch.randint(0, 2, (slen, slen)).to(torch.bool)
+    nnret = nntel(src, src_mask=src_mask)
+    ret = tel(src, src_mask=src_mask)
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+
     # Forward with attention-mask.
     src_mask = torch.randint(0, 2, (slen, slen)).to(torch.bool)
     nnret = nntel(src, src_mask=src_mask, src_key_padding_mask=src_key_padding_mask)
@@ -82,7 +88,7 @@ def test_TransformerEncoderLayer():
     nn_src_mask = nn.Transformer.generate_square_subsequent_mask(slen)
     nnret = nntel(src, src_mask=nn_src_mask, is_causal=False)
     nnret2 = nntel(src, src_mask=nn_src_mask, is_causal=True)
-    ret = tel(src, is_causal=True)
+    ret = tel(src, src_mask=nn_src_mask, is_causal=True)
     assert torch.all(torch.isclose(nnret, nnret2, rtol=1e-3))
     assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
 
@@ -127,6 +133,12 @@ def test_TransformerEncoder():
     ret = te(src, src_key_padding_mask=src_key_padding_mask)
     assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
 
+    # Forward with attention-mask only.
+    src_mask = torch.randint(0, 2, (4, 4)).to(torch.bool)
+    nnret = nnte(src, mask=src_mask)
+    ret = te(src, src_mask=src_mask)
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+
     # Forward with attention-mask.
     src_mask = torch.randint(0, 2, (4, 4)).to(torch.bool)
     nnret = nnte(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
@@ -140,8 +152,10 @@ def test_TransformerEncoder():
     nnret = nnte(src, mask=nn_src_mask, is_causal=False)
     nnret2 = nnte(src, mask=nn_src_mask, is_causal=True)
     ret = te(src, is_causal=True)
+    ret2 = te(src, src_mask=nn_src_mask, is_causal=True)
     assert torch.all(torch.isclose(nnret, nnret2, rtol=1e-3))
     assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert torch.all(torch.isclose(ret, ret2, rtol=1e-3))
 
 
 # %%
@@ -187,16 +201,47 @@ def test_TransformerDecoderLayer():
     ret = tdl(tgt, mem, memory_key_padding_mask=memory_key_padding_mask)
     assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
 
+    tgt_key_padding_mask = torch.randint(0, 2, (bsz, tlen)).to(torch.bool)
+    nnret = nntdl(
+        tgt, mem,
+        tgt_key_padding_mask=tgt_key_padding_mask,
+        memory_key_padding_mask=memory_key_padding_mask)
+    ret = tdl(
+        tgt, mem,
+        tgt_key_padding_mask=tgt_key_padding_mask,
+        memory_key_padding_mask=memory_key_padding_mask)
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+
+    # Forward with self-attention-mask only.
+    tgt_mask = torch.randint(0, 2, (tlen, tlen)).to(torch.bool)
+    nnret = nntdl(
+        tgt, mem,
+        tgt_mask=tgt_mask,
+        tgt_is_causal=False,
+    )
+    ret = tdl(
+        tgt, mem,
+        tgt_mask=tgt_mask,
+        tgt_is_causal=False
+    )
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+
     # Forward with self-attention-mask and key-padding-mask.
     tgt_mask = torch.randint(0, 2, (tlen, tlen)).to(torch.bool)
     nnret = nntdl(
         tgt, mem,
         tgt_mask=tgt_mask,
-        memory_key_padding_mask=memory_key_padding_mask)
+        tgt_is_causal=False,
+        tgt_key_padding_mask=tgt_key_padding_mask,
+        memory_key_padding_mask=memory_key_padding_mask,
+    )
     ret = tdl(
         tgt, mem,
         tgt_mask=tgt_mask,
-        memory_key_padding_mask=memory_key_padding_mask)
+        tgt_is_causal=False,
+        tgt_key_padding_mask=tgt_key_padding_mask,
+        memory_key_padding_mask=memory_key_padding_mask,
+    )
     assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
 
     # Forward with causal mask.

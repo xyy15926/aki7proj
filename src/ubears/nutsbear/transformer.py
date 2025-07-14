@@ -3,7 +3,7 @@
 #   Name: transformer.py
 #   Author: xyy15926
 #   Created: 2025-07-10 09:25:01
-#   Updated: 2025-07-10 11:11:47
+#   Updated: 2025-07-14 19:26:46
 #   Description:
 # ---------------------------------------------------------
 
@@ -17,8 +17,15 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+# from torch.nn import MultiheadAttention
 from ubears.nutsbear.attention import MultiheadAttention
 # from IPython.core.debugger import set_trace
+
+# If `need_weights` is set, customed SDPA will be used instead of
+# `F.scaled_dot_product_attention`, which may lead to NaNs after the Softmax
+# in customed SDPA for query with all NInf(masked) and lead to NaN in `.grad`
+# in `.backward()` process.
+NEED_ATTN_WEIGHTS = False
 
 
 # %%
@@ -207,12 +214,24 @@ class TransformerEncoder(nn.Module):
         """
         outp = src
         # Merge the `key_padding_mask` and `attn_mask` only once.
-        if src_key_padding_mask is not None:
-            bias_mask = MultiheadAttention.merge_masks(src_key_padding_mask, src_mask)
+        if src_key_padding_mask is not None or is_causal:
+            bias_mask = MultiheadAttention.merge_masks(
+                src_key_padding_mask,
+                src_mask,
+                is_causal=is_causal,
+                query=src,
+                key=src,
+            )
         else:
             bias_mask = src_mask
+        # Skip padding mask and causality since maskes are all merged.
         for mod in self.layers:
-            outp = mod(outp, src_mask=bias_mask, is_causal=is_causal)
+            outp = mod(
+                outp,
+                src_mask=bias_mask,
+                src_key_padding_mask=None,
+                is_causal=False
+            )
         return outp
 
 
@@ -290,17 +309,28 @@ class TransformerDecoder(nn.Module):
         """
         outp = tgt
         # Merge the `key_padding_mask` and `attn_mask` only once.
-        if tgt_key_padding_mask is not None:
+        if tgt_key_padding_mask is not None or tgt_is_causal:
             self_bias_mask = MultiheadAttention.merge_masks(
-                tgt_key_padding_mask, tgt_mask)
+                tgt_key_padding_mask,
+                tgt_mask,
+                is_causal=tgt_is_causal,
+                query=tgt,
+                key=tgt,
+            )
         else:
             self_bias_mask = tgt_mask
-        if memory_key_padding_mask is not None:
+        if memory_key_padding_mask is not None or memory_is_causal:
             cross_bias_mask = MultiheadAttention.merge_masks(
-                memory_key_padding_mask, memory_mask)
+                memory_key_padding_mask,
+                memory_mask,
+                is_causal=memory_is_causal,
+                query=tgt,
+                key=memory,
+            )
         else:
             cross_bias_mask = memory_mask
         # DecoderLayer forward sequently.
+        # Skip padding mask and causality since maskes are all merged.
         for mod in self.layers:
             outp = mod(
                 outp,
@@ -309,8 +339,8 @@ class TransformerDecoder(nn.Module):
                 memory_mask=cross_bias_mask,
                 tgt_key_padding_mask=None,
                 memory_key_padding_mask=None,
-                tgt_is_causal=tgt_is_causal,
-                memory_is_causal=memory_is_causal,
+                tgt_is_causal=False,
+                memory_is_causal=False,
             )
 
         return outp
@@ -357,7 +387,10 @@ class TransformerEncoderLayer(nn.Module):
         dropout_p: The probability of the dropout.
         """
         super().__init__()
-        self.self_attn = MultiheadAttention(embed_sz, heads_n, dropout_p=dropout_p)
+        self.self_attn = MultiheadAttention(
+            embed_sz, heads_n,
+            dropout_p=dropout_p,
+        )
         self.sa_dropout = nn.Dropout(dropout_p)
 
         self.ffn_linear1 = nn.Linear(embed_sz, ffn_sz, bias=True)
@@ -377,11 +410,16 @@ class TransformerEncoderLayer(nn.Module):
         is_causal: bool = False,
     ) -> torch.Tensor:
         """Self-Attention block."""
+        # Reset `need_weights` to use `F.scaled_dot_product_attention`
+        # instead the customed one
+        # 1. Acceleration (maybe).
+        # 2. No NaN from `F.softmax` when all-NInf.
         attn_val, attn_ws = self.self_attn(
             inp, inp, inp,
             key_padding_mask=key_padding_mask,
             attn_mask=attn_mask,
             is_causal=is_causal,
+            need_weights=NEED_ATTN_WEIGHTS,
         )
         return self.sa_dropout(attn_val)
 
@@ -482,11 +520,15 @@ class TransformerDecoderLayer(nn.Module):
         """
         super().__init__()
         self.self_attn = MultiheadAttention(
-            embed_sz, heads_n, dropout_p=dropout_p)
+            embed_sz, heads_n,
+            dropout_p=dropout_p,
+        )
         self.sa_dropout = nn.Dropout(dropout_p)
 
         self.cross_attn = MultiheadAttention(
-            embed_sz, heads_n, dropout_p=dropout_p)
+            embed_sz, heads_n,
+            dropout_p=dropout_p,
+        )
         self.ca_dropout = nn.Dropout(dropout_p)
 
         self.ffn_linear1 = nn.Linear(embed_sz, ffn_sz, bias=True)
@@ -507,11 +549,16 @@ class TransformerDecoderLayer(nn.Module):
         is_causal: bool = False,
     ) -> torch.Tensor:
         """Self-Attention block for target sequence."""
+        # Reset `need_weights` to use `F.scaled_dot_product_attention`
+        # instead the customed one
+        # 1. Acceleration (maybe).
+        # 2. No NaN from `F.softmax` when all-NInf.
         attn_val, attn_ws = self.self_attn(
             inp, inp, inp,
             key_padding_mask=key_padding_mask,
             attn_mask=attn_mask,
             is_causal=is_causal,
+            need_weights=NEED_ATTN_WEIGHTS,
         )
         return self.sa_dropout(attn_val)
 
@@ -524,11 +571,16 @@ class TransformerDecoderLayer(nn.Module):
         is_causal: bool = False,
     ) -> torch.Tensor:
         """Cross-Attention block for target and memory."""
+        # Reset `need_weights` to use `F.scaled_dot_product_attention`
+        # instead the customed one
+        # 1. Acceleration (maybe).
+        # 2. No NaN from `F.softmax` when all-NInf.
         attn_val, attn_ws = self.cross_attn(
             tgt, mem, mem,
             attn_mask=attn_mask,
             key_padding_mask=key_padding_mask,
             is_causal=is_causal,
+            need_weights=NEED_ATTN_WEIGHTS,
         )
         return self.ca_dropout(attn_val)
 
