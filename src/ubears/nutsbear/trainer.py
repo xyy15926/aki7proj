@@ -3,13 +3,13 @@
 #   Name: trainer.py
 #   Author: xyy15926
 #   Created: 2025-07-08 09:02:04
-#   Updated: 2025-07-08 20:15:09
+#   Updated: 2025-07-21 21:57:56
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 import logging
-from typing import List, Any, Tuple, Self
+from typing import List, Any, Tuple, Self, Callable
 from collections.abc import Sequence
 import numpy as np
 import pandas as pd
@@ -57,7 +57,6 @@ class Trainer:
     tb_writer: The path for TensorBoard.SummaryWriter to record the training
       process.
     epoch_idx: The index of current training epoch.
-    batch_idx: The index of batch of current training epochs.
     """
     def __init__(
         self,
@@ -65,6 +64,7 @@ class Trainer:
         loss_fn: "nn.Function",
         optimizer: optim.Optimizer = None,
         mod_name: str = None,
+        pred_fn: Callable = None,
     ):
         """Init trainer.
 
@@ -74,10 +74,19 @@ class Trainer:
         loss_fn: Loss function.
         optimizer: Optimizer.
         mod_name: Name of current module instance.
-        TensorBoard.SummaryWriter to record the training process.
+          For `TensorBoard.SummaryWriter` to record the training process.
+        pred_fn: Prediction function.
+          1. Accept `self.mod` and the unpacked iteration value, except the last
+            one as label, from the Dataloader and return the prediction.
+          2. The `mod.__forward__` will be used as the default.
+          3. If `pred_fn` provided, the `loss_fn` may should be provided
+            because the iteration value from the DataLoader won't be treated
+            as `(*features, label)` automatically, namely `(ret, *iteration)`
+            will provided as `loss_fn`'s arguments instead of `(ret, label)`.
         """
         self.mod = mod
         self.loss_fn = loss_fn
+        self.pred_fn = pred_fn
         self.optimizer = (optim.Adam(mod.parameters())
                           if optimizer is None else optimizer)
         if mod_name is not None:
@@ -88,10 +97,9 @@ class Trainer:
             self.mod_name = None
             self.tb_writer = None
         self.epoch_idx = 0
-        self.batch_idx = 0
         self.batch_n = None
 
-    def log(self, **kwargs):
+    def log(self, batch_idx, **kwargs):
         """Log the training process.
 
         Params:
@@ -99,58 +107,75 @@ class Trainer:
         scalar: {NAME: VALUE} to be added by
           `TensorBoard.SummaryWriter.add_scalar`.
         """
+        epoch_idx = self.epoch_idx
+        batch_n = self.batch_n
+
         # Log loss with native logger.
         if "Loss" in kwargs:
             loss = kwargs["Loss"]
-            if self.batch_n is None:
+            if batch_n is None:
                 logger.info(
                     f"Loss: {loss:>07f}\t"
-                    f"[Epoch: {self.epoch_idx:>2d} - "
-                    f"Batch: {self.batch_idx:>05d}]"
+                    f"[Epoch: {epoch_idx:>2d} - "
+                    f"Batch: {batch_idx:>05d}]"
                 )
             else:
                 logger.info(
                     f"Loss: {loss:>07f}\t"
-                    f"[Epoch: {self.epoch_idx:>2d} - "
-                    f"Batch: {self.batch_idx:>05d}/"
-                    f"{self.batch_n:>05d}]"
+                    f"[Epoch: {epoch_idx:>2d} - "
+                    f"Batch: {batch_idx:>05d}/"
+                    f"{batch_n:>05d} "
+                    f"{batch_idx / batch_n * 100:>04.2f}%]"
                 )
 
         # Log all infomations with `TensorBoard.SummaryWriter`.
         if self.tb_writer is None:
             return
         if self.batch_n is None:
-            all_bidx = self.batch_idx
+            all_bidx = batch_idx
         else:
-            all_bidx = self.epoch_idx * self.batch_n + self.batch_idx
+            all_bidx = epoch_idx * batch_n + batch_idx
         with self.tb_writer as writer:
             for key, val in kwargs.items():
                 if isinstance(val, float):
                     writer.add_scalar(key, val, all_bidx)
 
-    def fit(self, dloader: DataLoader, epoch_n: int = 1, log_itvl: int = 10):
+    def fit(
+        self,
+        dloader: DataLoader,
+        epoch_n: int = 1,
+        log_batchn: int = None,
+    ):
         """Fit the module.
 
         Params:
         -------------------------
         dloader: Train DataLoader.
         epoch_n: The number of epochs to train.
-        log_itvl: The number of batch between the record-point.
+        log_batchn: The number of batch between the record-point.
         """
         optimizer = self.optimizer
+        pred_fn = self.pred_fn
         loss_fn = self.loss_fn
-        try:
-            self.batch_n = len(dloader)
-        except TypeError:
-            self.batch_n = None
+
+        if self.batch_n is None:
+            try:
+                self.batch_n = len(dloader)
+            except TypeError:
+                self.batch_n = None
 
         for ce in range(self.epoch_idx, self.epoch_idx + epoch_n):
-            itvl_loss = 0
+            t_loss = 0
             logger.info(f"Epoch: {ce}")
-            for bidx, (*feats, label) in enumerate(dloader):
+            for bidx, enums in enumerate(dloader):
                 # Forward and backward.
-                ret = self.mod(*feats)
-                loss = loss_fn(ret, label)
+                if pred_fn is None:
+                    *feats, label = enums
+                    ret = self.mod(*feats)
+                    loss = loss_fn(ret, label)
+                else:
+                    ret = pred_fn(self.mod, *enums)
+                    loss = loss_fn(ret, *enums)
                 loss.backward()
 
                 # Optimize.
@@ -158,17 +183,23 @@ class Trainer:
                 optimizer.zero_grad()
 
                 # Log for every `log_itvl` batchs.
-                itvl_loss += loss.item()
-                if (bidx + 1) % log_itvl == 0:
-                    loss = itvl_loss / log_itvl
-                    self.log(Loss=loss)
-                    itvl_loss = 0
-                self.batch_idx += 1
+                t_loss += loss.item()
+                if (bidx + 1) % log_batchn == 0:
+                    loss = t_loss / log_batchn
+                    self.log(bidx + 1, Loss=loss)
+                    t_loss = 0
+            else:
+                left_n = (bidx + 1) % log_batchn
+                if left_n > 0:
+                    loss = t_loss / left_n
+                    self.log(bidx + 1, Loss=loss)
+                    t_loss = 0
+
             # Set the number the of batchs in the first epoch as the `batch_n`
             # if `batch_n` is not set properly earlier.
             if self.batch_n is None:
-                self.batch_n = self.batch_idx
-            self.batch_idx = 0
+                self.batch_n = bidx + 1
+
             self.epoch_idx += 1
 
     # TODO: save optim.
