@@ -3,7 +3,7 @@
 #   Name: attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 12:01:06
-#   Updated: 2025-07-14 19:23:59
+#   Updated: 2025-07-19 17:05:07
 #   Description:
 # ---------------------------------------------------------
 
@@ -27,6 +27,107 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 logger.info("Logging Start.")
+
+
+# %%
+class RotaryPE(nn.Module):
+    """Rotary Position Embedding.
+
+    Ref:
+    -------------------------------
+    - RePE: https://www.zhihu.com/tardis/bd/art/647109286
+
+    Attrs:
+    -------------------------------
+    embed_sz: Embeding size.
+      Only tensor with same embedding size(last dim size) should be encoded.
+    cur_len: Rotary cache length.
+    cos_cache: Cosine part of the rotary cache.
+    sin_cache: Sine part of the rotary cache.
+
+    Shape:
+    -------------------------------
+    cos_cache: [cur_len, embed_sz]
+    sin_cache: [cur_len, embed_sz]
+    """
+
+    def __init__(
+        self,
+        embed_sz: int,
+        bot: float = 1e4,
+        device: str = None,
+        dtype: str = None,
+    ):
+        """Init Module.
+        """
+        super().__init__()
+        self.embed_sz = embed_sz
+        self._bot = bot
+        self.cur_len = 0
+        self.cos_cache = torch.tensor([])
+        self.sin_cache = torch.tensor([])
+
+    def forward(self, x: torch.Tensor, pos: torch.Tensor = None):
+        """
+        Params:
+        -------------------------------
+        x: Tensor be updated with position encoding.
+        position: Position of the input tensor.
+          0-slen will be used as default.
+
+        Shape:
+        -------------------------------
+        x: [..., seq_len, embed_sz]
+        position: [..., seq_len]
+        RETURN: [..., seq_len, embed_sz]
+
+        Return:
+        -------------------------------
+        Tensor after rotary embedding.
+        """
+        factory_kwargs = {"device": x.device, "dtype": x.dtype}
+        *_____, slen, sz = x.size()
+        assert sz == self.embed_sz, "Embedding size must be the same."
+        if pos is not None:
+            assert pos.size(-1) == slen, "All positions must be provided."
+            max_pos = torch.max(pos)
+            if max_pos >= self.cur_len:
+                self.rotary_cache(max_pos + 1, **factory_kwargs)
+            cos_ = self.cos_cache[pos]
+            sin_ = self.sin_cache[pos]
+        else:
+            if slen >= self.cur_len:
+                self.rotary_cache(slen, **factory_kwargs)
+            cos_ = self.cos_cache[:slen]
+            sin_ = self.sin_cache[:slen]
+
+        cross_x = x.unflatten(-1, (-1, 2)).flip(-1).flatten(-2)
+        ret = x * cos_ + cross_x * sin_
+
+        return ret
+
+    def rotary_cache(
+        self,
+        max_pos: int,
+        device: str = None,
+        dtype: str = None,
+    ):
+        """Calculate rotary cache.
+
+        Params:
+        -----------------------------------
+        max_pos: The rotary cache to be calculated.
+        """
+        factory_kwargs = {"device": device, "dtype": dtype}
+        # Set the rotary parameter.
+        esz = self.embed_sz
+        theta = -torch.arange(0, esz, 2, **factory_kwargs) / esz
+        theta = (self._bot ** theta).unsqueeze(1).expand(-1, 2).flatten(-2)
+        mtheta = torch.arange(max_pos).unsqueeze(1) * theta.unsqueeze(0)
+        self.cos_cache = torch.cos(mtheta)
+        sin_cache = torch.sin(mtheta)
+        sin_cache[:, ::2] *= -1
+        self.sin_cache = sin_cache
 
 
 # %%

@@ -3,7 +3,7 @@
 #   Name: test_attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 15:58:08
-#   Updated: 2025-07-14 19:35:47
+#   Updated: 2025-07-19 19:04:38
 #   Description:
 # ---------------------------------------------------------
 
@@ -26,7 +26,40 @@ if __name__ == "__main__":
 from ubears.nutsbear.attention import (
     scaled_dot_product_attention,
     MultiheadAttention,
+    RotaryPE,
 )
+
+
+# %%
+def test_RotaryPE():
+    esz = 32
+    rpe = RotaryPE(esz)
+
+    # The absolute position N1, N2 doesn't matter.
+    x = torch.ones(100, esz)
+    x_rped = rpe(x)
+    N1, N2 = torch.randint(40, (2,)).tolist()
+    ret = x_rped[N1:] @ x_rped[N2:].transpose(0, 1)
+    # The diagonal elements's relative position gaps are all `N2 - N1`.
+    assert torch.all(torch.isclose(ret[0, 0], torch.diag(ret)))
+    assert torch.all(torch.isclose(ret[0, 1], torch.diag(ret, 1)))
+
+    x = torch.randn((100, 32))
+    N1, N2 = torch.randint(40, (2,)).tolist()
+    x1_rped = rpe(x, torch.arange(N1, N1 + 100))
+    ret1 = x1_rped[:50] @ x1_rped[50:].transpose(0, 1)
+    x2_rped = rpe(x, torch.arange(N2, N2 + 100))
+    ret2 = x2_rped[:50] @ x2_rped[50:].transpose(0, 1)
+    assert torch.all(torch.isclose(ret1, ret2, rtol=1e-2))
+
+    # Multi dimensions.
+    x = torch.ones(100, 100, esz)
+    x_rped = rpe(x)
+    N1, N2 = torch.randint(40, (2,)).tolist()
+    ret = x_rped[:, N1:] @ x_rped[:, N2:].transpose(-1, -2)
+    assert torch.all(torch.isclose(ret[0].expand(100, -1, -1), ret))
+    assert torch.all(torch.isclose(ret[0, 0, 0], torch.diag(ret[0])))
+    assert torch.all(torch.isclose(ret[0, 0, 1], torch.diag(ret[0], 1)))
 
 
 # %%
