@@ -3,7 +3,7 @@
 #   Name: exdf.py
 #   Author: xyy15926
 #   Created: 2024-11-11 17:04:03
-#   Updated: 2025-02-14 21:34:44
+#   Updated: 2025-07-21 10:49:54
 #   Description:
 # ---------------------------------------------------------
 
@@ -123,10 +123,18 @@ def flat_ft_dfs(
                 field_name = fconf["key"]
                 dtype = fconf["dtype"]
                 nptype = stype_spec(dtype, "pdtype", True)
+                dval = fconf.get(
+                    "defualt",
+                    stype_spec(dtype, "default", True)
+                )
                 if field_name not in df:
                     logger.info(f"{field_name} can't be found in `{part_name}`.")
                     continue
-                df[field_name] = df[field_name].astype(nptype)
+                try:
+                    df[field_name] = df[field_name].astype(nptype)
+                # Fill NaN with default value before casting float to int.
+                except pd.errors.IntCastingNaNError:
+                    df[field_name] = df[field_name].fillna(dval).astype(nptype)
 
             flat_rets[part_name] = df
 

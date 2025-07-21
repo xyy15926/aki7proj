@@ -13,11 +13,10 @@ import pytest
 if __name__ == "__main__":
     from importlib import reload
     from ubears.flagbear.str2 import dtyper, fliper
-    from ubears.modsbear.dflater import ex2df, exenv
+    from ubears.modsbear.dflater import ex2df
     reload(dtyper)
     reload(fliper)
     reload(ex2df)
-    reload(exenv)
 
 import numpy as np
 import pandas as pd

@@ -3,7 +3,7 @@
 #   Name: confflat8.py
 #   Author: xyy15926
 #   Created: 2024-09-14 14:42:54
-#   Updated: 2024-10-24 09:16:23
+#   Updated: 2025-07-21 15:25:12
 #   Description:
 # ---------------------------------------------------------
 
@@ -1460,6 +1460,13 @@ def df_flat_confs():
         pboc_fields.extend([[val["part"], *ele] for ele in val["fields"]])
     pboc_parts = pd.DataFrame(pboc_parts)
     pboc_fields = pd.DataFrame.from_records(
-        pboc_fields, columns=["part", "key", "step", "dtype", "desc"])
+        pboc_fields, columns=["part", "key", "step", "dtype", "desc"]
+    )
+    # Add up the default value.
+    pboc_fields["default"] = None
+    pboc_fields.loc[pboc_fields["dtype"] == "INT", "default"] = 0
+    pboc_fields.loc[pboc_fields["dtype"].str[:7] == "VARCHAR", "default"] = ""
+    pboc_fields.loc[pboc_fields["dtype"] == "TEXT", "default"] = ""
+    pboc_fields.loc[pboc_fields["dtype"] == "DATE", "default"] = pd.NaT
 
     return pboc_parts, pboc_fields

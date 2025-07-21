@@ -3,7 +3,7 @@
 #   Name: dtyper.py
 #   Author: xyy15926
 #   Created: 2024-11-11 09:18:28
-#   Updated: 2025-02-14 20:06:19
+#   Updated: 2025-07-21 15:14:59
 #   Description:
 # ---------------------------------------------------------
 
@@ -86,7 +86,7 @@ def stype_spec(
             "dtype": "INT",
             "regex": REGEXS["sint"],
             "caster": int,
-            "default": nan,
+            "default": -999999,
             "nptype": "int",
             "pdtype": "int",
         },
