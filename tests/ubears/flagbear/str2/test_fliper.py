@@ -27,6 +27,7 @@ import numpy as np
 from datetime import date, time
 from ubears.flagbear.llp.lex import Lexer
 from ubears.flagbear.llp.parser import EnvParser
+from ubears.flagbear.str2.dtyper import stype_spec
 from ubears.flagbear.str2.fliper import extract_field, rebuild_dict
 from ubears.flagbear.str2.fliper import reset_field
 
@@ -128,7 +129,7 @@ def test_extract_field_with_forced_dtype():
     assert extract_field(env, "c:cb") == "2"
     assert extract_field(env, "c:cb", dtype="INT") == 2
     assert extract_field(env, "c:ca", dtype="INT") == "ca2"
-    assert np.isnan(extract_field(env, "c:ca", dtype="INT", dforced=True))
+    assert extract_field(env, "c:ca", dtype="INT", dforced=True) == stype_spec("INT", "default")
     assert extract_field(env, "c:ca", dtype="INT", dforced=True,
                          dfill=1234) == 1234
     assert extract_field(env, "c:ca", dtype="INT2", dforced=True) == "ca2"

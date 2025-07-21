@@ -137,5 +137,5 @@ def test_str_caster():
         assert str_caster("0", "INT2")
 
     assert str_caster("ca2", "INT", dforced=False) == "ca2"
-    assert np.isnan(str_caster("ca2", "INT", dforced=True))
+    assert str_caster("ca2", "INT", dforced=True) == stype_spec("INT", "default")
     assert str_caster("ca2", "INT", dforced=True, dfill=0) == 0
