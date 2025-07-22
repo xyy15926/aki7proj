@@ -3,7 +3,7 @@
 #   Name: test_transformer.py
 #   Author: xyy15926
 #   Created: 2025-07-10 09:29:34
-#   Updated: 2025-07-14 17:33:50
+#   Updated: 2025-07-22 22:54:49
 #   Description:
 # ---------------------------------------------------------
 
@@ -94,6 +94,43 @@ def test_TransformerEncoderLayer():
 
 
 # %%
+def test_TransformerEncoderLayer_with_SimpleMHA():
+    bsz, slen, tlen, mlen = 3, 4, 6, 4
+    src = torch.randn(bsz, slen, 8, dtype=torch.float32)
+    tgt = torch.randn(bsz, tlen, 8, dtype=torch.float32)
+    mem = torch.randn(bsz, mlen, 8, dtype=torch.float32)
+
+    tel = TransformerEncoderLayer(8, 1, 16, 0, attn_style="SingleW")
+
+    # Default forward.
+    ret = tel(src)
+    assert ret.size() == (bsz, slen, 8)
+
+    # Forward with key-padding-mask.
+    src_key_padding_mask = torch.randint(0, 2, (bsz, slen)).to(torch.bool)
+    ret = tel(src, src_key_padding_mask=src_key_padding_mask)
+    assert ret.size() == (bsz, slen, 8)
+
+    # Forward with attention-mask only.
+    src_mask = torch.randint(0, 2, (slen, slen)).to(torch.bool)
+    ret = tel(src, src_mask=src_mask)
+    assert ret.size() == (bsz, slen, 8)
+
+    # Forward with attention-mask.
+    src_mask = torch.randint(0, 2, (slen, slen)).to(torch.bool)
+    ret = tel(src, src_mask=src_mask, src_key_padding_mask=src_key_padding_mask)
+    assert ret.size() == (bsz, slen, 8)
+
+    # Forward with causal attention-mask.
+    # `is_causal` in `nn.TransformerEncoderLayer` is just a hint and
+    # `attn_mask`(`src_mask`) must be set if `is_causal` is set.
+    nn_src_mask = nn.Transformer.generate_square_subsequent_mask(slen)
+    ret = tel(src, src_mask=nn_src_mask, is_causal=True)
+    ret_ = tel(src, src_mask=nn_src_mask, is_causal=False)
+    assert torch.all(torch.isclose(ret, ret_, rtol=1e-3))
+
+
+# %%
 def test_TransformerEncoder():
     bsz, slen, tlen, mlen = 3, 4, 6, 4
     src = torch.randn(bsz, slen, 8, dtype=torch.float32)
@@ -157,6 +194,43 @@ def test_TransformerEncoder():
     assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
     assert torch.all(torch.isclose(ret, ret2, rtol=1e-3))
 
+
+# %%
+def test_TransformerEncoder_with_SimpleMHA():
+    bsz, slen, tlen, mlen = 3, 4, 6, 4
+    src = torch.randn(bsz, slen, 8, dtype=torch.float32)
+    tgt = torch.randn(bsz, tlen, 8, dtype=torch.float32)
+    mem = torch.randn(bsz, mlen, 8, dtype=torch.float32)
+
+    tel = TransformerEncoderLayer(8, 1, 16, 0, attn_style="SingleW")
+    te = TransformerEncoder(tel, 2)
+
+    # Default forward.
+    ret = te(src)
+    assert ret.size() == (bsz, slen, 8)
+
+    # Forward with key-padding-mask.
+    src_key_padding_mask = torch.randint(0, 2, (bsz, slen)).to(torch.bool)
+    ret = te(src, src_key_padding_mask=src_key_padding_mask)
+    assert ret.size() == (bsz, slen, 8)
+
+    # Forward with attention-mask only.
+    src_mask = torch.randint(0, 2, (slen, slen)).to(torch.bool)
+    ret = te(src, src_mask=src_mask)
+    assert ret.size() == (bsz, slen, 8)
+
+    # Forward with attention-mask.
+    src_mask = torch.randint(0, 2, (slen, slen)).to(torch.bool)
+    ret = te(src, src_mask=src_mask, src_key_padding_mask=src_key_padding_mask)
+    assert ret.size() == (bsz, slen, 8)
+
+    # Forward with causal attention-mask.
+    # `is_causal` in `nn.TransformerEncoderLayer` is just a hint and
+    # `attn_mask`(`src_mask`) must be set if `is_causal` is set.
+    nn_src_mask = nn.Transformer.generate_square_subsequent_mask(slen)
+    ret = te(src, src_mask=nn_src_mask, is_causal=True)
+    ret_ = te(src, src_mask=nn_src_mask, is_causal=False)
+    assert torch.all(torch.isclose(ret, ret_, rtol=1e-3))
 
 # %%
 def test_TransformerDecoderLayer():
@@ -252,6 +326,59 @@ def test_TransformerDecoderLayer():
 
 
 # %%
+def test_TransformerDecoderLayer_with_SimpleMHA():
+    bsz, slen, tlen, mlen = 3, 4, 6, 4
+    src = torch.randn(bsz, slen, 8, dtype=torch.float32)
+    tgt = torch.randn(bsz, tlen, 8, dtype=torch.float32)
+    mem = torch.randn(bsz, mlen, 8, dtype=torch.float32)
+
+    tdl = TransformerDecoderLayer(8, 2, 16, 0.0, attn_style="SingleW")
+
+    # Default forward.
+    ret = tdl(tgt, mem, tgt_is_causal=False)
+    assert ret.size() == (bsz, tlen, 8)
+
+    # Forward with key-padding-mask.
+    memory_key_padding_mask = torch.randint(0, 2, (bsz, mlen)).to(torch.bool)
+    ret = tdl(tgt, mem, memory_key_padding_mask=memory_key_padding_mask)
+    assert ret.size() == (bsz, tlen, 8)
+
+    tgt_key_padding_mask = torch.randint(0, 2, (bsz, tlen)).to(torch.bool)
+    ret = tdl(
+        tgt, mem,
+        tgt_key_padding_mask=tgt_key_padding_mask,
+        memory_key_padding_mask=memory_key_padding_mask
+    )
+    assert ret.size() == (bsz, tlen, 8)
+
+    # Forward with self-attention-mask only.
+    tgt_mask = torch.randint(0, 2, (tlen, tlen)).to(torch.bool)
+    ret = tdl(
+        tgt, mem,
+        tgt_mask=tgt_mask,
+        tgt_is_causal=False
+    )
+    assert ret.size() == (bsz, tlen, 8)
+
+    # Forward with self-attention-mask and key-padding-mask.
+    tgt_mask = torch.randint(0, 2, (tlen, tlen)).to(torch.bool)
+    ret = tdl(
+        tgt, mem,
+        tgt_mask=tgt_mask,
+        tgt_is_causal=False,
+        tgt_key_padding_mask=tgt_key_padding_mask,
+        memory_key_padding_mask=memory_key_padding_mask,
+    )
+    assert ret.size() == (bsz, tlen, 8)
+
+    # Forward with causal mask.
+    nn_tgt_mask = nn.Transformer.generate_square_subsequent_mask(tlen)
+    ret = tdl(tgt, mem, tgt_is_causal=True)
+    ret2 = tdl(tgt, mem, tgt_is_causal=False, tgt_mask=nn_tgt_mask)
+    assert torch.all(torch.isclose(ret2, ret, rtol=1e-3))
+
+
+# %%
 def test_TransformerDecoder():
     bsz, slen, tlen, mlen = 3, 4, 6, 4
     src = torch.randn(bsz, slen, 8, dtype=torch.float32)
@@ -313,6 +440,60 @@ def test_TransformerDecoder():
     nnret = nntd(tgt, mem, tgt_is_causal=True, tgt_mask=nn_tgt_mask)
     ret = td(tgt, mem, tgt_is_causal=True)
     assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+
+
+# %%
+def test_TransformerDecoder_with_SimpleMHA():
+    bsz, slen, tlen, mlen = 3, 4, 6, 4
+    src = torch.randn(bsz, slen, 8, dtype=torch.float32)
+    tgt = torch.randn(bsz, tlen, 8, dtype=torch.float32)
+    mem = torch.randn(bsz, mlen, 8, dtype=torch.float32)
+
+    tdl = TransformerDecoderLayer(8, 2, 16, 0.0, attn_style="SingleW")
+    td = TransformerDecoder(tdl, 2)
+
+    # Default forward.
+    ret = td(tgt, mem, tgt_is_causal=False)
+    assert ret.size() == (bsz, tlen, 8)
+
+    # Forward with key-padding-mask.
+    memory_key_padding_mask = torch.randint(0, 2, (bsz, mlen)).to(torch.bool)
+    ret = td(tgt, mem, memory_key_padding_mask=memory_key_padding_mask)
+    assert ret.size() == (bsz, tlen, 8)
+
+    tgt_key_padding_mask = torch.randint(0, 2, (bsz, tlen)).to(torch.bool)
+    ret = td(
+        tgt, mem,
+        tgt_key_padding_mask=tgt_key_padding_mask,
+        memory_key_padding_mask=memory_key_padding_mask
+    )
+    assert ret.size() == (bsz, tlen, 8)
+
+    # Forward with self-attention-mask only.
+    tgt_mask = torch.randint(0, 2, (tlen, tlen)).to(torch.bool)
+    ret = td(
+        tgt, mem,
+        tgt_mask=tgt_mask,
+        tgt_is_causal=False
+    )
+    assert ret.size() == (bsz, tlen, 8)
+
+    # Forward with self-attention-mask and key-padding-mask.
+    tgt_mask = torch.randint(0, 2, (tlen, tlen)).to(torch.bool)
+    ret = td(
+        tgt, mem,
+        tgt_mask=tgt_mask,
+        tgt_is_causal=False,
+        tgt_key_padding_mask=tgt_key_padding_mask,
+        memory_key_padding_mask=memory_key_padding_mask,
+    )
+    assert ret.size() == (bsz, tlen, 8)
+
+    # Forward with causal mask.
+    nn_tgt_mask = nn.Transformer.generate_square_subsequent_mask(tlen)
+    ret = td(tgt, mem, tgt_is_causal=True)
+    ret2 = td(tgt, mem, tgt_is_causal=False, tgt_mask=nn_tgt_mask)
+    assert torch.all(torch.isclose(ret2, ret, rtol=1e-3))
 
 
 # %%

@@ -3,7 +3,7 @@
 #   Name: transformer.py
 #   Author: xyy15926
 #   Created: 2025-07-10 09:25:01
-#   Updated: 2025-07-14 19:26:46
+#   Updated: 2025-07-22 22:50:36
 #   Description:
 # ---------------------------------------------------------
 
@@ -18,7 +18,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 # from torch.nn import MultiheadAttention
-from ubears.nutsbear.attention import MultiheadAttention
+from ubears.nutsbear.attention import MultiheadAttention, SimpleMHA
 # from IPython.core.debugger import set_trace
 
 # If `need_weights` is set, customed SDPA will be used instead of
@@ -373,6 +373,7 @@ class TransformerEncoderLayer(nn.Module):
         heads_n: int,
         ffn_sz: int,
         dropout_p: float = 0.0,
+        attn_style: str = "SDPA",
     ):
         """Encoder Layer Initialization.
 
@@ -385,12 +386,25 @@ class TransformerEncoderLayer(nn.Module):
         heads_n: The number of heads in the MHA.
         ffn_sz: The size of hidden layer in the FFN.
         dropout_p: The probability of the dropout.
+        attn_style: The attention style(module).
+          SDPA: MultiheadAttention by default.
+          SingleW: SimpleMHA.
         """
         super().__init__()
-        self.self_attn = MultiheadAttention(
-            embed_sz, heads_n,
-            dropout_p=dropout_p,
-        )
+        if attn_style == "SDPA":
+            self.self_attn = MultiheadAttention(
+                embed_sz,
+                heads_n,
+                dropout_p=dropout_p,
+            )
+        elif attn_style == "SingleW":
+            self.self_attn = SimpleMHA(
+                embed_sz,
+                heads_n,
+                dropout_p=dropout_p,
+            )
+        else:
+            raise ValueError("Invalid MHA style.")
         self.sa_dropout = nn.Dropout(dropout_p)
 
         self.ffn_linear1 = nn.Linear(embed_sz, ffn_sz, bias=True)
@@ -505,6 +519,7 @@ class TransformerDecoderLayer(nn.Module):
         heads_n: int,
         ffn_sz: int,
         dropout_p: float = 0.0,
+        attn_style: str = "SDPA",
     ):
         """Decoder Layer Initialization.
 
@@ -517,18 +532,36 @@ class TransformerDecoderLayer(nn.Module):
         heads_n: The number of heads in the MHA.
         ffn_sz: The size of hidden layer in the FFN.
         dropout_p: The probability of the dropout.
+        attn_style: The attention style(module).
+          SDPA: MultiheadAttention by default.
+          SingleW: SimpleMHA.
         """
         super().__init__()
-        self.self_attn = MultiheadAttention(
-            embed_sz, heads_n,
-            dropout_p=dropout_p,
-        )
+        if attn_style == "SDPA":
+            self.self_attn = MultiheadAttention(
+                embed_sz,
+                heads_n,
+                dropout_p=dropout_p,
+            )
+            self.cross_attn = MultiheadAttention(
+                embed_sz,
+                heads_n,
+                dropout_p=dropout_p,
+            )
+        elif attn_style == "SingleW":
+            self.self_attn = SimpleMHA(
+                embed_sz,
+                heads_n,
+                dropout_p=dropout_p,
+            )
+            self.cross_attn = SimpleMHA(
+                embed_sz,
+                heads_n,
+                dropout_p=dropout_p,
+            )
+        else:
+            raise ValueError("Invalid MHA style.")
         self.sa_dropout = nn.Dropout(dropout_p)
-
-        self.cross_attn = MultiheadAttention(
-            embed_sz, heads_n,
-            dropout_p=dropout_p,
-        )
         self.ca_dropout = nn.Dropout(dropout_p)
 
         self.ffn_linear1 = nn.Linear(embed_sz, ffn_sz, bias=True)

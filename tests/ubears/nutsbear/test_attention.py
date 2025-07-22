@@ -3,7 +3,7 @@
 #   Name: test_attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 15:58:08
-#   Updated: 2025-07-19 19:04:38
+#   Updated: 2025-07-22 22:46:45
 #   Description:
 # ---------------------------------------------------------
 
@@ -27,6 +27,7 @@ from ubears.nutsbear.attention import (
     scaled_dot_product_attention,
     MultiheadAttention,
     RotaryPE,
+    SimpleMHA,
 )
 
 
@@ -213,9 +214,9 @@ def test_MultiHeadAttention():
     key = torch.randn(3, 6, 8, dtype=torch.float32)
     value = torch.randn(3, 6, 8, dtype=torch.float32)
 
-    nnmha = nn.MultiheadAttention(8, 1, batch_first=True)
+    nnmha = nn.MultiheadAttention(8, 2, batch_first=True)
     nn_sd = nnmha.state_dict()
-    mha = MultiheadAttention(8, 1)
+    mha = MultiheadAttention(8, 2)
     sd = {
         "in_proj.weight": nn_sd["in_proj_weight"],
         "in_proj.bias": nn_sd["in_proj_bias"],
@@ -233,15 +234,17 @@ def test_MultiHeadAttention():
     key_padding_mask = torch.randint(0, 2, (3, 6)).to(torch.bool)
     nnattn, nnw = nnmha(query, key, value, key_padding_mask=key_padding_mask)
     attn, attn_ws = mha(query, key, value, key_padding_mask=key_padding_mask)
-    assert torch.all(torch.isclose(torch.nan_to_num(nnattn, 0.0), attn, rtol=1e-3))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
 
     nnattn, nnw = nnmha(
         query, key, value,
-        key_padding_mask=key_padding_mask.logical_not())
+        key_padding_mask=key_padding_mask.logical_not()
+    )
     attn, attn_ws = mha(
         query, key, value,
-        key_padding_mask=key_padding_mask.logical_not())
-    assert torch.all(torch.isclose(torch.nan_to_num(nnattn, 0.0), attn, rtol=1e-3))
+        key_padding_mask=key_padding_mask.logical_not()
+    )
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
 
     # Forward with attention-mask only.
     attn_mask = torch.randint(0, 2, (4, 6)).to(torch.bool)
@@ -265,31 +268,36 @@ def test_MultiHeadAttention():
         attn_mask=attn_mask,
         need_weights=True,
     )
+    assert torch.all(torch.isclose(nnw_w, attn_ws_w, rtol=1e-3))
     assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3))
     assert torch.all(torch.isclose(nnattn_w, attn_w, rtol=1e-3, equal_nan=True))
-    assert torch.all(torch.isclose(torch.nan_to_num(attn, 0.0), attn_w, rtol=1e-3))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
 
     # Forward with attention-mask(or mixed mask).
     attn_mask = torch.randint(0, 2, (4, 6)).to(torch.bool)
     nnattn, nnw = nnmha(
         query, key, value,
         attn_mask=attn_mask,
-        key_padding_mask=key_padding_mask)
+        key_padding_mask=key_padding_mask
+    )
     attn, attn_ws = mha(
         query, key, value,
         attn_mask=attn_mask,
-        key_padding_mask=key_padding_mask)
-    assert torch.all(torch.isclose(torch.nan_to_num(nnattn, 0.0), attn, rtol=1e-3))
+        key_padding_mask=key_padding_mask
+    )
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
 
     nnattn, nnw = nnmha(
         query, key, value,
         attn_mask=attn_mask.logical_not(),
-        key_padding_mask=key_padding_mask.logical_not())
+        key_padding_mask=key_padding_mask.logical_not()
+    )
     attn, attn_ws = mha(
         query, key, value,
         attn_mask=attn_mask.logical_not(),
-        key_padding_mask=key_padding_mask.logical_not())
-    assert torch.all(torch.isclose(torch.nan_to_num(nnattn, 0.0), attn, rtol=1e-3))
+        key_padding_mask=key_padding_mask.logical_not()
+    )
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
 
 
 # %%
@@ -301,12 +309,16 @@ def test_MultiHeadAttention_qkv_diffsz():
     nnmha = nn.MultiheadAttention(
         8, 1,
         bias=True,
-        kdim=16, vdim=16,
-        batch_first=True)
+        kdim=16,
+        vdim=16,
+        batch_first=True
+    )
     nn_sd = nnmha.state_dict()
     mha = MultiheadAttention(
         8, 1,
-        ksz=16, vsz=16)
+        ksz=16,
+        vsz=16,
+    )
     qb, kb, vb = nn_sd["in_proj_bias"].chunk(3)
     sd = {
         "q_proj.weight": nn_sd["q_proj_weight"],
@@ -323,7 +335,7 @@ def test_MultiHeadAttention_qkv_diffsz():
     # Default forward.
     nnattn, nnw = nnmha(query, key, value)
     attn, attn_ws = mha(query, key, value)
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
 
 
 # %%
@@ -505,7 +517,7 @@ def test_NN_MultiHeadAttention_is_causal_hint():
         key_padding_mask=key_padding_mask.logical_not(),
         is_causal=True
     )
-    assert torch.all(torch.isclose(torch.nan_to_num(nnattn, 0.0), attn, rtol=1e-3))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
 
     # Forward with causal attention-mask.
     # 1. `is_causal` in `nn.MultiheadAttention` is just a hint and
@@ -523,9 +535,11 @@ def test_NN_MultiHeadAttention_is_causal_hint():
         need_weights=False,
         is_causal=True
     )
-    assert not torch.all(torch.isclose(torch.nan_to_num(nnattn, 0.0),
-                                       torch.nan_to_num(nnattn_, 0.0),
-                                       rtol=1e-3))
+    assert not torch.all(torch.isclose(
+        torch.nan_to_num(nnattn, 0.0),
+        torch.nan_to_num(nnattn_, 0.0),
+        rtol=1e-3
+    ))
     # 3. `need_weights=True` for example.
     nnattn, nnw = nnmha(
         query, key, value,
@@ -537,9 +551,11 @@ def test_NN_MultiHeadAttention_is_causal_hint():
         attn_mask=attn_mask,
         need_weights=True,
         is_causal=True)
-    assert torch.all(torch.isclose(torch.nan_to_num(nnattn, 0.0),
-                                   torch.nan_to_num(nnattn_, 0.0),
-                                   rtol=1e-3))
+    assert torch.all(torch.isclose(
+        torch.nan_to_num(nnattn, 0.0),
+        torch.nan_to_num(nnattn_, 0.0),
+        rtol=1e-3
+    ))
 
 
 # %%
@@ -713,3 +729,99 @@ def test_MultiHeadAttention_backward_grad():
     assert torch.all(query.isnan().logical_not())
     assert torch.all(key.isnan().logical_not())
     assert torch.all(value.isnan().logical_not())
+
+
+# %%
+def test_SimpleMHA():
+    bsz, slen, tlen, mlen = 3, 4, 6, 5
+    hn, esz = 1, 8
+    query = torch.randn(bsz, slen, esz, dtype=torch.float32)
+    key = torch.randn(bsz, mlen, esz, dtype=torch.float32)
+    value = torch.randn(bsz, mlen, esz, dtype=torch.float32)
+
+    mha = SimpleMHA(esz, hn)
+    nnmha = nn.MultiheadAttention(esz, hn, batch_first=True)
+    nn_sd = nnmha.state_dict()
+    qw, kw, vw = nn_sd["in_proj_weight"].chunk(3, dim=0)
+    # Attention: the single weight matrix should be following for only 1-head.
+    smha_w = kw.transpose(-1, -2) @ qw
+    sd = {"attn_proj.weight": smha_w}
+    mha.load_state_dict(sd, strict=False)
+    torch.eye(8, out=nn_sd["in_proj_weight"][-8:, :])
+    torch.eye(8, out=nn_sd["out_proj.weight"])
+    nnmha.load_state_dict(nn_sd)
+
+    nnattn, nnattn_ws = nnmha(query, key, value, need_weights=True)
+    attn, attn_ws = mha(query, key, value)
+    assert attn.size() == (bsz, slen, esz)
+    assert attn_ws.size() == (bsz, slen, mlen)
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(nnattn_ws, attn_ws, rtol=1e-3, equal_nan=True))
+
+    # Forward with key-padding-mask.
+    key_padding_mask = torch.randint(0, 2, (bsz, mlen)).to(torch.bool)
+    nnattn, nnattn_ws = nnmha(
+        query, key, value,
+        key_padding_mask=key_padding_mask,
+        need_weights=True,
+    )
+    attn, attn_ws = mha(
+        query, key, value,
+        key_padding_mask=key_padding_mask
+    )
+    assert attn.size() == (bsz, slen, esz)
+    assert attn_ws.size() == (bsz, slen, mlen)
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(nnattn_ws, attn_ws, rtol=1e-3, equal_nan=True))
+
+    # Forward with attention-mask only.
+    attn_mask = torch.randint(0, 2, (slen, mlen)).to(torch.bool)
+    nnattn, nnattn_ws = nnmha(
+        query, key, value,
+        attn_mask=attn_mask,
+        need_weights=True,
+    )
+    attn, attn_ws = mha(
+        query, key, value,
+        attn_mask=attn_mask,
+    )
+    assert attn.size() == (bsz, slen, esz)
+    assert attn_ws.size() == (bsz, slen, mlen)
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(nnattn_ws, attn_ws, rtol=1e-3, equal_nan=True))
+
+    # Forward with attention-mask(or mixed mask).
+    nnattn, nnattn_ws = nnmha(
+        query, key, value,
+        attn_mask=attn_mask,
+        key_padding_mask=key_padding_mask,
+        need_weights=True,
+    )
+    attn, attn_ws = mha(
+        query, key, value,
+        attn_mask=attn_mask,
+        key_padding_mask=key_padding_mask
+    )
+    assert attn.size() == (bsz, slen, esz)
+    assert attn_ws.size() == (bsz, slen, mlen)
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(nnattn_ws, attn_ws, rtol=1e-3, equal_nan=True))
+
+
+# %%
+def test_SimpleMHA_qkv_diffsz():
+    bsz, slen, tlen, mlen = 3, 4, 6, 5
+    hn, qsz, ksz = 1, 8, 16
+    query = torch.randn(bsz, slen, qsz, dtype=torch.float32)
+    key = torch.randn(bsz, mlen, ksz, dtype=torch.float32)
+    value = torch.randn(bsz, mlen, ksz, dtype=torch.float32)
+
+    mha = SimpleMHA(8, 1, ksz=ksz, vsz=ksz)
+    attn, attn_ws = mha(query, key, value)
+    assert attn.size() == (bsz, slen, ksz)
+    assert attn_ws.size() == (bsz, slen, mlen)
+
+    mha = SimpleMHA(8, 1, ksz=ksz, vsz=ksz, out_proj=True)
+    attn, attn_ws = mha(query, key, value)
+    assert attn.size() == (bsz, slen, qsz)
+    assert attn_ws.size() == (bsz, slen, mlen)

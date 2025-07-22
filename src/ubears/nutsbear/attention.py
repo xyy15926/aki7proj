@@ -3,7 +3,7 @@
 #   Name: attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 12:01:06
-#   Updated: 2025-07-19 17:05:07
+#   Updated: 2025-07-22 22:41:27
 #   Description:
 # ---------------------------------------------------------
 
@@ -356,7 +356,7 @@ class MultiheadAttention(nn.Module):
         key_padding_mask: torch.Tensor = None,
         attn_mask: torch.Tensor = None,
         is_causal: bool = False,
-        need_weights: bool = False,
+        need_weights: bool = True,
     ) -> torch.Tensor:
         """Multi-head attention forward step.
 
@@ -364,13 +364,13 @@ class MultiheadAttention(nn.Module):
           3 linear projection for query, key and value input seperately if
           query, key and value are the exact one tensor.
           (NestedTensor excluded.)
+        2. NaN will be filled with 0 if not `need_weights` for query with all
+          keys masked since `F.scaled_dot_product_attention` will be called,
+          just like the `nn.MultiheadAttention`.
         **** Different from `nn.MultiheadAttention`:
-        2. NaN will be filled with 0, for masked positions mostly so to keep up
-          with `F.scaled_dot_product_attention`,
-          while the `nn.MultiheadAttention` will keep NaN untouched.
         3. `is_causal` and `attn_mask` are independent here and merge will be
           done if both provided,
-          while `is_causal` in `nn.MultiheadAttention` is just a hint for 
+          while `is_causal` in `nn.MultiheadAttention` is just a hint for
           accelaration and doesn't make any differences in
           `nn.MultiheadAttention`, or `F.multi_head_attention_foward`
           preciesly, if `attn_mask` is set in same cases, `need_weights` set
@@ -474,10 +474,10 @@ class MultiheadAttention(nn.Module):
                 is_causal=False,
             )
         else:
-            # Attention: `F.scaled_dot_product_attention`'s `attn_mask` mask logic is opposite to the all others.
+            # Attention: `F.scaled_dot_product_attention`'s `attn_mask` mask
+            # logic is opposite to the all others.
             # Match the attention mask for SPDA of (bsz, heads_n, qslen, kvslen).
-            # from (bsz, qslen, kvslen)
-            # or (qslen, kvslen)
+            # from (bsz, qslen, kvslen) or (qslen, kvslen)
             if bias_mask is not None:
                 # set_trace()
                 if bias_mask.dim() == 3:
@@ -495,6 +495,9 @@ class MultiheadAttention(nn.Module):
         # => (bsz, seq_len, heads_n, hsz)
         # => (bsz, seq_len, heads_n * hsz)
         attn_val = attn_val.transpose(1, 2).flatten(-2)
+        # Use the average weight of the all heads.
+        if attn_ws is not None:
+            attn_ws = attn_ws.transpose(1, 2).mean(dim=-2)
 
         return self.out_proj(attn_val), attn_ws
 
@@ -638,3 +641,177 @@ class MultiheadAttention(nn.Module):
                 bias_mask += attn_mask.broadcast_to(bsz, qslen, kslen)
 
         return bias_mask
+
+
+# %%
+class SimpleMHA(nn.Module):
+    """Simplified MultiheadAttention.
+
+    1. Only one weight matrix which could be regarded as the `w_k^T * w_q`
+      will be used to calculate the attention score, if the value's size
+      is the same with the query size.
+
+      Proof for `w_a = w_k^T @ w_q`
+      $$
+      (q @ w_q^T) @ (k @ w_k^T)^T = q @ (w_q^T @ w_k) @ k^T
+        = q @ (w_k^T @ w_q)^T @ k^T
+      $$
+
+    2. Or the another outer-projection may be necessary to recover to the
+      original query size.
+
+    Attrs:
+    --------------------------
+    heads_n: Int.
+      The number of the multi-heads.
+    hsz: Int.
+      The size of one attention head.
+    dropout_p: Float.
+      The probability of the dropout.
+    bias: Bool.
+      If to enable bias in projection.
+    q_proj: nn.Linear
+      Linear projection for query input.
+    k_proj: nn.Linear
+      Linear projection for key input.
+    v_proj: nn.Linear
+      Linear projection for value input.
+    out_proj: nn.Linear
+      Linear projection for concated attention ouptut of multi-heads.
+    """
+    def __init__(
+        self,
+        qsz: int,
+        heads_n: int,
+        ksz: int = None,
+        vsz: int = None,
+        dropout_p: float = 0.0,
+        bias: bool = True,
+        out_proj: bool = False,
+        device: str = None,
+        dtype: str = None,
+    ):
+        """Simplified MultiheadAttention initialization.
+
+        Params:
+        ----------------------------
+        qsz: The (embedding)size of the query.
+        heads_n: The number the heads.
+        ksz: The (embedding)size of the key.
+        vsz: The (embedding)size of the value.
+        dropout_p: The probability of the dropout.
+        bias: If to use bias in the projection for Q, K, V.
+        device:
+        dtype:
+
+        Return:
+        ----------------------------
+        None
+        """
+        ksz = qsz if ksz is None else ksz
+        vsz = qsz if vsz is None else vsz
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super().__init__()
+        self.heads_n = heads_n
+        self.bias = bias
+        assert ksz % heads_n == 0, "Key embedding dim is not divisible by nheads."
+        assert vsz % heads_n == 0, "Value embedding dim is not divisible by nheads."
+        self.dropout_p = dropout_p
+        if not out_proj and vsz != qsz:
+            logger.warning("Output size isn't the same with the query size.")
+
+        # Only one hidden weight matrix for attention.
+        self.attn_proj = nn.Linear(qsz, ksz, bias=bias, **factory_kwargs)
+        if out_proj:
+            self.out_proj = nn.Linear(vsz, qsz, bias=bias, **factory_kwargs)
+        else:
+            self.out_proj = None
+
+        # Init parameters.
+        self._reset_parameter()
+
+    def _reset_parameter(self):
+        """Init parameters with xavier_uniform."""
+        xavier_uniform_(self.attn_proj.weight)
+        if self.bias:
+            constant_(self.attn_proj.bias, 0.0)
+        if self.out_proj:
+            xavier_uniform_(self.out_proj.weight)
+            if self.bias:
+                constant_(self.out_proj.bias, 0.0)
+
+    def forward(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        key_padding_mask: torch.Tensor = None,
+        attn_mask: torch.Tensor = None,
+        is_causal: bool = False,
+        need_weights: bool = False,
+    ) -> torch.Tensor:
+        """Simplifed Multi-head Attention forward step.
+
+        Params:
+        --------------------------
+        query: Query input Tensor
+        key: Key input Tensor.
+        value: Value input Tensor.
+        key_padding_mask: Padding mask for key sequence.
+        attn_mask: Mask for the attending relations between query and key.
+        is_causal: If to enforce causality, namely tokens can only attend to
+          previous tokens.
+        need_weights: If return valid attention weights.
+          Always return valid attention weights and keep untouched here just
+          to keep up with MHA.
+
+        Shape:
+        --------------------------
+        query: (bsz, query_seq_len, qsz)
+        key: (bsz, kv_seq_len, ksz)
+        value: (bsz, kv_seq_len, vsz)
+        key_padding_mask: (bsz, kv_seq_len)
+        attn_mask: (query_seq_len, kv_seq_len)
+        RETURN: (bsz, query_seq_len, qsz)
+
+        Return:
+        --------------------------
+        Attention outpout.
+        """
+        hn = self.heads_n
+        qksz = query.size(-1)
+        # Merge masks.
+        bias_mask = MultiheadAttention.merge_masks(
+            key_padding_mask,
+            attn_mask,
+            is_causal=is_causal,
+            query=query,
+            key=key,
+        )
+        if bias_mask is not None:
+            bias_mask = bias_mask.unsqueeze(1)
+
+        dropout_p = self.dropout_p if self.training else 0.0
+        # (bsz, slen, qsz)
+        # => (bsz, slen, ksz)
+        # => (bsz, slen, heads_n, hsz)
+        # => (bsz, heads_n, slen, hsz)
+        q = self.attn_proj(query).unflatten(-1, (hn, -1)).transpose(1, 2)
+        q *= np.sqrt(1.0 / qksz)
+        k = key.unflatten(-1, (hn, -1)).transpose(1, 2)
+        v = value.unflatten(-1, (hn, -1)).transpose(1, 2)
+        # (bsz, heads_n, qslen, kvslen)
+        attn_ = q @ k.transpose(-1, -2)
+        if bias_mask is not None:
+            attn_ += bias_mask
+        attn_ws = F.softmax(attn_, dim=-1)
+        if dropout_p:
+            attn_ws = F.dropout(attn_ws, dropout_p)
+        # (bsz, heads_n, qslen, kvslen)
+        # => (bsz, heads_n, qslen, hsz)
+        attn_ret = (attn_ws @ v).transpose(1, 2).flatten(-2)
+        if self.out_proj:
+            attn_ret = self.out_proj(attn_ret)
+        attn_ws = attn_ws.transpose(1, 2).mean(dim=-2)
+
+        return attn_ret, attn_ws

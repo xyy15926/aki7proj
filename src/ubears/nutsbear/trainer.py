@@ -3,7 +3,7 @@
 #   Name: trainer.py
 #   Author: xyy15926
 #   Created: 2025-07-08 09:02:04
-#   Updated: 2025-07-21 21:57:56
+#   Updated: 2025-07-22 11:06:04
 #   Description:
 # ---------------------------------------------------------
 
@@ -176,6 +176,8 @@ class Trainer:
                 else:
                     ret = pred_fn(self.mod, *enums)
                     loss = loss_fn(ret, *enums)
+                if torch.isnan(loss):
+                    logger.warning(f"NaN loss shows up at batch-{bidx}.")
                 loss.backward()
 
                 # Optimize.
@@ -230,4 +232,7 @@ class Trainer:
         spath = tmp_file(rf"{mod_name}_{epoch_ptn}", None, incr=0)
         sdict = torch.load(spath)
         mod.load_state_dict(sdict)
-        return mod
+        logger.info(f"Load module from {spath}.")
+        # Get the epoch idx.
+        epoch_idx = int(spath.name[-4:])
+        return mod, epoch_idx
