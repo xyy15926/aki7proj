@@ -3,7 +3,7 @@
 #   Name: attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 12:01:06
-#   Updated: 2025-07-22 22:41:27
+#   Updated: 2025-07-23 11:03:58
 #   Description:
 # ---------------------------------------------------------
 
@@ -27,6 +27,36 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 logger.info("Logging Start.")
+
+
+# %%
+def ssoftmax(
+    inp: torch.Tensor,
+    dim: int = -1,
+) -> torch.Tensor:
+    """All-NInf-safe Softmax.
+
+    1. 0.0 will be filled for all-NInf axis instead of NaN.
+    2. This maybe a litter slower for maximum check and transpose.
+
+    Params:
+    -------------------------------
+    inp: Input tensor.
+    dim: Dimension along which softmax will be computed.
+
+    Return:
+    -------------------------------
+    Softmax result with 0.0 filled for shoud-be NaN.
+    """
+    # Transpose the dimension for softmax so to fit up with the bool index.
+    if dim != -1 or dim != inp.dim():
+        inp = inp.transpose(-1, dim)
+    valid_pos = inp.max(dim=-1).values > -torch.inf
+    ret = torch.zeros_like(inp, dtype=inp.dtype, device=inp.device)
+    ret[valid_pos] = F.softmax(inp[valid_pos], dim=-1)
+    if dim != -1 or dim != inp.dim():
+        ret = ret.transpose(-1, dim)
+    return ret
 
 
 # %%
@@ -131,14 +161,14 @@ class RotaryPE(nn.Module):
 
 
 # %%
-# TODO: `F.softmax` will return NaN for all NInf and lead to NaN in `.grad`.
 def scaled_dot_product_attention(
     query: torch.Tensor,
     key: torch.Tensor,
     value: torch.Tensor,
     attn_mask: torch.Tensor = None,
     dropout_p: float = 0.0,
-    is_causal: bool = False
+    is_causal: bool = False,
+    safe_softmax: bool = True,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Scaled dot product attention.
 
@@ -176,6 +206,8 @@ def scaled_dot_product_attention(
         or just "padding-mask" if the `.size(1) == 1`.
     is_causal: If to enforce causality, namely tokens can only attend to
       previous tokens.
+    safe_softmax: Use `ssoftmax` instead of `F.softmax` to prevent NaN for
+      all-NInf, which will lead to NaN in `.grad` after backward.
 
     Shape:
     --------------------------
@@ -244,7 +276,10 @@ def scaled_dot_product_attention(
     q_scaled = query * np.sqrt(1.0 / qksz)
     scaled_dot = q_scaled @ key.transpose(-2, -1)
     scaled_dot += bias_mask
-    attn_weight = F.softmax(scaled_dot, dim=-1)
+    if safe_softmax:
+        attn_weight = ssoftmax(scaled_dot, dim=-1)
+    else:
+        attn_weight = F.softmax(scaled_dot, dim=-1)
     # attn_weight = torch.nan_to_num(attn_weight, 0.0)
     if dropout_p:
         attn_weight = F.dropout(scaled_dot, p=dropout_p)
@@ -364,10 +399,12 @@ class MultiheadAttention(nn.Module):
           3 linear projection for query, key and value input seperately if
           query, key and value are the exact one tensor.
           (NestedTensor excluded.)
-        2. NaN will be filled with 0 if not `need_weights` for query with all
-          keys masked since `F.scaled_dot_product_attention` will be called,
-          just like the `nn.MultiheadAttention`.
         **** Different from `nn.MultiheadAttention`:
+        2. NaN will be always filled with 0 for query with all keys masked
+          whether `need_weights` is set since `ssoftmax` will fill NaN with 0
+          for all-NInf axis just like `F.scaled_dot_product_attention`, which
+          will be called only when `nn.MultiheadAttention.forward` is called
+          with `need_weights` unset.
         3. `is_causal` and `attn_mask` are independent here and merge will be
           done if both provided,
           while `is_causal` in `nn.MultiheadAttention` is just a hint for
@@ -804,7 +841,7 @@ class SimpleMHA(nn.Module):
         attn_ = q @ k.transpose(-1, -2)
         if bias_mask is not None:
             attn_ += bias_mask
-        attn_ws = F.softmax(attn_, dim=-1)
+        attn_ws = ssoftmax(attn_, dim=-1)
         if dropout_p:
             attn_ws = F.dropout(attn_ws, dropout_p)
         # (bsz, heads_n, qslen, kvslen)

@@ -3,7 +3,7 @@
 #    Name: accencoder.py
 #   Author: xyy15926
 #   Created: 2025-07-15 10:51:09
-#   Updated: 2025-07-21 21:45:51
+#   Updated: 2025-07-23 11:34:11
 #   Description:
 # ---------------------------------------------------------
 
@@ -21,6 +21,7 @@ from torch.nn import functional as F
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.init import xavier_uniform_
 from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
+# from IPython.core.debugger import set_trace
 
 if __name__ == "__main__":
     from importlib import reload
@@ -76,10 +77,10 @@ class AccRecsTransformer(nn.Module):
         embed_sz: int,
         heads_n: int,
         ffn_sz: int,
-        ws_style: int = 2,
         enc_layers_n: int = 2,
         dec_layers_n: int = 1,
         dropout_p: float = 0.0,
+        attn_style: str = "SDPA",
         device: str = None,
         dtype: str = None,
     ):
@@ -97,7 +98,6 @@ class AccRecsTransformer(nn.Module):
         super().__init__()
         self.embed_sz = embed_sz
         self.heads_n = heads_n
-        self.ws_style = ws_style
         self.rpe = RotaryPE(embed_sz)
         factory_kwargs = {"device": device, "dtype": dtype}
 
@@ -122,6 +122,7 @@ class AccRecsTransformer(nn.Module):
             heads_n,
             ffn_sz,
             dropout_p=dropout_p,
+            attn_style=attn_style,
         )
         self.enc = TransformerEncoder(enc_layer, enc_layers_n)
         dec_layer = TransformerDecoderLayer(
@@ -129,6 +130,7 @@ class AccRecsTransformer(nn.Module):
             heads_n,
             ffn_sz,
             dropout_p=dropout_p,
+            attn_style=attn_style,
         )
         self.dec = TransformerDecoder(dec_layer, dec_layers_n)
 
@@ -251,6 +253,7 @@ class AccRecsTransformer(nn.Module):
         # The `pmask[..., 1:]` will mask the last element so that the
         # last element won't be attented in decoder.
         enced = self.enc(embed[pmask.logical_not()].unsqueeze(0))
+        # set_trace()
         embed[..., 0, :] = accat_
         deced = self.dec(
             embed.flatten(0, 1)[..., :-1,:],

@@ -3,7 +3,7 @@
 #   Name: test_attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 15:58:08
-#   Updated: 2025-07-22 22:46:45
+#   Updated: 2025-07-23 11:21:30
 #   Description:
 # ---------------------------------------------------------
 
@@ -24,11 +24,51 @@ if __name__ == "__main__":
     reload(attention)
 
 from ubears.nutsbear.attention import (
+    ssoftmax,
     scaled_dot_product_attention,
     MultiheadAttention,
     RotaryPE,
     SimpleMHA,
 )
+torch.autograd.set_detect_anomaly(False)
+
+
+# %%
+def test_ssoftmax():
+    # Check common result.
+    ori = torch.rand(5, 3, 4)
+    for dim in (0, 1, 2, -1):
+        ret1 = F.softmax(ori, dim)
+        ret2 = ssoftmax(ori, dim)
+        assert torch.all(torch.isclose(ret1, ret2))
+
+    # Check all-NInf input.
+    addup = torch.tensor([[float("-inf"), 0, 0, 0],
+                          [0, 0, 0, 0],
+                          [0, 0, 0, 0]])
+    inp = ori + addup
+    for dim in (1, 2):
+        ret1 = F.softmax(inp, dim)
+        ret2 = ssoftmax(inp, dim)
+        assert torch.all(torch.isclose(ret1, ret2))
+    ret1 = F.softmax(inp, 0)
+    ret2 = ssoftmax(inp, 0)
+    assert torch.all(torch.isclose(ret1[:, :, 1:], ret2[:, :, 1:]))
+    assert torch.all(torch.isnan(ret1[:, 0, 0]))
+    assert torch.all(ret2[:, 0, 0] == 0.0)
+
+    # Check the autograd.
+    ori = torch.rand(5, 3, 4, requires_grad=True)
+    inp = ori + addup
+    loss = F.softmax(inp, 0).sum()
+    loss.backward()
+    assert torch.all(torch.isnan(ori.grad[:, 0, 0]))
+
+    ori = torch.rand(5, 3, 4, requires_grad=True)
+    inp = ori + addup
+    loss = ssoftmax(inp, 0).sum()
+    loss.backward()
+    assert torch.all(ori.grad[:, 0, 0] == 0.0)
 
 
 # %%
@@ -120,8 +160,14 @@ def test_scaled_dot_product_attention_backward_grad():
         [1, 1, 0, 1, 1, 1],
     ]).to(torch.bool)
 
+    # `NaN` will be return for all-NInf query and lead to NaN in `.grad`
+    # in backward.
     output, ws = scaled_dot_product_attention(
-        query, key, value, attn_mask=attn_mask.logical_not()
+        query,
+        key,
+        value,
+        attn_mask=attn_mask.logical_not(),
+        safe_softmax=False,
     )
     os = output.sum()
     os.backward()
@@ -142,10 +188,38 @@ def test_scaled_dot_product_attention_backward_grad():
     sgd = optim.SGD((query, key, value))
 
     foutp = F.scaled_dot_product_attention(
-        query, key, value, attn_mask=attn_mask
+        query,
+        key,
+        value,
+        attn_mask=attn_mask,
     )
     fos = foutp.sum()
     fos.backward()
+    assert torch.all(query.grad[:, 0, :] == 0)
+    assert torch.all(query.grad.isnan().logical_not())
+    # Key and value's grad are 0 because no query attention to 2nd key.
+    assert torch.all(key.grad[:, 2, :] == 0)
+    assert torch.all(value.grad[:, 2, :] == 0)
+    sgd.step()
+    assert torch.all(query.isnan().logical_not())
+    assert torch.all(key.isnan().logical_not())
+    assert torch.all(value.isnan().logical_not())
+
+    # So does the `scaled_dot_product_attention` with safe-softmax.
+    query = torch.randn(3, 4, 2, dtype=torch.float64, requires_grad=True)
+    key = torch.randn(3, 6, 2, dtype=torch.float64, requires_grad=True)
+    value = torch.randn(3, 6, 2, dtype=torch.float64, requires_grad=True)
+    sgd = optim.SGD((query, key, value))
+
+    outp, ws = scaled_dot_product_attention(
+        query,
+        key,
+        value,
+        attn_mask=attn_mask.logical_not(),
+        safe_softmax=True
+    )
+    os = outp.sum()
+    os.backward()
     assert torch.all(query.grad[:, 0, :] == 0)
     assert torch.all(query.grad.isnan().logical_not())
     # Key and value's grad are 0 because no query attention to 2nd key.
@@ -238,7 +312,8 @@ def test_MultiHeadAttention():
 
     nnattn, nnw = nnmha(
         query, key, value,
-        key_padding_mask=key_padding_mask.logical_not()
+        key_padding_mask=key_padding_mask.logical_not(),
+        need_weights=False,
     )
     attn, attn_ws = mha(
         query, key, value,
@@ -278,19 +353,21 @@ def test_MultiHeadAttention():
     nnattn, nnw = nnmha(
         query, key, value,
         attn_mask=attn_mask,
-        key_padding_mask=key_padding_mask
+        key_padding_mask=key_padding_mask,
+        need_weights=False,
     )
     attn, attn_ws = mha(
         query, key, value,
         attn_mask=attn_mask,
-        key_padding_mask=key_padding_mask
+        key_padding_mask=key_padding_mask,
     )
     assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
 
     nnattn, nnw = nnmha(
         query, key, value,
         attn_mask=attn_mask.logical_not(),
-        key_padding_mask=key_padding_mask.logical_not()
+        key_padding_mask=key_padding_mask.logical_not(),
+        need_weights=False,
     )
     attn, attn_ws = mha(
         query, key, value,
@@ -508,7 +585,8 @@ def test_NN_MultiHeadAttention_is_causal_hint():
     nnattn, nnw = nnmha(
         query, key, value,
         attn_mask=F_attn_mask,
-        key_padding_mask=key_padding_mask.logical_not()
+        key_padding_mask=key_padding_mask.logical_not(),
+        need_weights=False,
     )
     # `is_causal` and `attn_mask` are merged.
     attn, attn_ws = mha(
@@ -684,39 +762,35 @@ def test_MultiHeadAttention_backward_grad():
         [1, 1, 0, 1, 1, 1],
     ]).to(torch.bool).logical_not()
 
-    # `MultiheadAttention` will return NaN in attention result and NaN in
-    # `.grad` for the query with all key masked if `need_weights` is set,
-    # which will use the customed SDPA in `multi_head_attention_forward`
-    # instead of calling `F.scaled_dot_product_attention`
-    # Because `F.softmax` will return NaN for all NInf.
-    query, key, value, sgd = _grad_data()
-    nnattn, nnw = mha(
-        query, key, value,
-        key_padding_mask=key_padding_mask,
-        attn_mask=attn_mask,
-        need_weights=True,
-    )
-    nnattn.sum().backward()
-    assert torch.all(query.grad[:, 0, :].isnan())
-    assert torch.all(query.grad[0, :, :].isnan())
-    assert torch.all(key.grad.isnan())
-    assert torch.all(value.grad.isnan())
-    sgd.step()
-    assert torch.all(query[:, 0, :].isnan())
-    assert torch.all(query[0, :, :].isnan())
-    assert torch.all(key.isnan())
-    assert torch.all(value.isnan())
-
-    # While `MultiheadAttention` will return 0 in attention result and 0 in
-    # `.grad` for the query with all key masked if `need_weights` is not set
-    # for the calling and the implmentation of
-    # `F.scaled_dot_product_attention`.
+    # `MultiheadAttention` will always return 0 in attention result and 0 in
+    # `.grad` for the query with all key masked whether`need_weights` set or
+    # not since both `F.scaled_dot_product_attention` and the implementation
+    # of cumtomed SDPA will prevent NaN for all-NInf from `F.softmax`.
     query, key, value, sgd = _grad_data()
     nnattn, nnw = mha(
         query, key, value,
         key_padding_mask=key_padding_mask,
         attn_mask=attn_mask,
         need_weights=False,
+    )
+    nnattn.sum().backward()
+    assert torch.all(query.grad[:, 0, :] == 0)
+    assert torch.all(query.grad[0, :, :] == 0)
+    assert torch.all(key.grad[0, :, :] == 0)
+    assert torch.all(key.grad[:, 2, :] == 0)
+    assert torch.all(value.grad[0, :, :] == 0)
+    assert torch.all(value.grad[:, 2, :] == 0)
+    sgd.step()
+    assert torch.all(query.isnan().logical_not())
+    assert torch.all(key.isnan().logical_not())
+    assert torch.all(value.isnan().logical_not())
+
+    query, key, value, sgd = _grad_data()
+    nnattn, nnw = mha(
+        query, key, value,
+        key_padding_mask=key_padding_mask,
+        attn_mask=attn_mask,
+        need_weights=True,
     )
     nnattn.sum().backward()
     assert torch.all(query.grad[:, 0, :] == 0)
@@ -771,8 +845,18 @@ def test_SimpleMHA():
     )
     assert attn.size() == (bsz, slen, esz)
     assert attn_ws.size() == (bsz, slen, mlen)
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
-    assert torch.all(torch.isclose(nnattn_ws, attn_ws, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(
+        torch.nan_to_num(nnattn, 0.0),
+        attn,
+        rtol=1e-3,
+        equal_nan=True
+    ))
+    assert torch.all(torch.isclose(
+        torch.nan_to_num(nnattn_ws, 0.0),
+        attn_ws,
+        rtol=1e-3,
+        equal_nan=True
+    ))
 
     # Forward with attention-mask only.
     attn_mask = torch.randint(0, 2, (slen, mlen)).to(torch.bool)
@@ -787,8 +871,18 @@ def test_SimpleMHA():
     )
     assert attn.size() == (bsz, slen, esz)
     assert attn_ws.size() == (bsz, slen, mlen)
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
-    assert torch.all(torch.isclose(nnattn_ws, attn_ws, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(
+        torch.nan_to_num(nnattn, 0.0),
+        attn,
+        rtol=1e-3,
+        equal_nan=True
+    ))
+    assert torch.all(torch.isclose(
+        torch.nan_to_num(nnattn_ws, 0.0),
+        attn_ws,
+        rtol=1e-3,
+        equal_nan=True
+    ))
 
     # Forward with attention-mask(or mixed mask).
     nnattn, nnattn_ws = nnmha(
@@ -804,8 +898,18 @@ def test_SimpleMHA():
     )
     assert attn.size() == (bsz, slen, esz)
     assert attn_ws.size() == (bsz, slen, mlen)
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
-    assert torch.all(torch.isclose(nnattn_ws, attn_ws, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(
+        torch.nan_to_num(nnattn, 0.0),
+        attn,
+        rtol=1e-3,
+        equal_nan=True
+    ))
+    assert torch.all(torch.isclose(
+        torch.nan_to_num(nnattn_ws, 0.0),
+        attn_ws,
+        rtol=1e-3,
+        equal_nan=True
+    ))
 
 
 # %%

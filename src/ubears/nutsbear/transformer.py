@@ -3,7 +3,7 @@
 #   Name: transformer.py
 #   Author: xyy15926
 #   Created: 2025-07-10 09:25:01
-#   Updated: 2025-07-22 22:50:36
+#   Updated: 2025-07-23 11:32:42
 #   Description:
 # ---------------------------------------------------------
 
@@ -388,16 +388,16 @@ class TransformerEncoderLayer(nn.Module):
         dropout_p: The probability of the dropout.
         attn_style: The attention style(module).
           SDPA: MultiheadAttention by default.
-          SingleW: SimpleMHA.
+          qWk: SimpleMHA.
         """
         super().__init__()
-        if attn_style == "SDPA":
+        if attn_style.lower() == "sdpa":
             self.self_attn = MultiheadAttention(
                 embed_sz,
                 heads_n,
                 dropout_p=dropout_p,
             )
-        elif attn_style == "SingleW":
+        elif attn_style.lower() == "qwk":
             self.self_attn = SimpleMHA(
                 embed_sz,
                 heads_n,
@@ -534,10 +534,10 @@ class TransformerDecoderLayer(nn.Module):
         dropout_p: The probability of the dropout.
         attn_style: The attention style(module).
           SDPA: MultiheadAttention by default.
-          SingleW: SimpleMHA.
+          qwk: SimpleMHA.
         """
         super().__init__()
-        if attn_style == "SDPA":
+        if attn_style.lower() == "sdpa":
             self.self_attn = MultiheadAttention(
                 embed_sz,
                 heads_n,
@@ -548,7 +548,7 @@ class TransformerDecoderLayer(nn.Module):
                 heads_n,
                 dropout_p=dropout_p,
             )
-        elif attn_style == "SingleW":
+        elif attn_style.lower() == "qwk":
             self.self_attn = SimpleMHA(
                 embed_sz,
                 heads_n,
@@ -593,6 +593,7 @@ class TransformerDecoderLayer(nn.Module):
             is_causal=is_causal,
             need_weights=NEED_ATTN_WEIGHTS,
         )
+        # assert not torch.any(torch.isnan(attn_val))
         return self.sa_dropout(attn_val)
 
     def _ca_block(
@@ -615,6 +616,7 @@ class TransformerDecoderLayer(nn.Module):
             is_causal=is_causal,
             need_weights=NEED_ATTN_WEIGHTS,
         )
+        # assert not torch.any(torch.isnan(attn_val))
         return self.ca_dropout(attn_val)
 
     def _ffn_block(
@@ -677,6 +679,7 @@ class TransformerDecoderLayer(nn.Module):
                 is_causal=tgt_is_causal,
             )
         )
+        # assert not torch.any(torch.isnan(tgt))
         tgt = self.norm2(
             tgt
             + self._ca_block(
@@ -687,5 +690,6 @@ class TransformerDecoderLayer(nn.Module):
                 is_causal=memory_is_causal,
             )
         )
+        # assert not torch.any(torch.isnan(tgt))
         tgt = self.norm3(tgt + self._ffn_block(tgt))
         return tgt

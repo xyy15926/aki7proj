@@ -100,7 +100,7 @@ def test_TransformerEncoderLayer_with_SimpleMHA():
     tgt = torch.randn(bsz, tlen, 8, dtype=torch.float32)
     mem = torch.randn(bsz, mlen, 8, dtype=torch.float32)
 
-    tel = TransformerEncoderLayer(8, 1, 16, 0, attn_style="SingleW")
+    tel = TransformerEncoderLayer(8, 1, 16, 0, attn_style="qwk")
 
     # Default forward.
     ret = tel(src)
@@ -202,7 +202,7 @@ def test_TransformerEncoder_with_SimpleMHA():
     tgt = torch.randn(bsz, tlen, 8, dtype=torch.float32)
     mem = torch.randn(bsz, mlen, 8, dtype=torch.float32)
 
-    tel = TransformerEncoderLayer(8, 1, 16, 0, attn_style="SingleW")
+    tel = TransformerEncoderLayer(8, 1, 16, 0, attn_style="qwk")
     te = TransformerEncoder(tel, 2)
 
     # Default forward.
@@ -332,7 +332,7 @@ def test_TransformerDecoderLayer_with_SimpleMHA():
     tgt = torch.randn(bsz, tlen, 8, dtype=torch.float32)
     mem = torch.randn(bsz, mlen, 8, dtype=torch.float32)
 
-    tdl = TransformerDecoderLayer(8, 2, 16, 0.0, attn_style="SingleW")
+    tdl = TransformerDecoderLayer(8, 2, 16, 0.0, attn_style="qwk")
 
     # Default forward.
     ret = tdl(tgt, mem, tgt_is_causal=False)
@@ -449,7 +449,7 @@ def test_TransformerDecoder_with_SimpleMHA():
     tgt = torch.randn(bsz, tlen, 8, dtype=torch.float32)
     mem = torch.randn(bsz, mlen, 8, dtype=torch.float32)
 
-    tdl = TransformerDecoderLayer(8, 2, 16, 0.0, attn_style="SingleW")
+    tdl = TransformerDecoderLayer(8, 2, 16, 0.0, attn_style="qwk")
     td = TransformerDecoder(tdl, 2)
 
     # Default forward.
