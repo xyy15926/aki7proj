@@ -3,7 +3,7 @@
 #   Name: test_attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 15:58:08
-#   Updated: 2025-07-23 11:21:30
+#   Updated: 2025-07-26 18:18:41
 #   Description:
 # ---------------------------------------------------------
 
@@ -815,12 +815,10 @@ def test_SimpleMHA():
 
     mha = SimpleMHA(esz, hn)
     nnmha = nn.MultiheadAttention(esz, hn, batch_first=True)
+    single_w = mha.state_dict()["attn_proj.weight"]
     nn_sd = nnmha.state_dict()
-    qw, kw, vw = nn_sd["in_proj_weight"].chunk(3, dim=0)
-    # Attention: the single weight matrix should be following for only 1-head.
-    smha_w = kw.transpose(-1, -2) @ qw
-    sd = {"attn_proj.weight": smha_w}
-    mha.load_state_dict(sd, strict=False)
+    nn_sd["in_proj_weight"][:8, :] = single_w
+    nn_sd["in_proj_weight"][8:-8, :] = single_w
     torch.eye(8, out=nn_sd["in_proj_weight"][-8:, :])
     torch.eye(8, out=nn_sd["out_proj.weight"])
     nnmha.load_state_dict(nn_sd)
@@ -915,17 +913,17 @@ def test_SimpleMHA():
 # %%
 def test_SimpleMHA_qkv_diffsz():
     bsz, slen, tlen, mlen = 3, 4, 6, 5
-    hn, qsz, ksz = 1, 8, 16
-    query = torch.randn(bsz, slen, qsz, dtype=torch.float32)
-    key = torch.randn(bsz, mlen, ksz, dtype=torch.float32)
-    value = torch.randn(bsz, mlen, ksz, dtype=torch.float32)
+    hn, qksz, vsz = 2, 8, 16
+    query = torch.randn(bsz, slen, qksz, dtype=torch.float32)
+    key = torch.randn(bsz, mlen, qksz, dtype=torch.float32)
+    value = torch.randn(bsz, mlen, vsz, dtype=torch.float32)
 
-    mha = SimpleMHA(8, 1, ksz=ksz, vsz=ksz)
+    mha = SimpleMHA(8, 1, vsz=vsz)
     attn, attn_ws = mha(query, key, value)
-    assert attn.size() == (bsz, slen, ksz)
+    assert attn.size() == (bsz, slen, vsz)
     assert attn_ws.size() == (bsz, slen, mlen)
 
-    mha = SimpleMHA(8, 1, ksz=ksz, vsz=ksz, out_proj=True)
+    mha = SimpleMHA(8, 1, vsz=vsz, out_proj=True)
     attn, attn_ws = mha(query, key, value)
-    assert attn.size() == (bsz, slen, qsz)
+    assert attn.size() == (bsz, slen, qksz)
     assert attn_ws.size() == (bsz, slen, mlen)

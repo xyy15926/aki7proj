@@ -3,7 +3,7 @@
 #   Name: attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 12:01:06
-#   Updated: 2025-07-23 11:03:58
+#   Updated: 2025-07-26 18:18:29
 #   Description:
 # ---------------------------------------------------------
 
@@ -684,18 +684,28 @@ class MultiheadAttention(nn.Module):
 class SimpleMHA(nn.Module):
     """Simplified MultiheadAttention.
 
-    1. Only one weight matrix which could be regarded as the `w_k^T * w_q`
-      will be used to calculate the attention score, if the value's size
-      is the same with the query size.
+    1. Keep only one attention weight matrix for Query and Key, with presuming
+      the embedding size of query and key are the same and should share the
+      same weight matrix in some certain extent.
+    2. Drop the weight matrix for Value if not necessary, especially the
+      the embedding size of Value is the same as the Query and some more
+      linear transformation will be stacked later.
 
-      Proof for `w_a = w_k^T @ w_q`
+    Notes:
+    1. Both Query and key should be applied linear transformation before
+    dot-production.
+    2. Presuming that no linear applied on Query or key, the dot-production
+      after splitting heads will only take the correspondant component of the
+      Query or Key, namely only single head attention make sense.
+    3. For example,
       $$
-      (q @ w_q^T) @ (k @ w_k^T)^T = q @ (w_q^T @ w_k) @ k^T
+      (q @ w_q^T) @ (k @ w_k^T)^T
+        = q @ (w_q^T @ w_k) @ k^T
         = q @ (w_k^T @ w_q)^T @ k^T
       $$
+      take `w_a = w^k^T @ w_q` will achieve the effect of the `w_q` and `w_k`
+      for single head but not for multi-heads.
 
-    2. Or the another outer-projection may be necessary to recover to the
-      original query size.
 
     Attrs:
     --------------------------
@@ -718,10 +728,10 @@ class SimpleMHA(nn.Module):
     """
     def __init__(
         self,
-        qsz: int,
+        qksz: int,
         heads_n: int,
-        ksz: int = None,
         vsz: int = None,
+        tsz: int = None,
         dropout_p: float = 0.0,
         bias: bool = True,
         out_proj: bool = False,
@@ -732,9 +742,8 @@ class SimpleMHA(nn.Module):
 
         Params:
         ----------------------------
-        qsz: The (embedding)size of the query.
+        qksz: The (embedding)size of the query and key.
         heads_n: The number the heads.
-        ksz: The (embedding)size of the key.
         vsz: The (embedding)size of the value.
         dropout_p: The probability of the dropout.
         bias: If to use bias in the projection for Q, K, V.
@@ -743,26 +752,25 @@ class SimpleMHA(nn.Module):
 
         Return:
         ----------------------------
-        None
         """
-        ksz = qsz if ksz is None else ksz
-        vsz = qsz if vsz is None else vsz
+        vsz = qksz if vsz is None else vsz
+        tsz = qksz if tsz is None else tsz
         factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
         self.heads_n = heads_n
-        self.bias = bias
-        assert ksz % heads_n == 0, "Key embedding dim is not divisible by nheads."
-        assert vsz % heads_n == 0, "Value embedding dim is not divisible by nheads."
+        self.hsz = tsz // heads_n
+        assert tsz % heads_n == 0, "Embeding dim is not divisible by nheads."
         self.dropout_p = dropout_p
-        if not out_proj and vsz != qsz:
+        if not out_proj and qksz != vsz:
             logger.warning("Output size isn't the same with the query size.")
 
-        # Only one hidden weight matrix for attention.
-        self.attn_proj = nn.Linear(qsz, ksz, bias=bias, **factory_kwargs)
+        # Query and key will share the same linear transformation.
+        self.attn_proj = nn.Linear(qksz, tsz, bias=bias, **factory_kwargs)
         if out_proj:
-            self.out_proj = nn.Linear(vsz, qsz, bias=bias, **factory_kwargs)
+            self.out_proj = nn.Linear(vsz, qksz, bias=bias, **factory_kwargs)
         else:
             self.out_proj = None
+        self.bias = bias
 
         # Init parameters.
         self._reset_parameter()
@@ -828,22 +836,25 @@ class SimpleMHA(nn.Module):
         if bias_mask is not None:
             bias_mask = bias_mask.unsqueeze(1)
 
-        dropout_p = self.dropout_p if self.training else 0.0
         # (bsz, slen, qsz)
         # => (bsz, slen, ksz)
         # => (bsz, slen, heads_n, hsz)
         # => (bsz, heads_n, slen, hsz)
         q = self.attn_proj(query).unflatten(-1, (hn, -1)).transpose(1, 2)
         q *= np.sqrt(1.0 / qksz)
-        k = key.unflatten(-1, (hn, -1)).transpose(1, 2)
+        k = self.attn_proj(key).unflatten(-1, (hn, -1)).transpose(1, 2)
         v = value.unflatten(-1, (hn, -1)).transpose(1, 2)
         # (bsz, heads_n, qslen, kvslen)
         attn_ = q @ k.transpose(-1, -2)
         if bias_mask is not None:
             attn_ += bias_mask
         attn_ws = ssoftmax(attn_, dim=-1)
+
+        # Apply dropout.
+        dropout_p = self.dropout_p if self.training else 0.0
         if dropout_p:
             attn_ws = F.dropout(attn_ws, dropout_p)
+
         # (bsz, heads_n, qslen, kvslen)
         # => (bsz, heads_n, qslen, hsz)
         attn_ret = (attn_ws @ v).transpose(1, 2).flatten(-2)
