@@ -3,7 +3,7 @@
 #   Name: test_exdf.py
 #   Author: xyy15926
 #   Created: 2025-06-10 19:29:26
-#   Updated: 2025-06-11 11:31:05
+#   Updated: 2025-07-29 16:28:02
 #   Description:
 # ---------------------------------------------------------
 
@@ -300,3 +300,16 @@ def test_agg_on_dfs():
     agg_pname = agg_pconfs.loc[0, "part"]
     mgap = (np.datetime64("today", "M") - np.datetime64("2013-01")).astype(float)
     assert np.all(agg_rets[agg_pname] == mgap)
+
+
+# %%
+def test_dep_from_fconfs():
+    flat_pconfs, flat_fconfs = pboc_flat_confs()
+    trans_pconfs, trans_fconfs = pboc_trans_confs()
+    agg_pconfs, agg_fconfs = pboc_agg_confs()
+    pconfs = pd.concat([flat_pconfs, trans_pconfs, agg_pconfs])
+    fconfs = pd.concat([flat_fconfs, trans_fconfs, agg_fconfs])
+    target = ["r4acc_ms_max1"]
+    deps = dep_from_fconfs(target, fconfs)
+    assert deps["key"].tolist() == ["PD01AD01", "PD01AR01",
+                                    "acc_moi_start", "r4acc_ms_max1"]

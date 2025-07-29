@@ -3,7 +3,7 @@
 #   Name: exdf.py
 #   Author: xyy15926
 #   Created: 2024-11-11 17:04:03
-#   Updated: 2025-07-21 10:49:54
+#   Updated: 2025-07-29 21:36:45
 #   Description:
 # ---------------------------------------------------------
 
@@ -194,6 +194,16 @@ def trans_from_dfs(
     for idx, pconf in pbar_rows:
         part_name = pconf["part"]
         pbar_rows.set_description(f"{part_name} transformation.")
+        # Skip current part with invalid `from_`.
+        if not isinstance(pconf["from_"], list):
+            continue
+        # Or with no valid rules.
+        trans_rules = trans_fconfs.loc[
+            (trans_fconfs["part"] == part_name) & trans_fconfs["trans"].notna(),
+            ["key", "cond", "trans"]
+        ].values
+        if len(trans_rules) == 0:
+            continue
 
         # Determine transformation type.
         if how == "auto":
@@ -217,8 +227,6 @@ def trans_from_dfs(
             joined_df = dfs[pconf["from_"][0]]
 
         # Transform.
-        trans_rules = trans_fconfs.loc[trans_fconfs["part"] == part_name,
-                                       ["key", "cond", "trans"]].values
         tdf = trans_on_df(joined_df, trans_rules, how=trans_how, envp=envp)
 
         # Concat transformation result if `new` is specified, which often ocurrs
@@ -380,7 +388,9 @@ def dep_from_fconfs(
     # Loop until no more dependences updates.
     while len(targets):
         rule_df = fconfs.loc[fconfs["key"].isin(targets)]
-        rules = rule_df[["key", "cond", "trans", "agg"]].values
+        cols = ["key", "cond", "trans", "agg"]
+        cols = [col for col in cols if col in rule_df.columns]
+        rules = rule_df[cols].values
         dep_dict = compile_deps(rules, envp=envp)
         targets = list(chain.from_iterable(dep_dict.values()))
         targets = set(targets) - dep_keys

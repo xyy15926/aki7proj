@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-08 20:59:28
-#   Updated: 2024-12-09 08:39:32
+#   Updated: 2025-07-29 21:43:34
 #   Description:
 # ---------------------------------------------------------
 
@@ -48,6 +48,26 @@ REPAY_STATUS_SPEC = {
     "N": (0  , "正常还款"),
     "Z": (32 , "以资抵债"),
 }
+REPAY_STATUS_SIMP = {
+    "1": (1  , "逾期1-30天"),
+    "2": (2  , "逾期31-60天"),
+    "3": (2  , "逾期61-90天"),
+    "4": (3  , "逾期91-120天"),
+    "5": (3  , "逾期121-150天"),
+    "6": (3  , "逾期151-180天"),
+    "7": (4  , "逾期180天以上"),
+    "*": (0  , "当月不需要还款且之前没有拖欠"),
+    "#": (0  , "未知"),
+    "/": (0  , "跳过"),
+    "A": (0  , "账单日调整,当月不出单"),
+    "B": (4  , "呆账"),
+    "C": (0  , "结清、正常销户"),
+    "D": (2  , "担保人代还"),
+    "G": (4  , "（非正常销户）结束"),
+    "M": (0  , "约定还款日后月底前还款"),
+    "N": (0  , "正常还款"),
+    "Z": (4  , "以资抵债"),
+}
 PBOC_ACC_REPAY_60_MONTHLY = {
     "part": "pboc_acc_repay_60_monthly",
     "desc": "分帐户明细_近60个月还款",
@@ -60,7 +80,9 @@ PBOC_ACC_REPAY_60_MONTHLY = {
         # `acc_repay_status_spec` 需要给默认值 `-1`，否则后续 `cb_min` 逻辑出错，空值赋 8
         ["acc_repay_status_spec", "map(PD01ED01, repay_status_spec, -1)"        , None  , "还款状态"],
         ["acc_repay_status8"    , "cb_max(cb_min(acc_repay_status_spec, 8), 0)" , None  , "还款状态"],
-        ["acc_repay_moi"        , "mon_itvl(PD01ER03, today)"                   , None  , "还款月距今月"]
+        ["acc_repay_moi"        , "mon_itvl(PD01ER03, today)"                   , None  , "还款月距今月"],
+        ["acc_repay_mgap"       , "mon_itvl(today, PD01ER03)"                   , None  , "还款月距今月（正）"],
+        ["acc_repay_status_simp", "map(PD01ED01, repay_status_simp)"            , None  , "还款状态"],
     ],
 }
 
@@ -90,7 +112,7 @@ def repay_status_spec(field: str = "acc_repay_status_spec"):
     return reprs
 
 
-#  %%
+# %%
 SPECIAL_TRANS_TYPE = {
     # 性质逐渐恶劣
     "1": (11        , "展期"),
@@ -478,7 +500,7 @@ GUAR_TYPE = {
     "1": (11        , "质押"),
     "2": (12        , "抵押"),
     "3": (21        , "保证"),
-    "4": (1         , "信用/无担保"),
+    "4": (1         , "信用/无担保"),   # 报文中无 `4`，空值即 `4-信用/无担保`
     "5": (22        , "组合（含保证）"),
     "6": (13        , "组合（不含保证）"),
     "7": (31        , "农户联保"),
@@ -498,67 +520,142 @@ def guar_type(field: str = "acc_guar_type"):
 
 
 # %%
+def set_acc_mark_single_rec(
+    cdr_cat,
+    org_cat,
+    biz_cat,
+    guar_way,
+    acc_amt,
+):
+    if cdr_cat in ("R2", "R3"):
+        if acc_amt <= 1e2:
+            acc_mark = 0
+        elif acc_amt <= 1e4:
+            acc_mark = 1
+        else:
+            acc_mark = 2
+    elif acc_amt <= 1e3:
+        acc_mark = 3
+    elif acc_amt <= 1e4:
+        acc_mark = 4
+    else:
+        non_commerical_loan = {
+            "11", "12", "13",
+            "31", "32", "33",
+            "41", "42", "51", "52"
+        }
+        if biz_cat in non_commerical_loan:
+            acc_mark = 5
+        else:
+            if acc_amt <= 5e4:
+                if guar_way == "4":
+                    acc_mark = 6
+                else:
+                    acc_mark = 7
+            else:
+                if guar_way == "4":
+                    acc_mark = 8
+                else:
+                    acc_mark = 9
+    return acc_mark
+
+
+def set_acc_mark(acc_info):
+    # cdr_cat = acc_info["PD01AD01"]
+    # org_cat = acc_info["PD01AD02"].fillna("22")
+    # biz_cat = acc_info["PD01AD03"].fillna("93")
+    # guar_way = acc_info["PD01AD07"].fillna("4")
+    # acc_amt = acc_info["PD01AJ01"].fillna(acc_info["PD01AJ02"])
+    import pandas as pd
+
+    ret = acc_info.apply(
+        lambda x: set_acc_mark_single_rec(
+            x["PD01AD01"],
+            x["PD01AD02"] if pd.notna(x["PD01AD02"]) else "22",
+            x["PD01AD03"] if pd.notna(x["PD01AD03"]) else "93",
+            x["PD01AD07"] if pd.notna(x["PD01AD07"]) else "4",
+            x["PD01AJ01"] if pd.notna(x["PD01AJ01"]) else x["PD01AJ02"],
+        ), axis=1
+    )
+    return ret
+
+
+# %%
+# 账户信息
 PBOC_ACC_INFO_BASIC = [
-    # 账户信息
-    ["acc_cat"                      , "map(PD01AD01, cdr_cat)"                      , None  , "账户类型"],
-    ["acc_org_cat"                  , "map(PD01AD02, org_cat)"                      , None  , "管理机构类型"],
-    ["acc_biz_cat"                  , "map(PD01AD03, biz_cat)"                      , None  , "账户业务类型"],
-    ["acc_repay_freq"               , "map(PD01AD06, repay_freq)"                   , None  , "D1R41账户还款频率"],
-    ["acc_trans_status"             , "map(PD01AD10, trans_status)"                 , None  , "C1账户转移时状态"],
-    ["acc_moi_range"                , "mon_itvl(PD01AR02, PD01AR01)"                , None  , "账户预期月数"],
-    ["acc_moi_start"                , "mon_itvl(PD01AR01, today)"                   , None  , "账户起始距今月"],
-    ["acc_doi_start"                , "day_itvl(PD01AR01, today)"                   , None  , "账户起始距今日"],
-    ["acc_moi_end"                  , "mon_itvl(PD01AR02, today)"                   , None  , "账户（预期）结束距今月"],    # Mixed: mixed_acc_moi_folw
-    ["acc_guar_type"                , "map(PD01AD07, guar_type)"                    , None  , "账户担保方式"],
-    ["acc_lmt"                      , "cb_fst(cb_fst(PD01AJ01, PD01AJ02), PD01AJ03)", None  , "账户借款、授信额"],
+    ["acc_cat"                  , "map(PD01AD01, cdr_cat)"                      , None  , "账户类型"],
+    ["acc_org_cat"              , "map(PD01AD02, org_cat)"                      , None  , "管理机构类型"],
+    ["acc_biz_cat"              , "map(PD01AD03, biz_cat)"                      , None  , "账户业务类型"],
+    ["acc_repay_freq"           , "map(PD01AD06, repay_freq)"                   , None  , "D1R41账户还款频率"],
+    ["acc_trans_status"         , "map(PD01AD10, trans_status)"                 , None  , "C1账户转移时状态"],
+    ["acc_moi_range"            , "mon_itvl(PD01AR02, PD01AR01)"                , None  , "账户预期月数"],
+    ["acc_moi_start"            , "mon_itvl(PD01AR01, today)"                   , None  , "账户起始距今月"],
+    ["acc_mgap_start"           , "mon_itvl(today, PD01AR01)"                   , None  , "账户起始距今月（正）"],
+    ["acc_doi_start"            , "day_itvl(PD01AR01, today)"                   , None  , "账户起始距今日"],
+    # Mixed: mixed_acc_moi_folw
+    ["acc_moi_end"              , "mon_itvl(PD01AR02, today)"                   , None  , "账户（预期）结束距今月"],
+    ["acc_guar_type"            , "map(PD01AD07, guar_type, 1)"                 , None  , "账户担保方式"],
+    ["acc_lmt"                  , "cb_fst(cb_fst(PD01AJ01, PD01AJ02), PD01AJ03)", None  , "账户借款、授信额"],
 ]
+# 最新表现
 PBOC_ACC_INFO_LATEST = [
-    # 最新表现
-    ["cur_acc_status"       , "map(PD01BD01, c1_acc_status)"    , "acc_cat == 99"                   , "最近状态"],          # Mixed: mixed_acc_status
-    ["cur_acc_status"       , "map(PD01BD01, d1_acc_status)"    , "acc_cat == 1"                    , "最近状态"],          # Mixed: mixed_acc_status
-    ["cur_acc_status"       , "map(PD01BD01, r4_acc_status)"    , "acc_cat == 2"                    , "最近状态"],          # Mixed: mixed_acc_status
-    ["cur_acc_status"       , "map(PD01BD01, r1_acc_status)"    , "acc_cat == 3"                    , "最近状态"],          # Mixed: mixed_acc_status
-    ["cur_acc_status"       , "map(PD01BD01, r23_acc_status)"   , "(acc_cat >= 4) & (acc_cat <= 5)" , "最近状态"],          # Mixed: mixed_acc_status
-    ["cur_lvl5_status"      , "map(PD01BD03, lvl5_status)"      , None                              , "最近5级分类"],       # Mixed: mixed_lvl5_status
-    ["cur_repay_status"     , "map(PD01BD04, repay_status)"     , None                              , "最近还款状态"],
-    ["cur_moi_closed"       , "mon_itvl(PD01BR01, today)"       , None                              , "最近关闭时间"],      # Mixed: mixed_acc_moi_folw
-    ["cur_doi_last_repay"   , "day_itvl(PD01BR02, today)"       , None                              , "最近还款距今日"],    # Mixed: mixed_doi_last_repay
-    ["cur_doi_report"       , "day_itvl(PD01BR03, today)"       , None                              , "最近报告日期距今日"],# Mixed: mixed_doi_report
+    # Mixed: mixed_acc_status
+    ["cur_acc_status"           , "map(PD01BD01, c1_acc_status)"    , "acc_cat == 99"                   , "最近状态"],
+    ["cur_acc_status"           , "map(PD01BD01, d1_acc_status)"    , "acc_cat == 1"                    , "最近状态"],
+    ["cur_acc_status"           , "map(PD01BD01, r4_acc_status)"    , "acc_cat == 2"                    , "最近状态"],
+    ["cur_acc_status"           , "map(PD01BD01, r1_acc_status)"    , "acc_cat == 3"                    , "最近状态"],
+    ["cur_acc_status"           , "map(PD01BD01, r23_acc_status)"   , "(acc_cat >= 4) & (acc_cat <= 5)" , "最近状态"],
+    # Mixed: mixed_lvl5_status
+    ["cur_lvl5_status"          , "map(PD01BD03, lvl5_status)"      , None                              , "最近5级分类"],
+    ["cur_repay_status"         , "map(PD01BD04, repay_status)"     , None                              , "最近还款状态"],
+    # Mixed: mixed_acc_moi_folw
+    ["cur_moi_closed"           , "mon_itvl(PD01BR01, today)"       , None                              , "最近关闭时间"],
+    # Mixed: mixed_doi_last_repay
+    ["cur_doi_last_repay"       , "day_itvl(PD01BR02, today)"       , None                              , "最近还款距今日"],
+    # Mixed: mixed_doi_report
+    ["cur_doi_report"           , "day_itvl(PD01BR03, today)"       , None                              , "最近报告日期距今日"],
 ]
+# 月度表现
 PBOC_ACC_INFO_MONTHLY = [
-    # 月度表现
-    ["monthly_acc_status"       , "map(PD01CD01, d1_acc_status)"    , "acc_cat == 1"                    , "月度状态"],          # Mixed: mixed_acc_status
-    ["monthly_acc_status"       , "map(PD01CD01, r4_acc_status)"    , "acc_cat == 2"                    , "月度状态"],          # Mixed: mixed_acc_status
-    ["monthly_acc_status"       , "map(PD01CD01, r1_acc_status)"    , "acc_cat == 3"                    , "月度状态"],          # Mixed: mixed_acc_status
-    ["monthly_acc_status"       , "map(PD01CD01, r23_acc_status)"   , "(acc_cat >= 4) & (acc_cat <= 5)" , "月度状态"],          # Mixed: mixed_acc_status
-    ["monthly_lvl5_status"      , "map(PD01CD02, lvl5_status)"      , None                              , "月度5级分类"],       # Mixed: mixed_lvl5_status
-    ["monthly_doi_last_repay"   , "day_itvl(PD01CR03, today)"       , None                              , "月度还款距今日"],    # Mixed: mixed_doi_last_repay
-    ["monthly_doi_report"       , "day_itvl(PD01CR01, today)"       , None                              , "月度报告日期距今日"],# Mixed: mixed_doi_report
+    # Mixed: mixed_acc_status
+    ["monthly_acc_status"       , "map(PD01CD01, d1_acc_status)"    , "acc_cat == 1"                    , "月度状态"],
+    ["monthly_acc_status"       , "map(PD01CD01, r4_acc_status)"    , "acc_cat == 2"                    , "月度状态"],
+    ["monthly_acc_status"       , "map(PD01CD01, r1_acc_status)"    , "acc_cat == 3"                    , "月度状态"],
+    ["monthly_acc_status"       , "map(PD01CD01, r23_acc_status)"   , "(acc_cat >= 4) & (acc_cat <= 5)" , "月度状态"],
+    # Mixed: mixed_lvl5_status
+    ["monthly_lvl5_status"      , "map(PD01CD02, lvl5_status)"      , None                              , "月度5级分类"],
+    # Mixed: mixed_doi_last_repay
+    ["monthly_doi_last_repay"   , "day_itvl(PD01CR03, today)"       , None                              , "月度还款距今日"],
+    # Mixed: mixed_doi_report
+    ["monthly_doi_report"       , "day_itvl(PD01CR01, today)"       , None                              , "月度报告日期距今日"],
     ["monthly_usd_ppor"         , "sdiv(PD01CJ02, acc_lmt)"         , None                              , "月度额度使用率"],
     ["last_6m_avg_usd"          , "cb_fst(PD01CJ12, PD01CJ13)"      , None                              , "R23账户最近6月平均透支额"],
     ["last_6m_max_usd"          , "cb_fst(PD01CJ14, PD01CJ15)"      , None                              , "R23账户最近6月最大透支额"],
 ]
+# 最新表现、月度表现根据说明文档混合
 PBOC_ACC_INFO_MIXED = [
-    # 最新表现、月度表现根据说明文档混合
     # ["mixed_acc_moi_folw"       , "mon_itvl(cb_fst(PD01BR01, PD01AR02), today)"         , None  , "账户关闭距今月"],
-    ["mixed_acc_status"         , "cb_fst(cur_acc_status, monthly_acc_status)"          , None  , "账户状态"],
-    ["mixed_lvl5_status"        , "cb_max(cur_lvl5_status, monthly_lvl5_status)"        , None  , "账户5级分类"],
-    ["mixed_ots"                , "cb_min(PD01BJ01, PD01CJ01)"                          , None  , "账户余额"],
-    ["mixed_last_repay_amt"     , "cb_fst(PD01BJ02, PD01CJ05)"                          , None  , "最近实还款"],
-    ["mixed_doi_last_repay"     , "cb_min(cur_doi_last_repay, monthly_doi_last_repay)"  , None  , "最近还款距今日"],
-    ["mixed_doi_report"         , "cb_min(cur_doi_report, monthly_doi_report)"          , None  , "报告时间"],
+    ["mixed_acc_status"         , "cb_fst(cur_acc_status, monthly_acc_status)"                  , None                  , "账户状态"],
+    ["mixed_lvl5_status"        , "cb_max(cur_lvl5_status, monthly_lvl5_status)"                , None                  , "账户5级分类"],
+    ["mixed_ots"                , "cb_min(PD01BJ01, PD01CJ01)"                                  , None                  , "账户余额"],
+    ["mixed_last_repay_amt"     , "cb_fst(PD01BJ02, PD01CJ05)"                                  , None                  , "最近实还款"],
+    ["mixed_doi_last_repay"     , "cb_min(cur_doi_last_repay, monthly_doi_last_repay)"          , None                  , "最近还款距今日"],
+    ["mixed_doi_report"         , "cb_min(cur_doi_report, monthly_doi_report)"                  , None                  , "报告时间"],
     # 按月应还 - 包含已结清
-    # TODO: 即使 `acc_repay_freq == 3` 按月还款，`PD01AS01`、`PD01CS01` 还款期数、剩余还款期数依然可能为空
-    ["alle_mon"                     , "PD01AS01"                                                    , "acc_repay_freq == 3" , "全部还款期数（月）"],
-    ["alle_mon"                     , "cb_max(mon_itvl(cb_fst(PD01AR02, PD01BR01), PD01AR01), 1)"   , "acc_repay_freq != 3" , "全部还款期数（月）"],
-    ["mixed_alle_monthly_repay"     , "sdiv(PD01AJ01, alle_mon)"                                    , "acc_cat <= 2"        , "D1R4全周期按月应还款"],
+    # TODO: 即使 `acc_repay_freq==3` 按月还款，`PD01AS01`、`PD01CS01` 还款期数、剩余还款期数依然可能为空
+    ["alle_mon"                 , "PD01AS01"                                                    , "acc_repay_freq == 3" , "全部还款期数（月）"],
+    ["alle_mon"                 , "cb_max(mon_itvl(cb_fst(PD01AR02, PD01BR01), PD01AR01), 1)"   , "acc_repay_freq != 3" , "全部还款期数（月）"],
+    ["mixed_alle_monthly_repay" , "sdiv(PD01AJ01, alle_mon)"                                    , "acc_cat <= 2"        , "D1R4全周期按月应还款"],
     # 按月应还
-    ["folw_mon"                     , "PD01CS01"                                                    , "acc_repay_freq == 3" , "剩余还款期数（月）"],
-    ["folw_mon"                     , "cb_max(mon_itvl(PD01AR02, cb_max(PD01CR01, PD01CR04)), 1)"   , "acc_repay_freq != 3" , "剩余还款期数（月）"],
-    # D1R41 月负债：按月还款账户直接取 `PD01CJ04-本月应还款`，否则直接按月直接除
-    ["mixed_folw_monthly_repay_"    , "cb_max(PD01CJ04, sdiv(PD01CJ01, folw_mon))"                  , "acc_cat <= 3"        , "D1R41按月应还款"],
-    ["mixed_folw_monthly_repay"     , "cb_fst(mixed_folw_monthly_repay_, mixed_alle_monthly_repay)" , "acc_cat <= 3"        , "D1R41按月应还款"],
-    ["mixed_folw_monthly_repay"     , "cb_max(PD01CJ04, smul(PD01CJ12, 0.1))"                       , "acc_cat == 4"        , "R2按月应还款"],
+    ["folw_mon"                 , "PD01CS01"                                                    , "acc_repay_freq == 3" , "剩余还款期数（月）"],
+    ["folw_mon"                 , "cb_max(mon_itvl(PD01AR02, cb_max(PD01CR01, PD01CR04)), 1)"   , "acc_repay_freq != 3" , "剩余还款期数（月）"],
+    # D1R41 月负债：按月还款账户取 `PD01CJ04-本月应还款`，否则直接按月直接除
+    ["mixed_folw_monthly_repay_", "cb_max(PD01CJ04, sdiv(PD01CJ01, folw_mon))"                  , "acc_cat <= 3"        , "D1R41按月应还款"],
+    ["mixed_folw_monthly_repay" , "cb_fst(mixed_folw_monthly_repay_, mixed_alle_monthly_repay)" , "acc_cat <= 3"        , "D1R41按月应还款"],
+    ["mixed_folw_monthly_repay" , "cb_max(PD01CJ04, smul(PD01CJ12, 0.1))"                       , "acc_cat == 4"        , "R2按月应还款"],
+]
+PBOC_ACC_UNION_INFO = [
+    ["acc_mark"                 , "set_acc_mark(_)"                                             , None                  , "账户综合标签"],
 ]
 PBOC_ACC_INFO = {
     "part": "pboc_acc_info",
@@ -567,10 +664,13 @@ PBOC_ACC_INFO = {
     "prikey": ["rid", "certno", "accid"],
     "from_": ["pboc_acc_info"],
     "joinkey": None,
-    "trans": (PBOC_ACC_INFO_BASIC
-              + PBOC_ACC_INFO_LATEST
-              + PBOC_ACC_INFO_MONTHLY
-              + PBOC_ACC_INFO_MIXED)
+    "trans": (
+        PBOC_ACC_INFO_BASIC
+        + PBOC_ACC_INFO_LATEST
+        + PBOC_ACC_INFO_MONTHLY
+        + PBOC_ACC_INFO_MIXED
+        + PBOC_ACC_UNION_INFO
+    )
 }
 
 
@@ -1038,6 +1138,7 @@ PBOC_COMPANY = {
 MAPPERS = {
     "repay_status"                      : REPAY_STATUS,
     "repay_status_spec"                 : REPAY_STATUS_SPEC,
+    "repay_status_simp"                 : REPAY_STATUS_SIMP,
     "special_trans_type"                : SPECIAL_TRANS_TYPE,
     "special_accd_type"                 : SPECIAL_ACCD_TYPE,
     "biz_cat"                           : BIZ_CAT,
@@ -1076,6 +1177,7 @@ MAPPERS = {
 
 MAPPERS_CODE = {k: {kk: vv[0] for kk, vv in v.items()}
                 for k, v in MAPPERS.items()}
+MAPPERS_CODE["set_acc_mark"] = set_acc_mark
 MAPPERS_CHN = {k: {kk: vv[1] for kk, vv in v.items()}
                for k, v in MAPPERS.items()}
 
