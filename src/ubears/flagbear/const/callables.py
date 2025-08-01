@@ -3,7 +3,7 @@
 #   Name: callables.py
 #   Author: xyy15926
 #   Created: 2025-01-14 21:41:50
-#   Updated: 2025-02-25 12:03:25
+#   Updated: 2025-07-31 21:37:48
 #   Description:
 # ---------------------------------------------------------
 
@@ -237,11 +237,38 @@ def get_hour(x: Sequence):
 
 
 # %%
-def map(x: Sequence,
-        ref: Mapping | Callable,
-        z: Any = np.nan):
-    ret = ([ref.get(ele, z) for ele in x] if hasattr(ref, "get")
-           else [ref(ele) for ele in x])
+def map(*args):
+    """Map the arguments with provided callables or dict.
+
+    Params:
+    ---------------------
+    args[-1]: Default value if not callable or a dict.
+    args[-2] or args[-1]: Callables or dict as mapping references.
+    args[:-2] or args[:-1]: Seqences to be zipped and mapped sequently.
+
+    Return:
+    ---------------------
+    Mapping result.
+    """
+    if isinstance(args[-1], Callable) or isinstance(args[-1], dict):
+        *args, ref = args
+        # Use `np.nan` as default instead of `None` to prevent the numeric
+        # result from being casted into object.
+        default = np.nan
+    elif isinstance(args[-2], Callable) or isinstance(args[-2], dict):
+        *args, ref, default = args
+    else:
+        raise ValueError("No valid mapping reference is provided.")
+
+    if isinstance(ref, dict):
+        assert len(args) == 1, "Invalid mapping source."
+        ret = [ref.get(ele, default) for ele in args[0]]
+    else:
+        if len(args) == 1:
+            ret = [ref(ele) for ele in args[0]]
+        else:
+            ret = [ref(*ele) for ele in zip(*args)]
+
     return np.asarray(ret)
 
 

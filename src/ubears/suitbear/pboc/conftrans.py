@@ -3,7 +3,7 @@
 #   Name: conftrans.py
 #   Author: xyy15926
 #   Created: 2024-09-08 20:59:28
-#   Updated: 2025-07-29 21:43:34
+#   Updated: 2025-07-31 22:03:25
 #   Description:
 # ---------------------------------------------------------
 
@@ -281,6 +281,7 @@ BIZ_CAT = {
     # 代偿
     "B1": (611      , "代偿债务"),
 }
+BIZ_CAT_DEFAULT = 411
 
 
 def biz_cat(field: str):
@@ -324,6 +325,7 @@ ORG_CAT = {
     "52": (98       , "公积金管理中心"),
     "99": (99       , "其他机构"),
 }
+ORG_CAT_DEFAULT = 22
 
 
 def org_cat(field: str):
@@ -520,72 +522,49 @@ def guar_type(field: str = "acc_guar_type"):
 
 
 # %%
-def set_acc_mark_single_rec(
+def set_acc_mark(
     cdr_cat,
     org_cat,
     biz_cat,
     guar_way,
     acc_amt,
 ):
-    if cdr_cat in ("R2", "R3"):
-        if acc_amt <= 1e2:
-            acc_mark = 0
-        elif acc_amt <= 1e4:
-            acc_mark = 1
-        else:
-            acc_mark = 2
-    elif acc_amt <= 1e3:
-        acc_mark = 3
+    # C1
+    if cdr_cat == 99:
+        acc_mark = 0
+    # R23
+    elif cdr_cat in (4, 5):
+        acc_mark = (
+            1 if acc_amt <= 1e2
+            else 2 if acc_amt <= 1e4
+            else 3
+        )
+    # D1R41 with small credit.
     elif acc_amt <= 1e4:
-        acc_mark = 4
-    else:
-        non_commerical_loan = {
-            "11", "12", "13",
-            "31", "32", "33",
-            "41", "42", "51", "52"
-        }
-        if biz_cat in non_commerical_loan:
+        acc_mark = 4 if acc_amt <= 1e3 else 5
+    # D1R4 with larger credit.
+    elif cdr_cat in (1, 2):
+        # Non-commercial loans.
+        if biz_cat < 150 and biz_cat != 121:
             acc_mark = 5
+        # Commercial loans.
         else:
-            if acc_amt <= 5e4:
-                if guar_way == "4":
-                    acc_mark = 6
-                else:
-                    acc_mark = 7
+            if guar_way == 1:
+                acc_mark = 6 if acc_amt <= 5e4 else 7
             else:
-                if guar_way == "4":
-                    acc_mark = 8
-                else:
-                    acc_mark = 9
+                acc_mark = 8 if acc_amt <= 5e4 else 9
+    # R1 with larger credit.
+    else:
+        acc_mark = 10
     return acc_mark
-
-
-def set_acc_mark(acc_info):
-    # cdr_cat = acc_info["PD01AD01"]
-    # org_cat = acc_info["PD01AD02"].fillna("22")
-    # biz_cat = acc_info["PD01AD03"].fillna("93")
-    # guar_way = acc_info["PD01AD07"].fillna("4")
-    # acc_amt = acc_info["PD01AJ01"].fillna(acc_info["PD01AJ02"])
-    import pandas as pd
-
-    ret = acc_info.apply(
-        lambda x: set_acc_mark_single_rec(
-            x["PD01AD01"],
-            x["PD01AD02"] if pd.notna(x["PD01AD02"]) else "22",
-            x["PD01AD03"] if pd.notna(x["PD01AD03"]) else "93",
-            x["PD01AD07"] if pd.notna(x["PD01AD07"]) else "4",
-            x["PD01AJ01"] if pd.notna(x["PD01AJ01"]) else x["PD01AJ02"],
-        ), axis=1
-    )
-    return ret
 
 
 # %%
 # 账户信息
 PBOC_ACC_INFO_BASIC = [
     ["acc_cat"                  , "map(PD01AD01, cdr_cat)"                      , None  , "账户类型"],
-    ["acc_org_cat"              , "map(PD01AD02, org_cat)"                      , None  , "管理机构类型"],
-    ["acc_biz_cat"              , "map(PD01AD03, biz_cat)"                      , None  , "账户业务类型"],
+    ["acc_org_cat"              , "map(PD01AD02, org_cat, ORG_CAT_DEFAULT)"     , None  , "管理机构类型"],
+    ["acc_biz_cat"              , "map(PD01AD03, biz_cat, BIZ_CAT_DEFAULT)"     , None  , "账户业务类型"],
     ["acc_repay_freq"           , "map(PD01AD06, repay_freq)"                   , None  , "D1R41账户还款频率"],
     ["acc_trans_status"         , "map(PD01AD10, trans_status)"                 , None  , "C1账户转移时状态"],
     ["acc_moi_range"            , "mon_itvl(PD01AR02, PD01AR01)"                , None  , "账户预期月数"],
@@ -655,7 +634,7 @@ PBOC_ACC_INFO_MIXED = [
     ["mixed_folw_monthly_repay" , "cb_max(PD01CJ04, smul(PD01CJ12, 0.1))"                       , "acc_cat == 4"        , "R2按月应还款"],
 ]
 PBOC_ACC_UNION_INFO = [
-    ["acc_mark"                 , "set_acc_mark(_)"                                             , None                  , "账户综合标签"],
+    ["acc_mark"         , "map(acc_cat, acc_org_cat, acc_biz_cat, acc_guar_type, acc_lmt, set_acc_mark)"    , None      , "账户综合标签"],
 ]
 PBOC_ACC_INFO = {
     "part": "pboc_acc_info",
@@ -1178,6 +1157,8 @@ MAPPERS = {
 MAPPERS_CODE = {k: {kk: vv[0] for kk, vv in v.items()}
                 for k, v in MAPPERS.items()}
 MAPPERS_CODE["set_acc_mark"] = set_acc_mark
+MAPPERS_CODE["BIZ_CAT_DEFAULT"] = BIZ_CAT_DEFAULT
+MAPPERS_CODE["ORG_CAT_DEFAULT"] = ORG_CAT_DEFAULT
 MAPPERS_CHN = {k: {kk: vv[1] for kk, vv in v.items()}
                for k, v in MAPPERS.items()}
 

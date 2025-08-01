@@ -3,7 +3,7 @@
 #   Name: test_callables.py
 #   Author: xyy15926arruns
 #   Created: 2025-02-20 18:56:36
-#   Updated: 2025-02-25 14:08:03
+#   Updated: 2025-07-31 22:05:26
 #   Description:
 # ---------------------------------------------------------
 
@@ -587,7 +587,7 @@ def test_sortby():
 
 
 # %%
-def test_maps():
+def test_map():
     ref = dict(zip("abcde", range(1, 6)))
 
     def refcall(ele):
@@ -600,6 +600,7 @@ def test_maps():
     x = ["a", "c", "d", "e", "b", None, "NA"]
     ret = map(x, ref)
     assert np.all(np.isclose(ret, [1, 3, 4, 5, 2, np.nan, np.nan], equal_nan=True))
+    assert np.issubdtype(ret.dtype, np.floating)
     ret = map(x, ref, None)
     assert np.all(ret == [1, 3, 4, 5, 2, None, None])
     ret = map(x, refcall)
@@ -646,6 +647,43 @@ def test_maps():
     ret = envp.bind_env(env).parse("map(x, refcall)")
     assert np.all(np.isclose(ret, [1, 3, 4, 5, 2, 7, 7], equal_nan=True))
 
+
+# %%
+def test_map_with_multiple_seqs():
+    def refcall(x, y):
+        return x + y
+
+    x = list(range(5))
+    y = list(range(5, 10))
+    env = dict(x=x, y=y)
+    envp = EnvParser({"refcall": refcall})
+    ret = envp.bind_env(env).parse("map(x, y, refcall)")
+    assert np.all(ret == list(range(5, 14, 2)))
+
+    x = np.arange(5)
+    y = np.arange(5, 10)
+    env = dict(x=x, y=y)
+    envp = EnvParser({"refcall": refcall})
+    ret = envp.bind_env(env).parse("map(x, y, refcall)")
+    assert np.all(ret == list(range(5, 14, 2)))
+
+    x = np.arange(5)
+    y = np.arange(5, 10)
+    env = dict(x=pd.Series(x), y=pd.Series(y))
+    envp = EnvParser({"refcall": refcall})
+    ret = envp.bind_env(env).parse("map(x, y, refcall)")
+    assert np.all(ret == list(range(5, 14, 2)))
+
+
+# %%
+def test_sep_map():
+    ref = dict(zip("abcde", range(1, 6)))
+
+    def refcall(ele):
+        refi = dict(zip("abcde", range(1, 6)))
+        return refi.get(ele, 7)
+
+    envp = EnvParser({"ref": ref, "refcall": refcall})
     # Seperate map.
     x = ["a,b,c,d,e,na,g", "a,g,c", "g"]
     ret = sep_map(x, ref)
