@@ -3,7 +3,7 @@
 #   Name: test_vae.py
 #   Author: xyy15926
 #   Created: 2025-09-02 09:16:19
-#   Updated: 2025-09-03 23:36:07
+#   Updated: 2025-09-03 23:36:47
 #   Description:
 # ---------------------------------------------------------
 
@@ -88,7 +88,7 @@ def test_VAEBase():
     vaeb = VAEBase(lat_sz, enc_out_sz, enc, dec)
 
     # Specify latent mu for each digit.
-    mu_emb = nn.Embedding(lat_sz)
+    mu_emb = nn.Embedding(10, lat_sz)
     opt = optim.Adam(vaeb.parameters())
     # opt.add_param_group({"params": mu_emb.parameters()})
 
