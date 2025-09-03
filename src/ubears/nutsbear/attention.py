@@ -3,7 +3,7 @@
 #   Name: attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 12:01:06
-#   Updated: 2025-07-26 18:18:29
+#   Updated: 2025-08-04 09:08:11
 #   Description:
 # ---------------------------------------------------------
 
@@ -65,7 +65,10 @@ class RotaryPE(nn.Module):
 
     Ref:
     -------------------------------
-    - RePE: https://www.zhihu.com/tardis/bd/art/647109286
+    - RoPE:
+      - https://www.zhihu.com/tardis/bd/art/647109286
+      - https://arxiv.org/pdf/2104.09864
+      - https://zhuanlan.zhihu.com/p/359502624
 
     Attrs:
     -------------------------------
@@ -77,16 +80,14 @@ class RotaryPE(nn.Module):
 
     Shape:
     -------------------------------
-    cos_cache: [cur_len, embed_sz]
-    sin_cache: [cur_len, embed_sz]
+    cos_cache: [..., cur_len, embed_sz]
+    sin_cache: [..., cur_len, embed_sz]
     """
 
     def __init__(
         self,
         embed_sz: int,
         bot: float = 1e4,
-        device: str = None,
-        dtype: str = None,
     ):
         """Init Module.
         """
@@ -94,8 +95,8 @@ class RotaryPE(nn.Module):
         self.embed_sz = embed_sz
         self._bot = bot
         self.cur_len = 0
-        self.cos_cache = torch.tensor([])
-        self.sin_cache = torch.tensor([])
+        self.cos_cache = nn.Buffer(persistent=False)
+        self.sin_cache = nn.Buffer(persistent=False)
 
     def forward(self, x: torch.Tensor, pos: torch.Tensor = None):
         """

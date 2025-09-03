@@ -3,7 +3,7 @@
 #   Name: trainer.py
 #   Author: xyy15926
 #   Created: 2025-07-08 09:02:04
-#   Updated: 2025-07-22 11:06:04
+#   Updated: 2025-09-03 17:59:34
 #   Description:
 # ---------------------------------------------------------
 
@@ -72,10 +72,12 @@ class Trainer:
         -------------------------
         mod: Module instance.
         loss_fn: Loss function.
+          Signature: loss_fn(mod, *data_iter)
         optimizer: Optimizer.
         mod_name: Name of current module instance.
           For `TensorBoard.SummaryWriter` to record the training process.
         pred_fn: Prediction function.
+          Signature: pred_fn(prediction, *data_iter)
           1. Accept `self.mod` and the unpacked iteration value, except the last
             one as label, from the Dataloader and return the prediction.
           2. The `mod.__forward__` will be used as the default.
@@ -144,9 +146,12 @@ class Trainer:
         self,
         dloader: DataLoader,
         epoch_n: int = 1,
-        log_batchn: int = None,
+        log_batchn: int = 1,
     ):
         """Fit the module.
+
+        1. `self.batch_n` will be set after first first epoch if can't be get
+          from `dloader` directly.
 
         Params:
         -------------------------
