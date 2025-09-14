@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+# ---------------------------------------------------------
+#   Name: test_autoencoder.py
+#   Author: xyy15926
+#   Created: 2025-09-02 09:16:19
+#   Updated: 2025-09-11 10:23:49
+#   Description:
+# ---------------------------------------------------------
+
+# %%
+import pytest
+import numpy as np
+import torch
+from torch import nn, optim
+from torch.nn import functional as F
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+from torchvision.utils import save_image
+
+if __name__ == "__main__":
+    from importlib import reload
+    from ubears.nutsbear import autoencoder
+    from ubears.nutsbear import trainer
+    reload(autoencoder)
+    reload(trainer)
+
+from ubears.nutsbear.autoencoder import VAEBase
+from ubears.nutsbear.trainer import Trainer
+from ubears.flagbear.slp.finer import get_tmp_path, get_assets_path
+
+
+# %%
+class MNISTEnc(nn.Module):
+    def __init__(
+        self,
+        inp_sz: int = (1, 28, 28),
+        oup_sz: int = 128,
+    ):
+        super().__init__()
+        self.fc1 = nn.Linear(np.multiply.reduce(inp_sz), oup_sz)
+
+    def forward(self, inp):
+        inp = inp.flatten(1, -1)
+        oup = F.relu(self.fc1(inp))
+        return oup
+
+
+class MNISTDec(nn.Module):
+    def __init__(
+        self,
+        inp_sz: int = 128,
+        oup_sz: int = (1, 28, 28),
+    ):
+        super().__init__()
+        fsz = np.multiply.reduce(oup_sz)
+        self.fc1 = nn.Linear(inp_sz, fsz)
+        self.fc2 = nn.Linear(fsz, fsz)
+        self.oup_sz = oup_sz
+
+    def forward(self, inp):
+        oup = F.relu(self.fc1(inp))
+        oup = F.sigmoid(self.fc2(oup))
+        return oup.view(-1, *self.oup_sz)
+
+
+# %%
+@pytest.mark.skip(reason="Time comsuming.")
+def test_VAEBase():
+    bsz = 100
+    mnist = datasets.MNIST(
+        get_assets_path() / "images",
+        train=True,
+        download=True,
+        transform=transforms.ToTensor()
+    )
+    train_loader = DataLoader(
+        mnist,
+        batch_size=bsz,
+        shuffle=True,
+    )
+
+    lat_sz = 10
+    enc_out_sz = 256
+    mnist_sz = 1, 28, 28
+    enc = MNISTEnc(mnist_sz, enc_out_sz)
+    dec = MNISTDec(lat_sz, mnist_sz)
+    vaeb = VAEBase(lat_sz, enc_out_sz, enc, dec)
+
+    # Specify latent mu for each digit.
+    mu_emb = nn.Embedding(10, lat_sz)
+    opt = optim.Adam(vaeb.parameters())
+    opt.add_param_group({"params": mu_emb.parameters()})
+
+    # x, y = next(iter(train_loader))
+    # recon, mu, logsig = vaeb(x)
+    # mu_ = mu_emb[y]
+    # loss = VAEBase.vae_loss(recon, x, mu, logsig, mu_)
+
+    def pred_loss_fn(mod, x, y):
+        recon, mu, logsig = mod(x)
+        mu_ = mu_emb(y)
+        loss, ce, kl = VAEBase.vae_loss(recon, x, mu, logsig, mu_)
+        return loss, {"CE": ce, "KLD": kl}
+
+    trainer = Trainer(
+        vaeb,
+        pred_loss_fn,
+        opt,
+        "vaetest",
+    )
+    trainer.fit(train_loader, 1, 10)
+
+    with torch.no_grad():
+        sample = torch.randn(10, 10, lat_sz)
+        sample = sample + mu_emb.weight.unsqueeze(1)
+        sample = vaeb.decode(sample)
+        save_image(
+            sample,
+            get_tmp_path() / "torch/vaeimg.png",
+            nrow=10,
+        )

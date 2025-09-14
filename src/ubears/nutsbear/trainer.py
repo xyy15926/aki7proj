@@ -3,7 +3,7 @@
 #   Name: trainer.py
 #   Author: xyy15926
 #   Created: 2025-07-08 09:02:04
-#   Updated: 2025-09-03 17:59:34
+#   Updated: 2025-09-14 23:47:22
 #   Description:
 # ---------------------------------------------------------
 
@@ -61,38 +61,32 @@ class Trainer:
     def __init__(
         self,
         mod: nn.Module,
-        loss_fn: "nn.Function",
+        pred_loss_fn: "nn.Function",
         optimizer: optim.Optimizer = None,
         mod_name: str = None,
-        pred_fn: Callable = None,
     ):
         """Init trainer.
 
         Params:
         -------------------------
         mod: Module instance.
-        loss_fn: Loss function.
-          Signature: loss_fn(mod, *data_iter)
+        pred_loss_fn: Loss function.
+          Signature: pred_loss_fn(mod, *data_iter) -> loss, {tag: value}
+          1. Accept `self.mod` and the unpacked iteration value from the
+            Dataloader to predict and calculate the loss.
+          2. Return loss and and optional key-value for log.
         optimizer: Optimizer.
         mod_name: Name of current module instance.
           For `TensorBoard.SummaryWriter` to record the training process.
-        pred_fn: Prediction function.
+        pred_loss_fn: Prediction function.
           Signature: pred_fn(prediction, *data_iter)
-          1. Accept `self.mod` and the unpacked iteration value, except the last
-            one as label, from the Dataloader and return the prediction.
-          2. The `mod.__forward__` will be used as the default.
-          3. If `pred_fn` provided, the `loss_fn` may should be provided
-            because the iteration value from the DataLoader won't be treated
-            as `(*features, label)` automatically, namely `(ret, *iteration)`
-            will provided as `loss_fn`'s arguments instead of `(ret, label)`.
         """
         self.mod = mod
-        self.loss_fn = loss_fn
-        self.pred_fn = pred_fn
+        self.pred_loss_fn = pred_loss_fn
         self.optimizer = (optim.Adam(mod.parameters())
                           if optimizer is None else optimizer)
         if mod_name is not None:
-            self.mod_name = f"{mod.__class__.__name__}_{mod_name}"
+            self.mod_name = mod_name
             absp = get_tmp_path() / self.mod_name
             self.tb_writer = SummaryWriter(absp)
         else:
@@ -160,8 +154,7 @@ class Trainer:
         log_batchn: The number of batch between the record-point.
         """
         optimizer = self.optimizer
-        pred_fn = self.pred_fn
-        loss_fn = self.loss_fn
+        pred_loss_fn = self.pred_loss_fn
 
         if self.batch_n is None:
             try:
@@ -169,18 +162,18 @@ class Trainer:
             except TypeError:
                 self.batch_n = None
 
+        self.mod.train()
         for ce in range(self.epoch_idx, self.epoch_idx + epoch_n):
             t_loss = 0
             logger.info(f"Epoch: {ce}")
             for bidx, enums in enumerate(dloader):
                 # Forward and backward.
-                if pred_fn is None:
-                    *feats, label = enums
-                    ret = self.mod(*feats)
-                    loss = loss_fn(ret, label)
+                ret = pred_loss_fn(self.mod, *enums)
+                if isinstance(ret, tuple):
+                    loss, log_tags = ret
                 else:
-                    ret = pred_fn(self.mod, *enums)
-                    loss = loss_fn(ret, *enums)
+                    loss = ret
+                    log_tags = {}
                 if torch.isnan(loss):
                     logger.warning(f"NaN loss shows up at batch-{bidx}.")
                 loss.backward()
@@ -193,13 +186,13 @@ class Trainer:
                 t_loss += loss.item()
                 if (bidx + 1) % log_batchn == 0:
                     loss = t_loss / log_batchn
-                    self.log(bidx + 1, Loss=loss)
+                    self.log(bidx + 1, Loss=loss, *log_tags)
                     t_loss = 0
             else:
                 left_n = (bidx + 1) % log_batchn
                 if left_n > 0:
                     loss = t_loss / left_n
-                    self.log(bidx + 1, Loss=loss)
+                    self.log(bidx + 1, Loss=loss, *log_tags)
                     t_loss = 0
 
             # Set the number the of batchs in the first epoch as the `batch_n`
@@ -231,8 +224,6 @@ class Trainer:
         """Load module."""
         if mod_name is None:
             mod_name = mod.__class__.__name__
-        else:
-            mod_name = f"{mod.__class__.__name__}_{mod_name}"
         epoch_ptn = r"E\d{4}"
         spath = tmp_file(rf"{mod_name}_{epoch_ptn}", None, incr=0)
         sdict = torch.load(spath)

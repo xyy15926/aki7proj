@@ -3,7 +3,7 @@
 #   Name: test_trainer.py
 #   Author: xyy15926
 #   Created: 2025-07-08 16:09:07
-#   Updated: 2025-07-21 21:41:41
+#   Updated: 2025-09-14 23:44:10
 #   Description:
 # ---------------------------------------------------------
 
@@ -48,24 +48,19 @@ def test_Trainer():
     dataset = TensorDataset(inp_idx, inp_val, label)
     dloader = DataLoader(dataset, 5)
 
-    # Trainer with default pred_fn and loss_fn.
-    mod_name = "test"
-    mod = DeepFM([fea_catn] * sparse_n + [1] * dense_n)
-    trn = Trainer(
-        mod,
-        F.binary_cross_entropy_with_logits,
-        mod_name=mod_name
-    )
-    trn.fit(dloader, 2, 4)
-
     # Trainer with customed pred_fn and loss_fn.
-    mod_name = "test"
+    mod_name = "deepfm_trainer_test"
     mod = DeepFM([fea_catn] * sparse_n + [1] * dense_n)
+
+    def pred_loss_fn(mod, idx, val, label):
+        pred = mod(idx, val)
+        loss = F.binary_cross_entropy_with_logits(pred, label)
+        return loss
+
     trn = Trainer(
         mod,
-        loss_fn=lambda x, *ele: F.binary_cross_entropy_with_logits(x, ele[-1]),
+        pred_loss_fn=pred_loss_fn,
         mod_name=mod_name,
-        pred_fn=lambda mod, *ele: mod(*ele[:-1]),
     )
     trn.fit(dloader, 2, 4)
 
