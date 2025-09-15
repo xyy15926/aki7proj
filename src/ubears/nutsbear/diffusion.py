@@ -3,7 +3,7 @@
 #   Name: diffusion.py
 #   Author: xyy15926
 #   Created: 2025-09-04 09:02:38
-#   Updated: 2025-09-14 23:06:31
+#   Updated: 2025-09-15 17:49:52
 #   Description:
 # ---------------------------------------------------------
 
@@ -93,7 +93,7 @@ class GaussianDiffusion:
         zt: Guassian noise.
         """
         zt = torch.randn_like(inp)
-        ba = self.alpha_bar[tsteps].view([-1,] + [1,] * (inp.dim() - 1))
+        ba = self.alpha_bar[tsteps - 1].view([-1,] + [1,] * (inp.dim() - 1))
         noised = torch.sqrt(ba) * inp + torch.sqrt(1. - ba) * zt
         return noised, zt
 

@@ -3,7 +3,7 @@
 #   Name: test_diffusion.py
 #   Author: xyy15926
 #   Created: 2025-09-10 22:27:58
-#   Updated: 2025-09-14 23:03:24
+#   Updated: 2025-09-15 17:57:36
 #   Description:
 # ---------------------------------------------------------
 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     reload(diffusion)
     reload(posemb)
 
-from ubears.flagbear.slp.finer import get_tmp_path, get_assets_path
+from ubears.flagbear.slp.finer import get_tmp_path, get_assets_path, tmp_file
 from ubears.nutsbear.trainer import Trainer
 from ubears.nutsbear.unet import DoubleConv, UNetDown, UNetUp, UNet
 from ubears.nutsbear.posemb import SinusoidalPECache
@@ -146,19 +146,26 @@ def test_DDPM():
         optm,
         "tboard/DDPM_UNet",
     )
-    trn.fit(train_loader, 12)
+    trn.fit(train_loader, 5)
 
     with torch.no_grad():
         x, y = next(iter(train_loader))
         xs = [x,]
-        for n in range(10, 100, 10):
+        # Add noise and denoise.
+        for n in range(10, 101, 10):
             xn, zt = ddpm.addnoise(x, n)
             xs.append(xn)
             xd = ddpm.denoise(unetm, xn, n, y)
             xs.append(xd)
+        # Denoise from random.
+        rnd = torch.randn_like(x)
+        xs.append(rnd)
+        rnd_ded = ddpm.denoise(unetm, rnd, 100, y)
+        xs.append(rnd_ded)
+
         save_image(
             torch.concat(xs, dim=0),
-            get_tmp_path() / "torch/ddpm_unet_x.png",
+            tmp_file("torch/ddpm_unet.png"),
             nrow=100,
         )
 
