@@ -27,3 +27,6 @@ __pycache__/
 .project
 .vscode
 .idle
+# pixi environments
+.pixi/*
+!.pixi/config.toml

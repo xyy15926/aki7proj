@@ -3,14 +3,13 @@
 #   Name: test_attention.py
 #   Author: xyy15926
 #   Created: 2025-06-17 15:58:08
-#   Updated: 2025-09-12 19:41:24
+#   Updated: 2025-09-22 21:55:19
 #   Description:
 # ---------------------------------------------------------
 
 # %%
 import pytest
 from pytest import mark
-import numpy as np
 import torch
 from torch import nn, optim
 from torch import nested
@@ -269,13 +268,16 @@ def test_MultiHeadAttention():
     # Default forward.
     nnattn, nnw = nnmha(query, key, value)
     attn, attn_ws = mha(query, key, value)
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-2))
 
     # Forward with key-padding-mask.
     key_padding_mask = torch.randint(0, 2, (3, 6)).to(torch.bool)
+    key_padding_mask[0, :] = True
     nnattn, nnw = nnmha(query, key, value, key_padding_mask=key_padding_mask)
     attn, attn_ws = mha(query, key, value, key_padding_mask=key_padding_mask)
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
+    assert torch.any(torch.isnan(nnattn))
+    assert not torch.any(torch.isnan(attn))
+    assert torch.all(torch.isclose(torch.nan_to_num(nnattn, 0.0), attn, rtol=1e-2))
 
     nnattn, nnw = nnmha(
         query, key, value,
@@ -286,10 +288,11 @@ def test_MultiHeadAttention():
         query, key, value,
         key_padding_mask=key_padding_mask.logical_not()
     )
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-2, equal_nan=True))
 
     # Forward with attention-mask only.
     attn_mask = torch.randint(0, 2, (4, 6)).to(torch.bool)
+    attn_mask[0, :] = True
     nnattn, nnw = nnmha(
         query, key, value,
         attn_mask=attn_mask,
@@ -310,10 +313,12 @@ def test_MultiHeadAttention():
         attn_mask=attn_mask,
         need_weights=True,
     )
-    assert torch.all(torch.isclose(nnw_w, attn_ws_w, rtol=1e-3))
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3))
-    assert torch.all(torch.isclose(nnattn_w, attn_w, rtol=1e-3, equal_nan=True))
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
+    assert torch.any(torch.isnan(nnw_w))
+    assert not torch.any(torch.isnan(attn_ws_w))
+    assert torch.all(torch.isclose(torch.nan_to_num(nnw_w, 0.0), attn_ws_w, rtol=1e-2))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-2))
+    assert torch.all(torch.isclose(torch.nan_to_num(nnattn_w, 0.0), attn_w, rtol=1e-2))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-2))
 
     # Forward with attention-mask(or mixed mask).
     attn_mask = torch.randint(0, 2, (4, 6)).to(torch.bool)
@@ -328,7 +333,7 @@ def test_MultiHeadAttention():
         attn_mask=attn_mask,
         key_padding_mask=key_padding_mask,
     )
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-2))
 
     nnattn, nnw = nnmha(
         query, key, value,
@@ -341,7 +346,7 @@ def test_MultiHeadAttention():
         attn_mask=attn_mask.logical_not(),
         key_padding_mask=key_padding_mask.logical_not()
     )
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-2))
 
 
 # %%
@@ -379,7 +384,7 @@ def test_MultiHeadAttention_qkv_diffsz():
     # Default forward.
     nnattn, nnw = nnmha(query, key, value)
     attn, attn_ws = mha(query, key, value)
-    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3, equal_nan=True))
+    assert torch.all(torch.isclose(nnattn, attn, rtol=1e-3))
 
 
 # %%

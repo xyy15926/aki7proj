@@ -5,13 +5,11 @@ authors = [
 	{name = "UBeaRLy", email = "ubearly@outlook.com"},
 ]
 description = "A project for collecting some tricks."
-# url = "https://github.com/xyy15926/aki7"
 readme = { file = "README.md", content-type = "text/plain" }
 classifiers = [
 	"Development Status :: 3 - Alpha",
 	"Environment :: Console",
 	"Intended Audience :: Financial and Insurance Industry",
-	"License :: OSI Approved :: Apache Software License",
 	"Programming Language :: Python",
 	"Programming Language :: Python :: 3 :: Only",
 	"Programming Language :: Python :: 3.6",
@@ -19,7 +17,7 @@ classifiers = [
 	"Programming Language :: Python :: 3.8",
 	"Programming Language :: Python :: 3.9",
 ]
-license = {text = "Apache License 2.0"}
+license-files = [ "license.txt" ]
 requires-python = ">=3.8, <= 3.14"
 dependencies = [
 	"numpy >= 1.2, <= 2.4",
@@ -32,24 +30,16 @@ dependencies = [
 	"openpyxl >= 3.0",
 	"jieba",
 	"pdfplumber",
+	"torch",
+	"tensorboard",
 	# Pypi only.
 	"numpy_financial",
 	"chinese_calendar",
 	"importlib-resources; python_version < '3.9'",
 ]
 
-[project.optional-dependencies]
-all = [
-	"networkx",
-	"xgboost",
-	"PyMySQL",
-	"TA-Lib",
-	"streamlit",
-	"tensorboard",
-	# Pypi only.
-	"torch",
-	"cx-Oracle",
-]
+[project.urls]
+homepage = "https://github.com/xyy15926/aki7"
 
 [build-system]
 requires = ["setuptools"]
@@ -63,3 +53,39 @@ where = ["src"]
 include = ["ubears*"]
 exclude = []
 namespaces = false
+
+# Ruff ref:
+# - https://docs.astral.ac.cn/ruff/linter/
+# - https://docs.astral.ac.cn/ruff/configuration/
+[tool.ruff]
+include = [
+	"pyproject.toml",
+	"pixi.toml",
+	"src/**/*.py",
+	"scripts/**/*.py",
+	"examples/**/*.py",
+	"contrib/**/*.py",
+]
+line-length = 88
+indent-width = 4
+target-version = "py313"
+
+[tool.ruff.lint]
+# select = ["E4", "E7", "E9", "F"]
+select = ["E", "F", "B"]
+ignore = []
+fixable = ["ALL"]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]
+
+[tool.ruff.format]
+exclude = ["*.ipynb"]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"

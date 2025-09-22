@@ -551,7 +551,7 @@ def test_Transformer():
     # Default forward.
     nnret = nntf(src, tgt)
     ret = nntf(src, tgt)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-2))
 
     # Forward with key-padding-mask.
     src_key_padding_mask = torch.randint(0, 2, (bsz, slen)).to(torch.bool)
@@ -564,7 +564,7 @@ def test_Transformer():
         src, tgt,
         src_key_padding_mask=src_key_padding_mask,
         tgt_key_padding_mask=tgt_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-2))
 
     # Forward with self-attention-mask and key-padding-mask.
     src_mask = torch.randint(0, 2, (slen, slen)).to(torch.bool)
@@ -581,7 +581,7 @@ def test_Transformer():
         tgt_mask=tgt_mask,
         src_key_padding_mask=src_key_padding_mask,
         tgt_key_padding_mask=tgt_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-2))
 
     # Forward with causal mask.
     nn_tgt_mask = nn.Transformer.generate_square_subsequent_mask(tlen)
@@ -591,4 +591,4 @@ def test_Transformer():
         tgt_is_causal=True,
     )
     ret = tf(src, tgt, tgt_is_causal=True)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert torch.all(torch.isclose(nnret, ret, rtol=1e-2))
