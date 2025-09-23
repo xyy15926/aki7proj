@@ -63,7 +63,8 @@ xgboost				= ">=3.0.5,<4"
 PyMySQL				= ">=1.1.2,<2"
 TA-Lib				= ">=0.6.4,<0.7"
 torchvision			= ">=0.22.0,<0.23"
-ruff = ">=0.13.1,<0.14"
+ruff				= ">=0.13.1,<0.14"
+setuptools			= ">=80.9.0,<81"
 # streamlit			= "*"
 
 [pypi-dependencies]
@@ -91,6 +92,13 @@ pytorch				= "*"
 tensorboard			= "*"
 pyecharts			= ">=2.0"
 
+[feature.prod.target.linux-64.dependencies]
+pdfplumber			= "*"
+
+[feature.prod.pypi-dependencies]
+ubears				= { path = ".", editable = true }
+chinese_calendar	= "*"
+
 [feature.prod-test.dependencies]
 pytest				= "*"
 torchvision			= ">=0.22.0,<0.23"
@@ -98,13 +106,6 @@ TA-Lib				= ">=0.6.4,<0.7"
 
 [feature.prod-test.pypi-dependencies]
 numpy-financial		= ">=1.0.0, <2"
-
-[feature.prod.pypi-dependencies]
-ubears				= { path = ".", editable = true }
-chinese_calendar	= "*"
-
-[feature.prod.target.linux-64.dependencies]
-pdfplumber			= "*"
 
 [environments]
 default = {solve-group = "default"}
@@ -119,6 +120,7 @@ no-default-feature = true
 # - https://github.com/prefix-dev/pixi/issues/4350
 # Tasks with no-prefix is set for default feature only.
 [tasks]
+ipythonn = { cmd = "ipython --no-autoindent" }
 test = { cmd = "pytest" }
 pypi-build = { cmd = "python -m build", depends-on = ["test-all"] }
 pypi-check = { cmd = "python -m twine check dist/*", depends-on = ["pypi-build"] }
