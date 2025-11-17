@@ -3,7 +3,7 @@
 #   Name: posemb.py
 #   Author: xyy15926
 #   Created: 2025-09-12 19:51:13
-#   Updated: 2025-09-12 20:15:50
+#   Updated: 2025-11-17 22:44:43
 #   Description:
 # ---------------------------------------------------------
 
@@ -30,8 +30,9 @@ logger.info("Logging Start.")
 
 
 # %%
-class SinusoidalPECache:
+class SinPE(nn.Module):
     """Sinusoidal Positional Embedding.
+
     Ref:
     -------------------------------
     - SinusoidalPE:
@@ -51,8 +52,9 @@ class SinusoidalPECache:
         self,
         base: float = 1e4,
     ):
+        super().__init__()
         self.base = base
-        self.pe_cache = None
+        self.register_buffer("pe_cache", None, False)
 
     def get_pe(
         self,
@@ -82,7 +84,7 @@ class SinusoidalPECache:
 
         # Update PE cache if necessary.
         if self.pe_cache is None:
-            self.pe_cache = SinusoidalPECache.sinpe(
+            self.pe_cache = SinPE.sinpe(
                 max_pos,
                 esz,
                 self.base,
@@ -92,7 +94,7 @@ class SinusoidalPECache:
         else:
             clen, csz = self.pe_cache.size()
             if max_pos > clen or esz > csz:
-                self.pe_cache = SinusoidalPECache.sinpe(
+                self.pe_cache = SinPE.sinpe(
                     max(max_pos, clen),
                     max(esz, csz),
                     self.base,
@@ -139,19 +141,6 @@ class SinusoidalPECache:
         pe_cache[:, 1::2] = torch.cos(pos * theta)
         return pe_cache
 
-
-_sinpe_cache = SinusoidalPECache()
-
-
-# %%
-class SinPE(nn.Module):
-    """Sinusoidal Positional Embedding.
-
-    Use SinusoidalPECache as cache.
-    """
-    def __init__(self):
-        super().__init__()
-
     def forward(
         self,
         x: torch.Tensor,
@@ -185,7 +174,7 @@ class SinPE(nn.Module):
             assert pos.size(-1) == slen, "All positions must be provided."
         else:
             pos = slen
-        return x + _sinpe_cache.get_pe(pos, sz, **factory_kwargs)
+        return x + self.get_pe(pos, sz, **factory_kwargs)
 
 
 # %%
@@ -228,8 +217,8 @@ class RotaryPE(nn.Module):
         super().__init__()
         self.embed_sz = embed_sz
         self.base = base
-        self.cos_cache = nn.Buffer(persistent=False)
-        self.sin_cache = nn.Buffer(persistent=False)
+        self.register_buffer("cos_cache", None, persistent=False)
+        self.register_buffer("sin_cache", None, persistent=False)
 
     def forward(self, x: torch.Tensor, pos: torch.Tensor = None):
         """
@@ -260,12 +249,12 @@ class RotaryPE(nn.Module):
         if pos is not None:
             assert pos.size(-1) == slen, "All positions must be provided."
             max_pos = torch.max(pos)
-            if max_pos >= self.cos_cache.size(0):
+            if self.cos_cache is None or max_pos >= self.cos_cache.size(0):
                 self.rotary_cache(max_pos + 1, **factory_kwargs)
             cos_ = self.cos_cache[pos]
             sin_ = self.sin_cache[pos]
         else:
-            if slen >= self.cos_cache.size(0):
+            if self.sin_cache is None or slen >= self.cos_cache.size(0):
                 self.rotary_cache(slen, **factory_kwargs)
             cos_ = self.cos_cache[:slen]
             sin_ = self.sin_cache[:slen]

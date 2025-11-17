@@ -3,7 +3,7 @@
 #   Name: test_diffusion.py
 #   Author: xyy15926
 #   Created: 2025-09-10 22:27:58
-#   Updated: 2025-09-15 17:57:36
+#   Updated: 2025-11-17 22:50:59
 #   Description:
 # ---------------------------------------------------------
 
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 from ubears.flagbear.slp.finer import get_tmp_path, get_assets_path, tmp_file
 from ubears.nutsbear.trainer import Trainer
 from ubears.nutsbear.unet import DoubleConv, UNetDown, UNetUp, UNet
-from ubears.nutsbear.posemb import SinusoidalPECache
+from ubears.nutsbear.posemb import SinPE
 from ubears.nutsbear.diffusion import GaussianDiffusion
 
 
@@ -62,7 +62,7 @@ class UNetCond(nn.Module):
         # Diffusion related attrs.
         self.class_n = class_n
         self.embed_sz = embed_sz
-        self.tsinpe = SinusoidalPECache()
+        self.tsinpe = SinPE()
         if class_n is not None:
             self.class_emb = nn.Embedding(class_n, embed_sz)
         self.dnc1_pe = nn.Linear(embed_sz, 8)

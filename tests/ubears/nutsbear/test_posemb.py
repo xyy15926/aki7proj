@@ -3,7 +3,7 @@
 #   Name: test_posemb.py
 #   Author: xyy15926
 #   Created: 2025-09-12 20:07:17
-#   Updated: 2025-09-12 20:16:19
+#   Updated: 2025-11-17 22:45:52
 #   Description:
 # ---------------------------------------------------------
 
@@ -22,8 +22,6 @@ if __name__ == "__main__":
     reload(posemb)
 
 from ubears.nutsbear.posemb import (
-    SinusoidalPECache,
-    _sinpe_cache,
     SinPE,
     RotaryPE,
 )
@@ -49,7 +47,7 @@ class TimestepSinPE(nn.Module):
         return embeddings
 
 
-def test_SinusoidalPE():
+def test_SinPE():
     esz = 32
     tstep = torch.randint(0, 100, (100,))
 
@@ -64,27 +62,27 @@ def test_SinusoidalPE():
     assert torch.allclose(xped[:, 1::2], xtped[:, -16:], rtol=1e-4)
 
     # The cache won't be updated(regenerated).
-    cache = _sinpe_cache.pe_cache
+    cache = sinpe.pe_cache
     tstep = torch.randint(0, 50, (100,))
     xped2 = sinpe(x, tstep)
-    assert cache is _sinpe_cache.pe_cache
+    assert cache is sinpe.pe_cache
 
     # The cache will be updated(regenerated).
-    cache = _sinpe_cache.pe_cache
+    cache = sinpe.pe_cache
     tstep = torch.randint(100, 200, (100,))
     xped3 = sinpe(x, tstep)
-    assert cache is not _sinpe_cache.pe_cache
-    assert _sinpe_cache.pe_cache.size(0) > 100
-    assert _sinpe_cache.pe_cache.size(1) == esz
+    assert cache is not sinpe.pe_cache
+    assert sinpe.pe_cache.size(0) > 100
+    assert sinpe.pe_cache.size(1) == esz
 
     # The cache will be updated(regenerated).
-    cache = _sinpe_cache.pe_cache
+    cache = sinpe.pe_cache
     x = torch.zeros(100, esz + 2, dtype=torch.int)
     tstep = torch.randint(0, 50, (100,))
     xped4 = sinpe(x, tstep)
-    assert cache is not _sinpe_cache.pe_cache
-    assert _sinpe_cache.pe_cache.size(0) > 100
-    assert _sinpe_cache.pe_cache.size(1) == esz + 2
+    assert cache is not sinpe.pe_cache
+    assert sinpe.pe_cache.size(0) > 100
+    assert sinpe.pe_cache.size(1) == esz + 2
 
 
 # %%
@@ -117,5 +115,3 @@ def test_RotaryPE():
     assert torch.all(torch.isclose(ret[0].expand(100, -1, -1), ret))
     assert torch.all(torch.isclose(ret[0, 0, 0], torch.diag(ret[0])))
     assert torch.all(torch.isclose(ret[0, 0, 1], torch.diag(ret[0], 1)))
-
-

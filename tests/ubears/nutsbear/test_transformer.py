@@ -3,7 +3,7 @@
 #   Name: test_transformer.py
 #   Author: xyy15926
 #   Created: 2025-07-10 09:29:34
-#   Updated: 2025-07-22 22:54:49
+#   Updated: 2025-11-17 22:22:55
 #   Description:
 # ---------------------------------------------------------
 
@@ -31,6 +31,38 @@ from ubears.nutsbear.transformer import (
     TransformerDecoder,
     Transformer,
 )
+
+
+# %%
+def all_close(
+    lt = torch.Tensor,
+    rt = torch.Tensor,
+    lnan_to_zero = False,
+    rnan_to_zero = False,
+    equal_nan = True,
+    rtol = 1e-5,
+    atol = 1e-3,
+):
+    if lnan_to_zero and torch.is_tensor(lt):
+        lt = torch.nan_to_num(lt, 0.0)
+    if rnan_to_zero and torch.is_tensor(rt):
+        rt = torch.nan_to_num(rt, 0.0)
+    if torch.is_tensor(rt):
+        return torch.allclose(
+            lt,
+            rt,
+            rtol=rtol,
+            atol=atol,
+            equal_nan=equal_nan
+        )
+    else:
+        return torch.allclose(
+            lt,
+            torch.tensor([rt]),
+            rtol=rtol,
+            atol=atol,
+            equal_nan=equal_nan
+        )
 
 
 # %%
@@ -62,25 +94,25 @@ def test_TransformerEncoderLayer():
     # Default forward.
     nnret = nntel(src)
     ret = tel(src)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with key-padding-mask.
     src_key_padding_mask = torch.randint(0, 2, (bsz, slen)).to(torch.bool)
     nnret = nntel(src, src_key_padding_mask=src_key_padding_mask)
     ret = tel(src, src_key_padding_mask=src_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with attention-mask only.
     src_mask = torch.randint(0, 2, (slen, slen)).to(torch.bool)
     nnret = nntel(src, src_mask=src_mask)
     ret = tel(src, src_mask=src_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with attention-mask.
     src_mask = torch.randint(0, 2, (slen, slen)).to(torch.bool)
     nnret = nntel(src, src_mask=src_mask, src_key_padding_mask=src_key_padding_mask)
     ret = tel(src, src_mask=src_mask, src_key_padding_mask=src_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with causal attention-mask.
     # `is_causal` in `nn.TransformerEncoderLayer` is just a hint and
@@ -89,8 +121,8 @@ def test_TransformerEncoderLayer():
     nnret = nntel(src, src_mask=nn_src_mask, is_causal=False)
     nnret2 = nntel(src, src_mask=nn_src_mask, is_causal=True)
     ret = tel(src, src_mask=nn_src_mask, is_causal=True)
-    assert torch.all(torch.isclose(nnret, nnret2, rtol=1e-3))
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, nnret2)
+    assert all_close(nnret, ret)
 
 
 # %%
@@ -127,7 +159,7 @@ def test_TransformerEncoderLayer_with_SimpleMHA():
     nn_src_mask = nn.Transformer.generate_square_subsequent_mask(slen)
     ret = tel(src, src_mask=nn_src_mask, is_causal=True)
     ret_ = tel(src, src_mask=nn_src_mask, is_causal=False)
-    assert torch.all(torch.isclose(ret, ret_, rtol=1e-3))
+    assert all_close(ret, ret_)
 
 
 # %%
@@ -162,25 +194,25 @@ def test_TransformerEncoder():
     # Default forward.
     nnret = nnte(src)
     ret = te(src)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with key-padding-mask.
     src_key_padding_mask = torch.randint(0, 2, (bsz, slen)).to(torch.bool)
     nnret = nnte(src, src_key_padding_mask=src_key_padding_mask)
     ret = te(src, src_key_padding_mask=src_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with attention-mask only.
     src_mask = torch.randint(0, 2, (4, 4)).to(torch.bool)
     nnret = nnte(src, mask=src_mask)
     ret = te(src, src_mask=src_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with attention-mask.
     src_mask = torch.randint(0, 2, (4, 4)).to(torch.bool)
     nnret = nnte(src, mask=src_mask, src_key_padding_mask=src_key_padding_mask)
     ret = te(src, src_mask=src_mask, src_key_padding_mask=src_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with causal attention-mask.
     # `is_causal` in `nn.TransformerEncoderLayer` is just a hint and
@@ -190,9 +222,9 @@ def test_TransformerEncoder():
     nnret2 = nnte(src, mask=nn_src_mask, is_causal=True)
     ret = te(src, is_causal=True)
     ret2 = te(src, src_mask=nn_src_mask, is_causal=True)
-    assert torch.all(torch.isclose(nnret, nnret2, rtol=1e-3))
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
-    assert torch.all(torch.isclose(ret, ret2, rtol=1e-3))
+    assert all_close(nnret, nnret2)
+    assert all_close(nnret, ret)
+    assert all_close(ret, ret2)
 
 
 # %%
@@ -230,7 +262,7 @@ def test_TransformerEncoder_with_SimpleMHA():
     nn_src_mask = nn.Transformer.generate_square_subsequent_mask(slen)
     ret = te(src, src_mask=nn_src_mask, is_causal=True)
     ret_ = te(src, src_mask=nn_src_mask, is_causal=False)
-    assert torch.all(torch.isclose(ret, ret_, rtol=1e-3))
+    assert all_close(ret, ret_)
 
 # %%
 def test_TransformerDecoderLayer():
@@ -267,13 +299,13 @@ def test_TransformerDecoderLayer():
     # Default forward.
     nnret = nntdl(tgt, mem, tgt_is_causal=False)
     ret = tdl(tgt, mem, tgt_is_causal=False)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with key-padding-mask.
     memory_key_padding_mask = torch.randint(0, 2, (bsz, mlen)).to(torch.bool)
     nnret = nntdl(tgt, mem, memory_key_padding_mask=memory_key_padding_mask)
     ret = tdl(tgt, mem, memory_key_padding_mask=memory_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     tgt_key_padding_mask = torch.randint(0, 2, (bsz, tlen)).to(torch.bool)
     nnret = nntdl(
@@ -284,7 +316,7 @@ def test_TransformerDecoderLayer():
         tgt, mem,
         tgt_key_padding_mask=tgt_key_padding_mask,
         memory_key_padding_mask=memory_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with self-attention-mask only.
     tgt_mask = torch.randint(0, 2, (tlen, tlen)).to(torch.bool)
@@ -298,7 +330,7 @@ def test_TransformerDecoderLayer():
         tgt_mask=tgt_mask,
         tgt_is_causal=False
     )
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with self-attention-mask and key-padding-mask.
     tgt_mask = torch.randint(0, 2, (tlen, tlen)).to(torch.bool)
@@ -316,13 +348,13 @@ def test_TransformerDecoderLayer():
         tgt_key_padding_mask=tgt_key_padding_mask,
         memory_key_padding_mask=memory_key_padding_mask,
     )
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with causal mask.
     nn_tgt_mask = nn.Transformer.generate_square_subsequent_mask(tlen)
     nnret = nntdl(tgt, mem, tgt_is_causal=True, tgt_mask=nn_tgt_mask)
     ret = tdl(tgt, mem, tgt_is_causal=True)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
 
 # %%
@@ -375,7 +407,7 @@ def test_TransformerDecoderLayer_with_SimpleMHA():
     nn_tgt_mask = nn.Transformer.generate_square_subsequent_mask(tlen)
     ret = tdl(tgt, mem, tgt_is_causal=True)
     ret2 = tdl(tgt, mem, tgt_is_causal=False, tgt_mask=nn_tgt_mask)
-    assert torch.all(torch.isclose(ret2, ret, rtol=1e-3))
+    assert all_close(ret2, ret)
 
 
 # %%
@@ -415,13 +447,13 @@ def test_TransformerDecoder():
     # Default forward.
     nnret = nntd(tgt, mem, tgt_is_causal=False)
     ret = td(tgt, mem, tgt_is_causal=False)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with key-padding-mask.
     memory_key_padding_mask = torch.randint(0, 2, (bsz, mlen)).to(torch.bool)
     nnret = nntd(tgt, mem, memory_key_padding_mask=memory_key_padding_mask)
     ret = td(tgt, mem, memory_key_padding_mask=memory_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with self-attention-mask and key-padding-mask.
     tgt_mask = torch.randint(0, 2, (tlen, tlen)).to(torch.bool)
@@ -433,13 +465,13 @@ def test_TransformerDecoder():
         tgt, mem,
         tgt_mask=tgt_mask,
         memory_key_padding_mask=memory_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
     # Forward with causal mask.
     nn_tgt_mask = nn.Transformer.generate_square_subsequent_mask(tlen)
     nnret = nntd(tgt, mem, tgt_is_causal=True, tgt_mask=nn_tgt_mask)
     ret = td(tgt, mem, tgt_is_causal=True)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-3))
+    assert all_close(nnret, ret)
 
 
 # %%
@@ -493,7 +525,7 @@ def test_TransformerDecoder_with_SimpleMHA():
     nn_tgt_mask = nn.Transformer.generate_square_subsequent_mask(tlen)
     ret = td(tgt, mem, tgt_is_causal=True)
     ret2 = td(tgt, mem, tgt_is_causal=False, tgt_mask=nn_tgt_mask)
-    assert torch.all(torch.isclose(ret2, ret, rtol=1e-3))
+    assert all_close(ret2, ret)
 
 
 # %%
@@ -551,7 +583,7 @@ def test_Transformer():
     # Default forward.
     nnret = nntf(src, tgt)
     ret = nntf(src, tgt)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-2))
+    assert all_close(nnret, ret)
 
     # Forward with key-padding-mask.
     src_key_padding_mask = torch.randint(0, 2, (bsz, slen)).to(torch.bool)
@@ -564,7 +596,7 @@ def test_Transformer():
         src, tgt,
         src_key_padding_mask=src_key_padding_mask,
         tgt_key_padding_mask=tgt_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-2))
+    assert all_close(nnret, ret)
 
     # Forward with self-attention-mask and key-padding-mask.
     src_mask = torch.randint(0, 2, (slen, slen)).to(torch.bool)
@@ -581,7 +613,7 @@ def test_Transformer():
         tgt_mask=tgt_mask,
         src_key_padding_mask=src_key_padding_mask,
         tgt_key_padding_mask=tgt_key_padding_mask)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-2))
+    assert all_close(nnret, ret)
 
     # Forward with causal mask.
     nn_tgt_mask = nn.Transformer.generate_square_subsequent_mask(tlen)
@@ -591,4 +623,4 @@ def test_Transformer():
         tgt_is_causal=True,
     )
     ret = tf(src, tgt, tgt_is_causal=True)
-    assert torch.all(torch.isclose(nnret, ret, rtol=1e-2))
+    assert all_close(nnret, ret)

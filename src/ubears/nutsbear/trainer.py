@@ -9,7 +9,7 @@
 
 # %%
 import logging
-from typing import List, Any, Tuple, Self, Callable
+from typing import List, Any, Tuple, Callable
 from collections.abc import Sequence
 import numpy as np
 import pandas as pd

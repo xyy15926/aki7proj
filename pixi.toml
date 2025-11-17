@@ -31,8 +31,9 @@ preview = ["pixi-build"]
 [pypi-options]
 index-url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
 extra-index-urls = [
-    "https://mirrors.aliyun.com/pypi/simple",
-    "https://pypi.org/simple",
+	"https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple",
+	"https://mirrors.aliyun.com/pypi/simple",
+	"https://pypi.org/simple",
 ]
 # Or true/false for all
 no-build-isolation = []
@@ -44,42 +45,7 @@ libc = "2.28"
 # cuda = "12"
 
 [dependencies]
-python				= ">=3.12.11,<3.13"
-numpy				= ">=2.3.3,<3"
-pandas				= ">=2.3.2,<3"
-scipy				= ">=1.16.0,<2"
-scikit-learn		= ">=1.7.2,<2"
-SQLAlchemy			= ">=2.0.43,<3"
-openpyxl			= ">=3.1.5,<4"
-tqdm				= ">=4.67.1,<5"
-jieba				= ">=0.42.1,<0.43"
-pytorch				= ">=2.7.1,<3"
-tensorboard			= ">=2.20.0,<3"
-pyecharts			= ">=2.0.8,<3"
-pytest				= ">=8.4.2,<9"
-ipython				= ">=9.5.0,<10"
-networkx			= ">=3.5,<4"
-xgboost				= ">=3.0.5,<4"
-PyMySQL				= ">=1.1.2,<2"
-TA-Lib				= ">=0.6.4,<0.7"
-torchvision			= ">=0.22.0,<0.23"
-ruff				= ">=0.13.1,<0.14"
-setuptools			= ">=80.9.0,<81"
-# streamlit			= "*"
-
-[pypi-dependencies]
-ubears				= { path = ".", editable = true }
-chinese_calendar	= ">=1.10.0, <2"
-numpy_financial		= ">=1.0.0, <2"
-build				= ">=1.3.0, <2"
-twine				= ">=6.2.0, <7"
-# cx-Oracle			= "*"
-
-[target.linux-64.dependencies]
-pdfplumber			= ">=0.11.5,<0.12"
-
-[feature.prod.dependencies]
-python				= ">=3.9"
+python				= ">=3.12"
 numpy				= ">=1.2, <=2.4"
 pandas				= ">=1.4, <=2.4"
 scipy				= ">=1.10, <=1.16"
@@ -88,53 +54,79 @@ SQLAlchemy			= ">=1.4"
 openpyxl			= ">=3.0"
 tqdm				= ">=4.0"
 jieba				= "*"
-pytorch				= "*"
-tensorboard			= "*"
 pyecharts			= ">=2.0"
 
-[feature.prod.target.linux-64.dependencies]
-pdfplumber			= "*"
-
-[feature.prod.pypi-dependencies]
+[pypi-dependencies]
 ubears				= { path = ".", editable = true }
 chinese_calendar	= "*"
 
-[feature.prod-test.dependencies]
+[target.linux-64.dependencies]
+pdfplumber			= "*"
+
+[feature.dev.dependencies]
+PyMySQL				= "*"
+ipython				= "*"
+ruff				= "*"
 pytest				= "*"
-torchvision			= ">=0.22.0,<0.23"
-TA-Lib				= ">=0.6.4,<0.7"
+setuptools			= "*"
+pip					= "*"
+# streamlit			= "*"
 
-[feature.prod-test.pypi-dependencies]
-numpy-financial		= ">=1.0.0, <2"
+[feature.dev.pypi-dependencies]
+build				= ">=1.3.0, <2"
+twine				= ">=6.2.0, <7"
+# cx-Oracle			= "*"
 
-[environments]
-default = {solve-group = "default"}
+[feature.fin.dependencies]
+networkx			= "*"
+xgboost				= "*"
+TA-Lib				= "*"
 
-[environments.prod]
-features = [ "prod", "prod-test" ]
-solve-group = "default"
-no-default-feature = true
+[feature.fin.pypi-dependencies]
+numpy_financial		= ">=1.0.0, <2"
+
+[feature.dml.dependencies]
+# The names for PyTorch in conda and PyPA, `pytorch` and `torch`, are different.
+# pytorch				= "*"
+
+[feature.dml.pypi-dependencies]
+torch				= ">=2.0"
+tensorboard			= "*"
+torchvision			= "*"
+torch-directml		= ">=0.2.5.dev"
+
+[feature.dml-latest.pypi-dependencies]
+torch				= ">=2.8"
+torchvision			= "*"
+
+[environments.default]
+features = [ "dev", "fin", "dml" ]
+solve-group = "dev"
+# You may barely set `no-default-feature` as the package itself will be added
+# up to the dependencies to the environment in most cases.
+no-default-feature = false
+
+[environments.latest]
+features = [ "dev", "dml-latest" ]
+solve-group = "latest"
+no-default-feature = false
 
 # Ref
 # - https://pixi.sh/latest/workspace/advanced_tasks/
 # - https://github.com/prefix-dev/pixi/issues/4350
-# Tasks with no-prefix is set for default feature only.
-[tasks]
-ipythonn = { cmd = "ipython --no-autoindent" }
+# 1. Tasks with no-prefix is set for default feature only.
+# 2. Tasks has to be redefined explicitly for feature of the environment with
+#   `no-default-feature` set.
+[feature.dev.tasks]
 test = { cmd = "pytest" }
 pypi-build = { cmd = "python -m build", depends-on = ["test-all"] }
 pypi-check = { cmd = "python -m twine check dist/*", depends-on = ["pypi-build"] }
 pypi-upload = { cmd = "python -m twine check upload/*", depends-on = ["pypi-check"] }
 
-# Tasks has to be redefined explicitly for feature of the environment with
-# `no-default-feature` set.
-[feature.prod.tasks]
-test = { cmd = "pytest" }
-
 [tasks.test-all]
 depends-on = [
 	{ task = "test", environment = "default" },
-	{ task = "test", environment = "prod" },
+	{ task = "test", environment = "latest" },
 ]
 
 [activation]

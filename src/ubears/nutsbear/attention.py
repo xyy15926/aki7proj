@@ -79,7 +79,7 @@ def scaled_dot_product_attention(
     3. `is_causal` and `attn_mask` could be set together, with warning log as
       reminder, and merge will be done.
     4. NaN won't filled with 0 after the softmax.
-    **** The same with `F.scaled_dot_product_attention`:
+    **** The same with `F.scaled_dot_product_attention` in PyTorch >= 2.8:
     4. NaN will be filled with 0, for masked positions mostly, so to keep up
       with `F.scaled_dot_product_attention`.
 
