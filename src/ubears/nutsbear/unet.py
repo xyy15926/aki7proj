@@ -3,7 +3,7 @@
 #   Name: unet.py
 #   Author: xyy15926
 #   Created: 2025-09-09 18:39:56
-#   Updated: 2025-09-12 11:17:18
+#   Updated: 2025-11-21 22:38:40
 #   Description:
 # ---------------------------------------------------------
 
@@ -38,16 +38,19 @@ class DoubleConv(nn.Module):
         self,
         cin:int = 4,
         cout:int = 8,
+        device: str = None,
+        dtype: str = None,
     ):
         super().__init__()
+        factory_kwargs = {"device": device, "dtype": dtype}
         # Pad to keep the shape unchanged so to make it easy to concat
         # the channels in UP-decoder process for skip-connection.
         self.double_conv = nn.Sequential(
-            nn.Conv2d(cin, cout, kernel_size=3, padding=1),
-            nn.BatchNorm2d(cout),
+            nn.Conv2d(cin, cout, kernel_size=3, padding=1, **factory_kwargs),
+            nn.BatchNorm2d(cout, **factory_kwargs),
             nn.ReLU(inplace=True),
-            nn.Conv2d(cout, cout, kernel_size=3, padding=1),
-            nn.BatchNorm2d(cout),
+            nn.Conv2d(cout, cout, kernel_size=3, padding=1, **factory_kwargs),
+            nn.BatchNorm2d(cout, **factory_kwargs),
             nn.ReLU(inplace=True),
         )
 
@@ -71,6 +74,8 @@ class UNetDown(nn.Module):
         self,
         cin: int,
         cout: int,
+        device: str = None,
+        dtype: str = None,
     ):
         """UNet down-scaling initiation.
 
@@ -80,9 +85,10 @@ class UNetDown(nn.Module):
         cout: Number of channels of the output tensor.
         """
         super().__init__()
+        factory_kwargs = {"device": device, "dtype": dtype}
         self.maxpool_dconv = nn.Sequential(
             nn.MaxPool2d(2),
-            DoubleConv(cin, cout)
+            DoubleConv(cin, cout, **factory_kwargs)
         )
 
     def forward(
@@ -104,6 +110,8 @@ class UNetUp(nn.Module):
         cin: int,
         cout: int,
         bilinear: bool = False,
+        device: str = None,
+        dtype: str = None,
     ):
         """UNet up-scaling initiation.
 
@@ -115,6 +123,7 @@ class UNetUp(nn.Module):
         cout: Number of channels of the output tensor.
         """
         super().__init__()
+        factory_kwargs = {"device": device, "dtype": dtype}
         # `nn.Upsample` may be faster than `nn.ConvTranspose2d` for non-parameter.
         # but less powerful.
         if bilinear:
@@ -129,8 +138,9 @@ class UNetUp(nn.Module):
                 cin,
                 kernel_size=2,
                 stride=2,
+                **factory_kwargs,
             )
-        self.dconv = DoubleConv(cin + cin // 2, cout)
+        self.dconv = DoubleConv(cin + cin // 2, cout, **factory_kwargs)
 
     def forward(
         self,
@@ -164,20 +174,23 @@ class UNet(nn.Module):
         cout: int,
         class_n: int = None,
         bilinear: bool = False,
+        device: str = None,
+        dtype: str = None,
     ):
         """UNet initialization.
         """
         super().__init__()
+        factory_kwargs = {"device": device, "dtype": dtype}
         self.cin = cin
         self.cout = cout
         self.class_n = class_n
-        self.in_conv = DoubleConv(cin, 4)
+        self.in_conv = DoubleConv(cin, 4, **factory_kwargs)
         # The in-channel and out-channel must be set carefully.
-        self.dnc1 = UNetDown(4, 8)
-        self.dnc2 = UNetDown(8, 16)
-        self.upc2 = UNetUp(16, 8, bilinear)
-        self.upc1 = UNetUp(8, 4, bilinear)
-        self.out_conv = nn.Conv2d(4, cout, kernel_size=1)
+        self.dnc1 = UNetDown(4, 8, **factory_kwargs)
+        self.dnc2 = UNetDown(8, 16, **factory_kwargs)
+        self.upc2 = UNetUp(16, 8, bilinear, **factory_kwargs)
+        self.upc1 = UNetUp(8, 4, bilinear, **factory_kwargs)
+        self.out_conv = nn.Conv2d(4, cout, kernel_size=1, **factory_kwargs)
 
     def forward(
         self,

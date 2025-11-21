@@ -3,7 +3,7 @@
 #   Name: diffusion.py
 #   Author: xyy15926
 #   Created: 2025-09-04 09:02:38
-#   Updated: 2025-09-15 17:49:52
+#   Updated: 2025-11-18 22:01:50
 #   Description:
 # ---------------------------------------------------------
 
@@ -32,7 +32,7 @@ logger.info("Logging Start.")
 
 
 # %%
-class GaussianDiffusion:
+class GaussianDiffusion(nn.Module):
     """Denoise Diffustion Probability Model.
 
     Ref:
@@ -53,6 +53,8 @@ class GaussianDiffusion:
         steps_n: int = 1000,
         beta_start: float = 1e-4,
         beta_end: float = 2e-2,
+        device: str = None,
+        dtype: str = None,
     ):
         """Gaussian Diffusion initialization.
 
@@ -63,10 +65,15 @@ class GaussianDiffusion:
         beta_end: The maximum diffusion rate.
         """
         super().__init__()
+        factory_kwargs = { "device": device, "dtype": dtype }
         self.steps_n = steps_n
-        self.beta = nn.Buffer(torch.linspace(beta_start, beta_end, steps_n))
-        self.alpha = nn.Buffer(1. - self.beta)
-        self.alpha_bar = nn.Buffer(torch.cumprod(self.alpha, dim=0))
+        beta = torch.linspace(beta_start, beta_end, steps_n, **factory_kwargs)
+        alpha = 1. - beta
+        alpha_bar = torch.cumprod(alpha, dim=0)
+
+        self.register_buffer("beta", beta)
+        self.register_buffer("alpha", alpha)
+        self.register_buffer("alpha_bar", alpha_bar)
 
     def addnoise(
         self,
@@ -92,7 +99,8 @@ class GaussianDiffusion:
         noised: Noised input tensor.
         zt: Guassian noise.
         """
-        zt = torch.randn_like(inp)
+        device = inp.device
+        zt = torch.randn_like(inp, device=device)
         ba = self.alpha_bar[tsteps - 1].view([-1,] + [1,] * (inp.dim() - 1))
         noised = torch.sqrt(ba) * inp + torch.sqrt(1. - ba) * zt
         return noised, zt
@@ -127,9 +135,11 @@ class GaussianDiffusion:
         """
         if isinstance(inp, (tuple, list)):
             inp_sz = inp
-            inp = torch.randn(inp)
+            device = next(model.parameters()).device
+            inp = torch.randn(inp, device=device)
         else:
             inp_sz = inp.size()
+            device = inp.device
         bsz = inp_sz[0]
 
         model.eval()
@@ -143,9 +153,9 @@ class GaussianDiffusion:
             # Predict and remove noise.
             pred_zt = model(inp, t, labels)
             if stn > 0:
-                noise = torch.randn(inp_sz)
+                noise = torch.randn(inp_sz, device=device)
             else:
-                noise = torch.zeros(inp_sz)
+                noise = torch.zeros(inp_sz, device=device)
             inp = (
                 1 / torch.sqrt(alpha)
                 * (inp - beta / torch.sqrt(1. - ba) * pred_zt)

@@ -186,13 +186,13 @@ class Trainer:
                 t_loss += loss.item()
                 if (bidx + 1) % log_batchn == 0:
                     loss = t_loss / log_batchn
-                    self.log(bidx + 1, Loss=loss, *log_tags)
+                    self.log(bidx + 1, Loss=loss, **log_tags)
                     t_loss = 0
             else:
                 left_n = (bidx + 1) % log_batchn
                 if left_n > 0:
                     loss = t_loss / left_n
-                    self.log(bidx + 1, Loss=loss, *log_tags)
+                    self.log(bidx + 1, Loss=loss, **log_tags)
                     t_loss = 0
 
             # Set the number the of batchs in the first epoch as the `batch_n`

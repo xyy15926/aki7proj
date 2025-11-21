@@ -3,7 +3,7 @@
 #   Name: test_attn.py
 #   Author: xyy15926
 #   Created: 2025-11-17 15:22:39
-#   Updated: 2025-11-17 23:02:01
+#   Updated: 2025-11-20 19:42:37
 #   Description:
 # ---------------------------------------------------------
 
@@ -17,52 +17,57 @@ from torch.nn import functional as F
 
 if __name__ == "__main__":
     from importlib import reload
+    from ubears.nutsbear import fixture
     from ubears.nutsbear import attention
+    reload(fixture)
     reload(attention)
 
+from ubears.nutsbear.fixture import (
+    fkwargs_32_cpu,
+    fkwargs_64_cpu,
+    fkwargs_32_dml,
+    fkwargs_64_dml,
+    all_close,
+)
 from ubears.nutsbear.attention import (
     MultiheadAttention,
 )
+
 torch.autograd.set_detect_anomaly(False)
 
+
 # %%
-def all_close(
-    lt = torch.Tensor,
-    rt = torch.Tensor,
-    lnan_to_zero = False,
-    rnan_to_zero = False,
-    equal_nan = True,
-    rtol = 1e-5,
-    atol = 1e-3,
-):
-    if lnan_to_zero and torch.is_tensor(lt):
-        lt = torch.nan_to_num(lt, 0.0)
-    if rnan_to_zero and torch.is_tensor(rt):
-        rt = torch.nan_to_num(rt, 0.0)
-    if torch.is_tensor(rt):
-        return torch.allclose(
-            lt,
-            rt,
-            rtol=rtol,
-            atol=atol,
-            equal_nan=equal_nan
-        )
-    else:
-        return torch.allclose(
-            lt,
-            torch.tensor([rt]),
-            rtol=rtol,
-            atol=atol,
-            equal_nan=equal_nan
-        )
+# 1. `F.test_F_scaled_dot_product_attention` doesn't support the float64
+#   in GPU, which may be just caused by same reason as `torch.allclose`.
+def test_F_scaled_dot_product_attention_float64():
+    query = torch.randn(3, 4, 8, **fkwargs_64_cpu)
+    key = torch.randn(3, 6, 8, **fkwargs_64_cpu)
+    value = torch.randn(3, 6, 8, **fkwargs_64_cpu)
+    fret_64_cpu = F.scaled_dot_product_attention(query, key, value)
+
+    for tag, fk in [
+        ("yes", fkwargs_32_cpu),
+        ("yes", fkwargs_32_dml),
+        ("no", fkwargs_64_dml),
+    ]:
+        query = query.to(**fk)
+        key = key.to(**fk)
+        value = value.to(**fk)
+        if tag == "yes":
+            fret = F.scaled_dot_product_attention(query, key, value)
+            assert all_close(fret, fret_64_cpu)
+        # 1. `F.test_F_scaled_dot_product_attention` doesn't support the
+        #   float64 in GPU.
+        else:
+            with pytest.raises(RuntimeError):
+                fret = F.scaled_dot_product_attention(query, key, value)
 
 
 # %%
-def test_F_scaled_dot_product_attention_is_causal():
-    dtype = torch.float64
-    query = torch.randn(3, 4, 8, dtype=dtype, requires_grad=True)
-    key = torch.randn(3, 6, 8, dtype=dtype, requires_grad=True)
-    value = torch.randn(3, 6, 8, dtype=dtype, requires_grad=True)
+def test_F_scaled_dot_product_attention_is_causal_3D_4D():
+    query = torch.randn(3, 4, 8, **fkwargs_32_cpu)
+    key = torch.randn(3, 6, 8, **fkwargs_32_cpu)
+    value = torch.randn(3, 6, 8, **fkwargs_32_cpu)
 
     key_padding_mask = torch.randint(0, 2, (3, 6)).to(torch.bool)
     key_padding_mask = torch.tensor([
@@ -84,15 +89,16 @@ def test_F_scaled_dot_product_attention_is_causal():
         False,
         query
     )
-    # `F.scaled_dot_product_attention` will raise error for
-    # 3D-QKV when `attn_mask` and `is_causal` is provided together.
+    # 1. `F.scaled_dot_product_attention` will raise error for
+    #   3D-QKV when `attn_mask` and `is_causal` is provided together.
     with pytest.raises(RuntimeError):
         fret = F.scaled_dot_product_attention(
             query, key, value,
             attn_mask=mask,
             is_causal=True,
         )
-    # But not for 4D-QKV.
+
+    # 2. But SDPA won't raise error for 4D-QKV in CPU.
     query = query.unsqueeze(1)
     key = key.unsqueeze(1)
     value = value.unsqueeze(1)
@@ -109,6 +115,17 @@ def test_F_scaled_dot_product_attention_is_causal():
     )
     # And the result won't be the same obviously.
     assert not torch.all(torch.isclose(fret, fret_, rtol=1e-3))
+
+    # 3. But SDPA will also raise error for 4D-QKV in GPU.
+    query = query.to(**fkwargs_32_dml)
+    key = key.to(**fkwargs_32_dml)
+    value = value.to(**fkwargs_32_dml)
+    with pytest.raises(RuntimeError):
+        fret = F.scaled_dot_product_attention(
+            query, key, value,
+            attn_mask=mask.to(fkwargs_32_dml["device"]),
+            is_causal=True,
+        )
 
 
 # %%

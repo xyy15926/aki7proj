@@ -3,7 +3,7 @@
 #   Name: posemb.py
 #   Author: xyy15926
 #   Created: 2025-09-12 19:51:13
-#   Updated: 2025-11-17 22:44:43
+#   Updated: 2025-11-20 22:04:13
 #   Description:
 # ---------------------------------------------------------
 
@@ -136,7 +136,7 @@ class SinPE(nn.Module):
         theta = -torch.arange(0, emb_sz, 2, **factory_kwargs) / emb_sz
         # theta = -torch.arange(0, esz // 2, **factory_kwargs) / esz
         theta = torch.pow(base, theta)
-        pos = torch.arange(0, slen).unsqueeze(1).float()
+        pos = torch.arange(0, slen, **factory_kwargs).unsqueeze(1).float()
         pe_cache[:, 0::2] = torch.sin(pos * theta)
         pe_cache[:, 1::2] = torch.cos(pos * theta)
         return pe_cache
@@ -169,6 +169,7 @@ class SinPE(nn.Module):
         else:
             dtype = torch.float
         factory_kwargs = {"device": x.device, "dtype": dtype}
+
         *_____, slen, sz = x.size()
         if pos is not None:
             assert pos.size(-1) == slen, "All positions must be provided."
@@ -242,10 +243,11 @@ class RotaryPE(nn.Module):
         if torch.is_floating_point(x):
             dtype = x.dtype
         else:
-            dtype = torch.float
+            dtype = torch.float32
         factory_kwargs = {"device": x.device, "dtype": dtype}
         *_____, slen, sz = x.size()
         assert sz == self.embed_sz, "Embedding size must be the same."
+
         if pos is not None:
             assert pos.size(-1) == slen, "All positions must be provided."
             max_pos = torch.max(pos)
@@ -259,7 +261,13 @@ class RotaryPE(nn.Module):
             cos_ = self.cos_cache[:slen]
             sin_ = self.sin_cache[:slen]
 
-        cross_x = x.unflatten(-1, (-1, 2)).flip(-1).flatten(-2)
+        # `torch.flip` will lead crush in DML.
+        # cross_x = x.unflatten(-1, (-1, 2)).flip(-1).flatten(-2)
+        flatten_x = x.unflatten(-1, (-1, 2))
+        cross_x = torch.cat(
+            [flatten_x[..., 1:], flatten_x[..., :1]],
+            dim=-1,
+        ).flatten(-2)
         ret = x * cos_ + cross_x * sin_
 
         return ret
@@ -279,9 +287,9 @@ class RotaryPE(nn.Module):
         factory_kwargs = {"device": device, "dtype": dtype}
         # Set the rotary parameter.
         esz = self.embed_sz
-        theta = -torch.arange(0, esz, 2, **factory_kwargs) / esz
+        theta = -torch.arange(0, esz, 2, device=device) / esz
         theta = (self.base ** theta).unsqueeze(1).expand(-1, 2).flatten(-2)
-        mtheta = torch.arange(max_pos).unsqueeze(1) * theta.unsqueeze(0)
+        mtheta = torch.arange(max_pos, device=device).unsqueeze(1) * theta.unsqueeze(0)
         self.cos_cache = torch.cos(mtheta)
         sin_cache = torch.sin(mtheta)
         sin_cache[:, ::2] *= -1

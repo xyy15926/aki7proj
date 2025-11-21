@@ -3,7 +3,7 @@
 #   Name: test_unet.py
 #   Author: xyy15926
 #   Created: 2025-09-10 19:20:48
-#   Updated: 2025-09-12 11:17:28
+#   Updated: 2025-11-21 22:54:25
 #   Description:
 # ---------------------------------------------------------
 
@@ -22,14 +22,37 @@ from PIL import Image
 
 if __name__ == "__main__":
     from importlib import reload
+    from ubears.nutsbear import fixture
     from ubears.nutsbear import unet
     from ubears.nutsbear import trainer
+    reload(fixture)
     reload(unet)
     reload(trainer)
 
+from ubears.nutsbear.fixture import (
+    fkwargs_32_cpu,
+    fkwargs_64_cpu,
+    fkwargs_32_dml,
+    fkwargs_64_dml,
+    all_close,
+)
 from ubears.nutsbear.unet import UNet
 from ubears.nutsbear.trainer import Trainer
-from ubears.flagbear.slp.finer import get_tmp_path, get_assets_path
+from ubears.flagbear.slp.finer import get_tmp_path, get_assets_path, tmp_file
+
+torch.autograd.set_detect_anomaly(False)
+
+
+# %%
+if fkwargs_32_dml:
+    torch_fkwargs_params = [fkwargs_64_cpu, fkwargs_32_dml]
+else:
+    torch_fkwargs_params = [fkwargs_64_cpu, ]
+@pytest.fixture(params=[fkwargs_64_cpu, fkwargs_32_dml])
+def torch_fkwargs(request):
+    return request.param
+# torch_fkwargs = fkwargs_32_dml
+# torch_fkwargs = fkwargs_64_cpu
 
 
 # %%
@@ -57,7 +80,8 @@ class ISBIImageDataset(Dataset):
 
 # %%
 @pytest.mark.skip(reason="Time comsuming.")
-def test_unet():
+def test_unet(torch_fkwargs):
+    device, dtype = torch_fkwargs["device"], torch_fkwargs["dtype"]
     transform = transforms.Compose([
         transforms.ToImage(),
         transforms.ToDtype(torch.float32, scale=True),
@@ -71,18 +95,20 @@ def test_unet():
     train_loader = DataLoader(dataset=train_dataset, batch_size=2)
 
     def pred_loss_fn(mod, img, label):
+        img = img.to(**torch_fkwargs)
+        label = label.to(**torch_fkwargs)
         pred = mod(img)
         return F.binary_cross_entropy(pred, label)
 
-    unet = UNet(1, 1)
-    optm = optim.Adam(unet.parameters())
+    unet_mod = UNet(1, 1, **torch_fkwargs)
+    optm = optim.Adam(unet_mod.parameters())
     trainer = Trainer(
-        unet,
+        unet_mod,
         pred_loss_fn,
         optm,
         "ISBI_seg",
     )
-    trainer.fit(train_loader, 40)
+    trainer.fit(train_loader, 3)
 
     with torch.no_grad():
         train_dataset = ISBIImageDataset(
@@ -91,12 +117,12 @@ def test_unet():
         )
         train_loader = DataLoader(dataset=train_dataset, batch_size=4)
         sample = next(iter(train_loader))
-        pred = unet(sample[0])
+        pred = unet_mod(sample[0].to(**torch_fkwargs)).to(**fkwargs_32_cpu)
         pred_01 = torch.zeros_like(pred)
         pred_01[pred > 0.5] = 1
         ret = torch.concat([sample[0], sample[1], pred, pred_01], dim=0)
         save_image(
             ret,
-            get_tmp_path() / "torch/unetimg.png",
+            tmp_file("torch/unetimg.png"),
             nrow=4,
         )

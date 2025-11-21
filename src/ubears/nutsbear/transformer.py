@@ -3,7 +3,7 @@
 #   Name: transformer.py
 #   Author: xyy15926
 #   Created: 2025-07-10 09:25:01
-#   Updated: 2025-07-23 11:32:42
+#   Updated: 2025-11-21 21:58:03
 #   Description:
 # ---------------------------------------------------------
 
@@ -57,6 +57,8 @@ class Transformer(nn.Module):
         dec_layers_n: int = 6,
         encoder: "TransformerEncoder" = None,
         decoder: "TransformerEncoder" = None,
+        device: str = None,
+        dtype: str = None,
     ):
         """Init Transformer.
 
@@ -74,17 +76,20 @@ class Transformer(nn.Module):
         decoder: The customed decoder.
           This will be set as the decoder in transformer directly if provided
           instead of initing a decoder with previous parameters.
+        device:
+        dtype:
         """
         super().__init__()
+        factory_kwargs = { "device": device, "dtype": dtype }
         if encoder is None:
             encoder_layer = TransformerEncoderLayer(
-                embed_sz, heads_n, ffn_sz, dropout_p)
+                embed_sz, heads_n, ffn_sz, dropout_p, **factory_kwargs)
             self.encoder = TransformerEncoder(encoder_layer, enc_layers_n)
         else:
             self.encoder = encoder
         if decoder is None:
             decoder_layer = TransformerDecoderLayer(
-                embed_sz, heads_n, ffn_sz, dropout_p)
+                embed_sz, heads_n, ffn_sz, dropout_p, **factory_kwargs)
             self.decoder = TransformerDecoder(decoder_layer, dec_layers_n)
         else:
             self.decoder = decoder
@@ -374,6 +379,8 @@ class TransformerEncoderLayer(nn.Module):
         ffn_sz: int,
         dropout_p: float = 0.0,
         attn_style: str = "SDPA",
+        device: str = None,
+        dtype: str = None,
     ):
         """Encoder Layer Initialization.
 
@@ -391,30 +398,33 @@ class TransformerEncoderLayer(nn.Module):
           qWk: SimpleMHA.
         """
         super().__init__()
+        factory_kwargs = { "device": device, "dtype": dtype }
         if attn_style.lower() == "sdpa":
             self.self_attn = MultiheadAttention(
                 embed_sz,
                 heads_n,
                 dropout_p=dropout_p,
+                **factory_kwargs,
             )
         elif attn_style.lower() == "qwk":
             self.self_attn = SimpleMHA(
                 embed_sz,
                 heads_n,
                 dropout_p=dropout_p,
+                **factory_kwargs,
             )
         else:
             raise ValueError("Invalid MHA style.")
         self.sa_dropout = nn.Dropout(dropout_p)
 
-        self.ffn_linear1 = nn.Linear(embed_sz, ffn_sz, bias=True)
-        self.ffn_linear2 = nn.Linear(ffn_sz, embed_sz, bias=True)
+        self.ffn_linear1 = nn.Linear(embed_sz, ffn_sz, bias=True, **factory_kwargs)
+        self.ffn_linear2 = nn.Linear(ffn_sz, embed_sz, bias=True, **factory_kwargs)
         self.ffn_activation = nn.ReLU()
         self.ffn_dropout1 = nn.Dropout(dropout_p)
         self.ffn_dropout2 = nn.Dropout(dropout_p)
 
-        self.norm1 = nn.LayerNorm(embed_sz)
-        self.norm2 = nn.LayerNorm(embed_sz)
+        self.norm1 = nn.LayerNorm(embed_sz, **factory_kwargs)
+        self.norm2 = nn.LayerNorm(embed_sz, **factory_kwargs)
 
     def _sa_block(
         self,
@@ -520,6 +530,8 @@ class TransformerDecoderLayer(nn.Module):
         ffn_sz: int,
         dropout_p: float = 0.0,
         attn_style: str = "SDPA",
+        device: str = None,
+        dtype: str = None,
     ):
         """Decoder Layer Initialization.
 
@@ -537,42 +549,47 @@ class TransformerDecoderLayer(nn.Module):
           qwk: SimpleMHA.
         """
         super().__init__()
+        factory_kwargs = { "device": device, "dtype": dtype }
         if attn_style.lower() == "sdpa":
             self.self_attn = MultiheadAttention(
                 embed_sz,
                 heads_n,
                 dropout_p=dropout_p,
+                **factory_kwargs,
             )
             self.cross_attn = MultiheadAttention(
                 embed_sz,
                 heads_n,
                 dropout_p=dropout_p,
+                **factory_kwargs,
             )
         elif attn_style.lower() == "qwk":
             self.self_attn = SimpleMHA(
                 embed_sz,
                 heads_n,
                 dropout_p=dropout_p,
+                **factory_kwargs,
             )
             self.cross_attn = SimpleMHA(
                 embed_sz,
                 heads_n,
                 dropout_p=dropout_p,
+                **factory_kwargs,
             )
         else:
             raise ValueError("Invalid MHA style.")
         self.sa_dropout = nn.Dropout(dropout_p)
         self.ca_dropout = nn.Dropout(dropout_p)
 
-        self.ffn_linear1 = nn.Linear(embed_sz, ffn_sz, bias=True)
-        self.ffn_linear2 = nn.Linear(ffn_sz, embed_sz, bias=True)
+        self.ffn_linear1 = nn.Linear(embed_sz, ffn_sz, bias=True, **factory_kwargs)
+        self.ffn_linear2 = nn.Linear(ffn_sz, embed_sz, bias=True, **factory_kwargs)
         self.ffn_activation = nn.ReLU()
         self.ffn_dropout1 = nn.Dropout(dropout_p)
         self.ffn_dropout2 = nn.Dropout(dropout_p)
 
-        self.norm1 = nn.LayerNorm(embed_sz)
-        self.norm2 = nn.LayerNorm(embed_sz)
-        self.norm3 = nn.LayerNorm(embed_sz)
+        self.norm1 = nn.LayerNorm(embed_sz, **factory_kwargs)
+        self.norm2 = nn.LayerNorm(embed_sz, **factory_kwargs)
+        self.norm3 = nn.LayerNorm(embed_sz, **factory_kwargs)
 
     def _sa_block(
         self,
