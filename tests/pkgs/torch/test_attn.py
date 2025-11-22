@@ -3,7 +3,7 @@
 #   Name: test_attn.py
 #   Author: xyy15926
 #   Created: 2025-11-17 15:22:39
-#   Updated: 2025-11-20 19:42:37
+#   Updated: 2025-11-22 21:21:55
 #   Description:
 # ---------------------------------------------------------
 
@@ -58,7 +58,7 @@ def test_F_scaled_dot_product_attention_float64():
             assert all_close(fret, fret_64_cpu)
         # 1. `F.test_F_scaled_dot_product_attention` doesn't support the
         #   float64 in GPU.
-        else:
+        elif fkwargs_64_dml:
             with pytest.raises(RuntimeError):
                 fret = F.scaled_dot_product_attention(query, key, value)
 
@@ -117,15 +117,16 @@ def test_F_scaled_dot_product_attention_is_causal_3D_4D():
     assert not torch.all(torch.isclose(fret, fret_, rtol=1e-3))
 
     # 3. But SDPA will also raise error for 4D-QKV in GPU.
-    query = query.to(**fkwargs_32_dml)
-    key = key.to(**fkwargs_32_dml)
-    value = value.to(**fkwargs_32_dml)
-    with pytest.raises(RuntimeError):
-        fret = F.scaled_dot_product_attention(
-            query, key, value,
-            attn_mask=mask.to(fkwargs_32_dml["device"]),
-            is_causal=True,
-        )
+    if fkwargs_32_dml:
+        query = query.to(**fkwargs_32_dml)
+        key = key.to(**fkwargs_32_dml)
+        value = value.to(**fkwargs_32_dml)
+        with pytest.raises(RuntimeError):
+            fret = F.scaled_dot_product_attention(
+                query, key, value,
+                attn_mask=mask.to(fkwargs_32_dml["device"]),
+                is_causal=True,
+            )
 
 
 # %%
