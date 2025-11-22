@@ -3,7 +3,7 @@
 #   Name: deepfm.py
 #   Author: xyy15926
 #   Created: 2024-06-27 11:17:08
-#   Updated: 2025-07-08 14:11:30
+#   Updated: 2025-11-22 20:58:53
 #   Description:
 # ---------------------------------------------------------
 
@@ -11,8 +11,6 @@
 import logging
 from typing import List, Any, Tuple
 from collections.abc import Sequence
-import numpy as np
-import pandas as pd
 
 import torch
 from torch import nn
@@ -25,12 +23,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 logger.info("Logging Start.")
-
-DEVICE = ("cuda"
-          if torch.cuda.is_available()
-          else "mps"
-          if torch.backends.mps.is_available()
-          else "cpu")
 
 
 # %%
@@ -60,24 +52,41 @@ class DeepFM(nn.Module):
         fea_catns: List[int],
         emb_sz:int = 8,
         hidden_szs:List[int] = [32, 32],
-        dropout_p: float = 0.0
+        dropout_p: float = 0.0,
+        device: str = None,
+        dtype: str = None,
     ):
         super().__init__()
+        factory_kwargs = {"device": device, "dtype": dtype}
         self.emb_sz = emb_sz
         self.dropout_p = dropout_p
-        self._init_fm_block(fea_catns)
-        self._init_dnn_block(fea_catns, emb_sz * len(fea_catns), hidden_szs)
+        self._init_fm_block(fea_catns, **factory_kwargs)
+        self._init_dnn_block(
+            fea_catns,
+            emb_sz * len(fea_catns),
+            hidden_szs,
+            **factory_kwargs
+        )
 
-    def _init_fm_block(self, fea_catns: list[int]):
+    def _init_fm_block(
+        self,
+        fea_catns: list[int],
+        device: str = None,
+        dtype: str = None,
+    ):
         """Init FM block.
 
         1. `fmo1_embeds` actes as the weights of the sparse features directly
           added up linearly in FM.
         """
-        self.fmo1_embeds = nn.ModuleList(
-            [nn.Embedding(catn, 1) for catn in fea_catns])
-        self.fmo2_embeds = nn.ModuleList(
-            [nn.Embedding(catn, self.emb_sz) for catn in fea_catns])
+        factory_kwargs = {"device": device, "dtype": dtype}
+        self.fmo1_embeds = nn.ModuleList([
+            nn.Embedding(catn, 1, **factory_kwargs) for catn in fea_catns
+        ])
+        self.fmo2_embeds = nn.ModuleList([
+            nn.Embedding(catn, self.emb_sz, **factory_kwargs)
+            for catn in fea_catns
+        ])
         self.fmo1_dropout = nn.Dropout(self.dropout_p)
         self.fmo2_dropout = nn.Dropout(self.dropout_p)
 
@@ -86,13 +95,16 @@ class DeepFM(nn.Module):
         fea_catns: list[int],
         in_sz: int,
         hidden_szs: list[int],
+        device: str = None,
+        dtype: str = None,
     ):
         """Init DNN block."""
+        factory_kwargs = {"device": device, "dtype": dtype}
         dnn_layers = []
         for hsz in hidden_szs:
-            dnn_layers.append(nn.Linear(in_sz, hsz))
+            dnn_layers.append(nn.Linear(in_sz, hsz, **factory_kwargs))
             dnn_layers.append(nn.ReLU())
-            dnn_layers.append(nn.BatchNorm1d(hsz))
+            dnn_layers.append(nn.BatchNorm1d(hsz, **factory_kwargs))
             dnn_layers.append(nn.Dropout(self.dropout_p))
             in_sz = hsz
         self.dnn = nn.Sequential(*dnn_layers)

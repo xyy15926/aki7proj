@@ -19,7 +19,6 @@ from torchvision import datasets
 import torchvision.transforms.v2 as transforms
 from torchvision.utils import save_image
 from PIL import Image
-import torch_directml
 
 if __name__ == "__main__":
     from importlib import reload
@@ -49,11 +48,12 @@ if fkwargs_32_dml:
     torch_fkwargs_params = [fkwargs_64_cpu, fkwargs_32_dml]
 else:
     torch_fkwargs_params = [fkwargs_64_cpu, ]
-@pytest.fixture(params=[fkwargs_64_cpu, fkwargs_32_dml])
+@pytest.fixture(params=torch_fkwargs_params)
 def torch_fkwargs(request):
     return request.param
 # torch_fkwargs = fkwargs_32_dml
 # torch_fkwargs = fkwargs_64_cpu
+
 
 # %%
 class UNetCond(nn.Module):

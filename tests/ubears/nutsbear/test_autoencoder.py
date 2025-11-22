@@ -45,7 +45,7 @@ if fkwargs_32_dml:
     torch_fkwargs_params = [fkwargs_64_cpu, fkwargs_32_dml]
 else:
     torch_fkwargs_params = [fkwargs_64_cpu, ]
-@pytest.fixture(params=[fkwargs_64_cpu, fkwargs_32_dml])
+@pytest.fixture(params=torch_fkwargs_params)
 def torch_fkwargs(request):
     return request.param
 # torch_fkwargs = fkwargs_32_dml

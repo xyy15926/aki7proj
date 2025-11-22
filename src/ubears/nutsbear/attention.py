@@ -17,6 +17,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from torch.nn.init import constant_, xavier_normal_, xavier_uniform_
+from ubears.nutsbear.fixture import ssoftmax
 # from IPython.core.debugger import set_trace
 
 # %%
@@ -27,36 +28,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger()
 logger.info("Logging Start.")
-
-
-# %%
-def ssoftmax(
-    inp: torch.Tensor,
-    dim: int = -1,
-) -> torch.Tensor:
-    """All-NInf-safe Softmax.
-
-    1. 0.0 will be filled for all-NInf axis instead of NaN.
-    2. This maybe a litter slower for maximum check and transpose.
-
-    Params:
-    -------------------------------
-    inp: Input tensor.
-    dim: Dimension along which softmax will be computed.
-
-    Return:
-    -------------------------------
-    Softmax result with 0.0 filled for shoud-be NaN.
-    """
-    # Transpose the dimension for softmax so to fit up with the bool index.
-    if dim != -1 or dim != inp.dim():
-        inp = inp.transpose(-1, dim)
-    valid_pos = inp.max(dim=-1).values > -torch.inf
-    ret = torch.zeros_like(inp, dtype=inp.dtype, device=inp.device)
-    ret[valid_pos] = F.softmax(inp[valid_pos], dim=-1)
-    if dim != -1 or dim != inp.dim():
-        ret = ret.transpose(-1, dim)
-    return ret
 
 
 # %%
