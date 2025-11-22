@@ -3,7 +3,7 @@
 #   Name: ovdd.py
 #   Author: xyy15926
 #   Created: 2024-03-12 11:02:29
-#   Updated: 2025-05-15 11:33:15
+#   Updated: 2025-11-21 20:26:54
 #   Description:
 # ---------------------------------------------------------
 
@@ -127,8 +127,9 @@ def snap_ovd(
             repds = repds.copy()
             repds[np.isnat(repds)] = np.datetime64("today", "D")
         ovdds = repds - dueds
+        ovdds[ovdds < 0] = 0
     else:
-        ovdds = np.array(ovd_days, dtype="m8[D]")
+        ovdds = np.asarray(ovd_days, dtype="m8[D]")
         if np.isnan(ovdds).sum() > 0:
             logger.warning("NaT will be replaced with 0 in overdue days.")
             # Copy before modified.
