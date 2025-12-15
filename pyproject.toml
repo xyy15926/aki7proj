@@ -33,8 +33,8 @@ dependencies = [
 	"jieba",
 	"pdfplumber",
 	"torch",
+	"torchvision",
 	"tensorboard",
-	# Pypi only.
 	"numpy_financial",
 	"chinese_calendar",
 	"importlib-resources; python_version < '3.9'",
