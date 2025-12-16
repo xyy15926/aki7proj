@@ -7,6 +7,8 @@ authors = [
 	{name = "UBeaRLy", email = "ubearly@outlook.com"},
 ]
 description = "A project for collecting some tricks."
+long_description_content_type = "text/x-rst"
+long_description = "README.md"
 readme = { file = "README.md", content-type = "text/plain" }
 classifiers = [
 	"Development Status :: 3 - Alpha",
@@ -14,56 +16,110 @@ classifiers = [
 	"Intended Audience :: Financial and Insurance Industry",
 	"Programming Language :: Python",
 	"Programming Language :: Python :: 3 :: Only",
-	"Programming Language :: Python :: 3.6",
-	"Programming Language :: Python :: 3.7",
-	"Programming Language :: Python :: 3.8",
-	"Programming Language :: Python :: 3.9",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12",
 ]
 license-files = [ "license.txt" ]
-requires-python = ">=3.8, <= 3.14"
+requires-python = ">= 3.10"
 dependencies = [
 	"numpy >= 1.2, <= 2.4",
 	"scipy >= 1.10, <= 1.16",
 	"pandas >= 1.4, <= 2.4",
-	"scikit-learn >= 1.1, <= 1.8",
-	"tqdm >= 4.0",
-	"pyecharts >= 2.0",
-	"SQLAlchemy >= 1.4",
 	"openpyxl >= 3.0",
-	"jieba",
+	"tqdm >= 4.0",
+	"SQLAlchemy >= 1.4",
+	"chinese_calendar",
 	"pdfplumber",
-	"torch",
+	"jieba",
+]
+[project.optional-dependencies]
+extra = [
+	# "importlib-resources; python_version < '3.9'",
+	"scikit-learn >= 1.1, <= 1.8",
+	"pyecharts >= 2.0",
+	"xgboost",
+	"TA-lib",
+	"numpy_financial",
+	"PyMySQL",
+	"networkx",
+]
+torch = [
+	"torch >= 2.0",
 	"torchvision",
 	"tensorboard",
-	"numpy_financial",
-	"chinese_calendar",
-	"importlib-resources; python_version < '3.9'",
+	"torch-directml >= 0.2.5.dev",
 ]
 
 [project.urls]
 homepage = "https://github.com/xyy15926/aki7"
 
 # Build with setuptools.
+# [build-system]
+# build-backend = "setuptools.build_meta"
+# requires = [ "setuptools >= 60.0" ]
+
+# [tool.setuptools]
+# package-dir = {"" = "src"}
+# include-package-data = false
+
+# [tool.setuptools.dynamic]
+# version = { attr = "ubears.__version__" }
+
+# [tool.setuptools.packages.find]
+# where = ["src"]
+# include = ["ubears*"]
+# exclude = []
+# namespaces = false
+
+# [tool.setuptools.package-data]
+# ubears = [ "*.csv", "*.txt" ]
+# "ubears.data" = [ "*" ]
+
+# Build with hatcling
+# Hatchling ref:
+# - https://hatch.pypa.io/latest/config/build/
 [build-system]
-requires = [ "setuptools >= 60.0" ]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
+requires = [
+	"hatchling"
+]
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-include-package-data = false
+[tool.hatch.version]
+path = "src/ubears/__init__.py"
 
-[tool.setuptools.dynamic]
-version = { attr = "ubears.__version__" }
+[tool.hatch.build]
+skip-excluded-dirs = true
+directory = "dist"
+dev-mode-dirs = ["."]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["ubears*"]
+[tool.hatch.build.targets.sdist]
+# 1. Merge all files under `sources` together, just like searching paths.
+sources = [ "src" ]
+ignore-vcs = false
+include = [
+	"src/ubears/**/*.py",
+	"src/ubears/**/*.csv",
+	"src/ubears/**/*.txt",
+]
 exclude = []
-namespaces = false
 
-[tool.setuptools.package-data]
-ubears = [ "*.csv", "*.txt" ]
-"ubears.data" = [ "*" ]
+# 1. `wheel` will be build `sdist`, so `packages` should skip the `src` if
+#   `sdist.sources` is specified properly. But `wheel.sources` will still
+#   require the `src/****` to specify the packages.
+# 2. The children pacakges will be packaged recursively, which is different
+#   from the `setuptools`.
+[tool.hatch.build.targets.wheel]
+packages = [ "ubears" ]
+# `artifacts` is semantically equivalent to `include` but not affected by
+# `exclude`.
+# But `"!"` could be used to excluded more generic items in `artifacts`.
+artifacts = [
+	"src/**/*.so",
+	"src/**/*.dll",
+]
+# Include other files besides `.py` and `artifacts` in packages.
+only-packages = false
 
 # Ruff ref:
 # - https://docs.astral.ac.cn/ruff/linter/

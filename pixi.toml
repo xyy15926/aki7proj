@@ -45,7 +45,11 @@ libc = "2.28"
 # cuda = "12"
 
 [dependencies]
-python				= ">=3.12"
+# Pixi will always try to install the latest version of python and then
+# try to solve the dependencies without try to downgrade the version of
+# python(ABI).
+# So the python is fixed to 3.12 for `torch-directml` here.
+python				= "==3.12"
 numpy				= ">=1.2, <=2.4"
 scipy				= ">=1.10, <=1.16"
 
@@ -60,7 +64,7 @@ twine				= ">=6.2.0, <7"
 # cx-Oracle			= "*"
 
 [feature.this.pypi-dependencies]
-ubears				= { path = ".", editable = true }
+ubears				= { path = ".", editable = true, extras = ["extra", "torch"] }
 
 [feature.basic.pypi-dependencies]
 pandas				= ">=1.4, <=2.4"
@@ -69,6 +73,7 @@ tqdm				= ">=4.0"
 SQLAlchemy			= ">=1.4"
 chinese_calendar	= "*"
 pdfplumber			= "*"
+jieba				= "*"
 
 [feature.extra.pypi-dependencies]
 scikit-learn		= ">=1.1, <=1.8"
@@ -77,7 +82,6 @@ xgboost				= "*"
 TA-Lib				= "*"
 numpy_financial		= ">=1.0.0, <2"
 PyMySQL				= "*"
-jieba				= "*"
 networkx			= "*"
 
 # [feature.torch.pypi-dependencies]
@@ -123,9 +127,11 @@ depends-on = [
 
 [feature.dev.tasks]
 test = { cmd = "pytest" }
-pypi-build = { cmd = "python -m build", depends-on = ["test-all"] }
-pypi-check = { cmd = "python -m twine check dist/*", depends-on = ["pypi-build"] }
-pypi-upload = { cmd = "python -m twine check upload/*", depends-on = ["pypi-check"] }
+pypi-build = { cmd = "python -m build" }
+pypi-check = { cmd = "python -m twine check dist/*" }
+# Ref: https://zhuanlan.zhihu.com/p/682004873
+pypi-uptest = { cmd = "python -m twine upload --repository testpypi dist/*" }
+pypi-upload = { cmd = "python -m twine upload dist/*" }
 
 [activation]
 scripts = []
@@ -154,6 +160,7 @@ repository		= { workspace = true }
 source = { path = "." }
 
 [package.build.backend]
+# `pixi-build-python` turns Python package into a conda package.
 name = "pixi-build-python"
 version = "*"
 # `channels` here will be overriden by `workspace.channels`.
@@ -169,9 +176,14 @@ env = {}
 # ignore-pyproject-manifest = true
 
 [package.build-dependencies]
-# Dependecies for build environment when building.
+# Dependencies for build environment when building.
+# 1. It seems that `setuptools` is not compatiable with the `pixi`.
+#   So `hatchling` is used to package.
+# 2. The build metadata for python package is in 'pyproject.toml`.
 python				= ">=3.12"
 pip					= "*"
+hatchling			= "*"
+# setuptools			= ">=60.0"
 # cmake = "*"
 # git = "*"
 
@@ -181,17 +193,24 @@ python				= ">=3.9"
 hatchling			= "*"
 
 [package.run-dependencies]
-python				= ">=3.9"
+python				= ">=3.12"
 numpy				= ">=1.2, <=2.4"
-pandas				= ">=1.4, <=2.4"
 scipy				= ">=1.10, <=1.16"
-scikit-learn		= ">=1.1, <=1.8"
-SQLAlchemy			= ">=1.4"
+pandas				= ">=1.4, <=2.4"
 openpyxl			= ">=3.0"
-jieba				= "*"
-pdfplumber			= "*"
-pytorch				= "*"
 tqdm				= ">=4.0"
-pyecharts			= ">=2.0"
-numpy_financial		= "*"
+SQLAlchemy			= ">=1.4"
 chinese_calendar	= "*"
+pdfplumber			= "*"
+jieba				= "*"
+# scikit-learn		= ">=1.1, <=1.8"
+# pyecharts			= ">=2.0"
+# xgboost				= "*"
+# TA-Lib				= "*"
+# numpy_financial		= "*"
+# PyMySQL				= "*"
+# network				= "*"
+# pytorch				= ">=2.0"
+# torchvision			= "*"
+# tensorboard			= "*"
+# torch-directml		= ">=0.2.5.dev"
