@@ -3569,7 +3569,7 @@ packages:
 - pypi: ./
   name: ubears
   version: 0.2.4
-  sha256: af1ad9dc0083325ba0ab3facecbbf25a8dcbadb04b3d4a8e7d8783807613a4d1
+  sha256: c4d9b8f47f026b750c570f4dff78e7545a369c52665f5797b2272e8aee645477
   requires_dist:
   - chinese-calendar
   - jieba

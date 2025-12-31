@@ -91,7 +91,8 @@ path = "src/ubears/__init__.py"
 [tool.hatch.build]
 skip-excluded-dirs = true
 directory = "dist"
-dev-mode-dirs = ["."]
+# Directories that should be included in the development environment.
+dev-mode-dirs = ["src"]
 
 [tool.hatch.build.targets.sdist]
 # 1. Merge all files under `sources` together, just like searching paths.
