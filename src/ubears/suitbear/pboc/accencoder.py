@@ -3,7 +3,7 @@
 #    Name: accencoder.py
 #   Author: xyy15926
 #   Created: 2025-07-15 10:51:09
-#   Updated: 2025-07-23 11:34:11
+#   Updated: 2025-11-22 21:40:24
 #   Description:
 # ---------------------------------------------------------
 
@@ -25,11 +25,19 @@ from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
 
 if __name__ == "__main__":
     from importlib import reload
+    from ubears.nutsbear import fixture
     from ubears.nutsbear import transformer, attention
+    reload(fixture)
     reload(attention)
     reload(transformer)
 
-from ubears.nutsbear.attention import RotaryPE
+from ubears.nutsbear.fixture import (
+    fkwargs_32_cpu,
+    fkwargs_64_cpu,
+    fkwargs_32_dml,
+    fkwargs_64_dml,
+)
+from ubears.nutsbear.posemb import RotaryPE
 from ubears.nutsbear.transformer import (
     TransformerEncoderLayer,
     TransformerDecoderLayer,
@@ -96,10 +104,10 @@ class AccRecsTransformer(nn.Module):
         dropout_p: The probability of dropout.
         """
         super().__init__()
+        factory_kwargs = {"device": device, "dtype": dtype}
         self.embed_sz = embed_sz
         self.heads_n = heads_n
         self.rpe = RotaryPE(embed_sz)
-        factory_kwargs = {"device": device, "dtype": dtype}
 
         # Init some embedings.
         self.repst_embed = nn.Embedding(
@@ -123,6 +131,7 @@ class AccRecsTransformer(nn.Module):
             ffn_sz,
             dropout_p=dropout_p,
             attn_style=attn_style,
+            **factory_kwargs,
         )
         self.enc = TransformerEncoder(enc_layer, enc_layers_n)
         dec_layer = TransformerDecoderLayer(
@@ -131,6 +140,7 @@ class AccRecsTransformer(nn.Module):
             ffn_sz,
             dropout_p=dropout_p,
             attn_style=attn_style,
+            **factory_kwargs,
         )
         self.dec = TransformerDecoder(dec_layer, dec_layers_n)
 
